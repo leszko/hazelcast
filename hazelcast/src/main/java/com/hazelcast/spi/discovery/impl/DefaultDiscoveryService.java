@@ -128,12 +128,11 @@ public class DefaultDiscoveryService
     }
 
     private Iterable<DiscoveryStrategy> loadDiscoveryStrategies(DiscoveryServiceSettings settings) {
-        DiscoveryConfig discoveryConfig = settings.getDiscoveryConfig();
         ClassLoader configClassLoader = settings.getConfigClassLoader();
 
         try {
             Collection<DiscoveryStrategyConfig> discoveryStrategyConfigs = new ArrayList<DiscoveryStrategyConfig>(
-                    discoveryConfig.getDiscoveryStrategyConfigs());
+                    settings.getAllDiscoveryStrategyConfigs());
 
             List<DiscoveryStrategyFactory> factories = collectFactories(discoveryStrategyConfigs, configClassLoader);
 

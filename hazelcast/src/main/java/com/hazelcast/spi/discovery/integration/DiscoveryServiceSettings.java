@@ -17,8 +17,12 @@
 package com.hazelcast.spi.discovery.integration;
 
 import com.hazelcast.config.DiscoveryConfig;
+import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.discovery.DiscoveryNode;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The <tt>DiscoveryServiceSettings</tt> class is used to pass the necessary
@@ -31,6 +35,7 @@ public final class DiscoveryServiceSettings {
     private ILogger logger;
     private ClassLoader configClassLoader;
     private DiscoveryConfig discoveryConfig;
+    private List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs = new ArrayList<DiscoveryStrategyConfig>();
     private DiscoveryMode discoveryMode;
 
     public DiscoveryNode getDiscoveryNode() {
@@ -66,6 +71,7 @@ public final class DiscoveryServiceSettings {
 
     public DiscoveryServiceSettings setDiscoveryConfig(DiscoveryConfig discoveryConfig) {
         this.discoveryConfig = discoveryConfig;
+
         return this;
     }
 
@@ -75,6 +81,18 @@ public final class DiscoveryServiceSettings {
 
     public DiscoveryServiceSettings setDiscoveryMode(DiscoveryMode discoveryMode) {
         this.discoveryMode = discoveryMode;
+        return this;
+    }
+
+    public List<DiscoveryStrategyConfig> getAllDiscoveryStrategyConfigs() {
+        List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
+        result.addAll(discoveryConfig.getDiscoveryStrategyConfigs());
+        result.addAll(additionalDiscoveryStrategyConfigs);
+        return result;
+    }
+
+    public DiscoveryServiceSettings setAdditionalDiscoveryStrategyConfigs(List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs) {
+        this.additionalDiscoveryStrategyConfigs = additionalDiscoveryStrategyConfigs;
         return this;
     }
 }
