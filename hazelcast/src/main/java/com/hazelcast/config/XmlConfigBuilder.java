@@ -1020,28 +1020,13 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             if ("enabled".equals(lowerCaseInternal(att.getNodeName()))) {
                 awsConfig.setEnabled(getBooleanValue(value));
             } else if (att.getNodeName().equals("connection-timeout-seconds")) {
-                awsConfig.setConnectionTimeoutSeconds(getIntegerValue("connection-timeout-seconds", value));
+                awsConfig.addProperty("connection-timeout-seconds", value);
             }
         }
         for (Node n : childElements(node)) {
+            String key = cleanNodeName(n);
             String value = getTextContent(n).trim();
-            if ("secret-key".equals(cleanNodeName(n))) {
-                awsConfig.setSecretKey(value);
-            } else if ("access-key".equals(cleanNodeName(n))) {
-                awsConfig.setAccessKey(value);
-            } else if ("region".equals(cleanNodeName(n))) {
-                awsConfig.setRegion(value);
-            } else if ("host-header".equals(cleanNodeName(n))) {
-                awsConfig.setHostHeader(value);
-            } else if ("security-group-name".equals(cleanNodeName(n))) {
-                awsConfig.setSecurityGroupName(value);
-            } else if ("tag-key".equals(cleanNodeName(n))) {
-                awsConfig.setTagKey(value);
-            } else if ("tag-value".equals(cleanNodeName(n))) {
-                awsConfig.setTagValue(value);
-            } else if ("iam-role".equals(cleanNodeName(n))) {
-                awsConfig.setIamRole(value);
-            }
+            awsConfig.addProperty(key, value);
         }
     }
 

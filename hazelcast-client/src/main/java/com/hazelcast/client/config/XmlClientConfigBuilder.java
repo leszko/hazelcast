@@ -598,26 +598,9 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
     private void handleAWS(Node node, ClientNetworkConfig clientNetworkConfig) {
         ClientAwsConfig clientAwsConfig = handleAwsAttributes(node);
         for (Node n : childElements(node)) {
+            String key = cleanNodeName(n);
             String value = getTextContent(n).trim();
-            if ("secret-key".equals(cleanNodeName(n))) {
-                clientAwsConfig.setSecretKey(value);
-            } else if ("access-key".equals(cleanNodeName(n))) {
-                clientAwsConfig.setAccessKey(value);
-            } else if ("region".equals(cleanNodeName(n))) {
-                clientAwsConfig.setRegion(value);
-            } else if ("host-header".equals(cleanNodeName(n))) {
-                clientAwsConfig.setHostHeader(value);
-            } else if ("security-group-name".equals(cleanNodeName(n))) {
-                clientAwsConfig.setSecurityGroupName(value);
-            } else if ("tag-key".equals(cleanNodeName(n))) {
-                clientAwsConfig.setTagKey(value);
-            } else if ("tag-value".equals(cleanNodeName(n))) {
-                clientAwsConfig.setTagValue(value);
-            } else if ("inside-aws".equals(cleanNodeName(n))) {
-                clientAwsConfig.setInsideAws(getBooleanValue(value));
-            } else if ("iam-role".equals(cleanNodeName(n))) {
-                clientAwsConfig.setIamRole(value);
-            }
+            clientAwsConfig.addProperty(key, value);
         }
         if (!clientAwsConfig.isInsideAws() && clientAwsConfig.getIamRole() != null) {
             throw new InvalidConfigurationException("You cannot set IAM Role from outside EC2");
@@ -634,8 +617,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
             if ("enabled".equalsIgnoreCase(att.getNodeName())) {
                 clientAwsConfig.setEnabled(getBooleanValue(value));
             } else if (att.getNodeName().equals("connection-timeout-seconds")) {
-                int timeout = getIntegerValue("connection-timeout-seconds", value);
-                clientAwsConfig.setConnectionTimeoutSeconds(timeout);
+                clientAwsConfig.addProperty("connection-timeout-seconds", value);
             }
         }
         return clientAwsConfig;
