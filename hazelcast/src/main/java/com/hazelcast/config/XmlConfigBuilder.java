@@ -60,6 +60,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static com.hazelcast.config.DiscoveryAliasMapper.DISCOVERY_ALIASES;
 import static com.hazelcast.config.JobTrackerConfig.DEFAULT_COMMUNICATE_STATS;
 import static com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import static com.hazelcast.config.XmlElements.ATOMIC_LONG;
@@ -671,8 +672,8 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             publisherConfig.setQueueCapacity(queueCapacity);
         } else if ("properties".equals(targetChildName)) {
             fillProperties(targetChild, publisherConfig.getProperties());
-        } else if ("aws".equals(targetChildName)) {
-            handleAWS(publisherConfig.getAwsConfig(), targetChild);
+        } else if (DISCOVERY_ALIASES.contains(targetChildName)) {
+            handleAWS(publisherConfig, targetChild, targetChildName);
         } else if ("discovery-strategies".equals(targetChildName)) {
             handleDiscoveryStrategies(publisherConfig.getDiscoveryConfig(), targetChild);
         } else if ("wan-sync".equals(targetChildName)) {
@@ -952,8 +953,8 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
                 handleMulticast(child);
             } else if ("tcp-ip".equals(name)) {
                 handleTcpIp(child);
-            } else if ("aws".equals(name)) {
-                handleAWS(config.getNetworkConfig().getJoin().getAwsConfig(), child);
+            } else if (DISCOVERY_ALIASES.contains(name)) {
+                handleAWS(config.getNetworkConfig().getJoin(), child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(config.getNetworkConfig().getJoin().getDiscoveryConfig(), child);
             }
@@ -1012,7 +1013,20 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         discoveryConfig.addDiscoveryStrategyConfig(new DiscoveryStrategyConfig(clazz, properties));
     }
 
-    private void handleAWS(AwsConfig awsConfig, Node node) {
+    private void handleAWS(JoinConfig joinConfig, Node node, String tag) {
+        joinConfig.addDiscoveryAliasConfig(createAwsConfig(node, tag));
+    }
+
+    private void handleAWS(WanPublisherConfig publisherConfig, Node node, String tag) {
+        DiscoveryAliasConfig discoveryAliasConfig = createAwsConfig(node, tag);
+        if (discoveryAliasConfig instanceof AwsConfig) {
+            publisherConfig.setAwsConfig((AwsConfig) discoveryAliasConfig);
+        }
+    }
+
+    private DiscoveryAliasConfig createAwsConfig(Node node, String tag) {
+        DiscoveryAliasConfig awsConfig = new DiscoveryAliasConfig();
+        awsConfig.setTag(tag);
         NamedNodeMap attributes = node.getAttributes();
         for (int a = 0; a < attributes.getLength(); a++) {
             Node att = attributes.item(a);
@@ -1028,6 +1042,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             String value = getTextContent(n).trim();
             awsConfig.addProperty(key, value);
         }
+        return awsConfig;
     }
 
     private void handleMulticast(Node node) {

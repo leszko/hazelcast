@@ -16,7 +16,9 @@
 
 package com.hazelcast.config;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import static com.hazelcast.util.Preconditions.isNotNull;
 
@@ -30,6 +32,8 @@ public class JoinConfig {
     private TcpIpConfig tcpIpConfig = new TcpIpConfig();
 
     private AwsConfig awsConfig = new AwsConfig();
+
+    private final List<DiscoveryAliasConfig> discoveryAliasConfigs = new ArrayList<DiscoveryAliasConfig>();
 
     private DiscoveryConfig discoveryConfig = new DiscoveryConfig();
 
@@ -78,6 +82,15 @@ public class JoinConfig {
      */
     public JoinConfig setAwsConfig(final AwsConfig awsConfig) {
         this.awsConfig = isNotNull(awsConfig, "awsConfig");
+        return this;
+    }
+
+    public List<DiscoveryAliasConfig> getDiscoveryAliasConfigs() {
+        return discoveryAliasConfigs;
+    }
+
+    public JoinConfig addDiscoveryAliasConfig(DiscoveryAliasConfig discoveryAliasConfig) {
+        this.discoveryAliasConfigs.add(isNotNull(discoveryAliasConfig, "discoveryAliasConfig"));
         return this;
     }
 

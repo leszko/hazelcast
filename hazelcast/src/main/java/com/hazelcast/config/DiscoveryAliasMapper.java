@@ -23,26 +23,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DiscoveryStrategyConfigAliasMapper {
+import static java.util.Arrays.asList;
+
+public class DiscoveryAliasMapper {
+    public static final List<String> DISCOVERY_ALIASES = asList("aws");
+
     public List<DiscoveryStrategyConfig> map(JoinConfig joinConfig) {
         List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
-        if (joinConfig.getAwsConfig().isEnabled()) {
-            result.add(createAwsDiscoveryStrategy(joinConfig.getAwsConfig()));
+        for (DiscoveryAliasConfig config : discoveryAliasConfigs(joinConfig)) {
+            if (config.isEnabled()) {
+                result.add(createAwsDiscoveryStrategy(config));
+            }
         }
         return result;
     }
 
-    private static DiscoveryStrategyConfig createAwsDiscoveryStrategy(AwsConfig awsConfig) {
+    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(JoinConfig joinConfig) {
+        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(joinConfig.getDiscoveryAliasConfigs());
+        configs.add(joinConfig.getAwsConfig());
+        return configs;
+    }
+
+    private static DiscoveryStrategyConfig createAwsDiscoveryStrategy(DiscoveryAliasConfig config) {
         String className = "com.hazelcast.aws.AwsDiscoveryStrategy";
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
-        putIfNotNull(properties, "access-key", awsConfig.getAccessKey());
-        putIfNotNull(properties, "secret-key", awsConfig.getSecretKey());
-        putIfNotNull(properties, "iam-role", awsConfig.getIamRole());
-        putIfNotNull(properties, "region", awsConfig.getRegion());
-        putIfNotNull(properties, "host-header", awsConfig.getHostHeader());
-        putIfNotNull(properties, "security-group-name", awsConfig.getSecurityGroupName());
-        putIfNotNull(properties, "tag-key", awsConfig.getTagKey());
-        putIfNotNull(properties, "tag-value", awsConfig.getTagValue());
+        for (String key : config.getProperties().keySet()) {
+            putIfNotNull(properties, key, config.getProperties().get(key));
+        }
         return new DiscoveryStrategyConfig(className, properties);
     }
 

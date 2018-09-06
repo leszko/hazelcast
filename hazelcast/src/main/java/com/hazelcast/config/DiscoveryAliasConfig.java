@@ -28,6 +28,8 @@ public class DiscoveryAliasConfig {
     protected boolean enabled;
     protected final Map<String, String> properties = new HashMap<String, String>();
 
+    private String tag;
+
     public DiscoveryAliasConfig setEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
@@ -44,5 +46,13 @@ public class DiscoveryAliasConfig {
 
     public Map<String, String> getProperties() {
         return properties;
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 }

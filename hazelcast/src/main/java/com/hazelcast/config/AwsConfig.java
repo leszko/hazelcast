@@ -123,6 +123,11 @@ public class AwsConfig extends DiscoveryAliasConfig {
     }
 
     @Override
+    public String getTag() {
+        return "aws";
+    }
+
+    @Override
     public String toString() {
         return "AwsConfig{" + "properties=" + properties + ", enabled=" + enabled + '}';
     }
