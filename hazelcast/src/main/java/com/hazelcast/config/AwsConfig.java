@@ -27,96 +27,36 @@ import static com.hazelcast.util.Preconditions.checkHasText;
  * @deprecated Use {@link DiscoveryAliasConfig} instead.
  */
 @Deprecated
-public class AwsConfig {
-    private boolean enabled;
-    private final Map<String, String> properties = new HashMap<String, String>();
+public class AwsConfig extends DiscoveryAliasConfig {
 
-    /**
-     * Gets the access key to access AWS. Returns null if no access key is configured.
-     *
-     * @return the access key to access AWS
-     * @see #setAccessKey(String)
-     */
     public String getAccessKey() {
         return properties.get("access-key");
     }
 
-    /**
-     * Gets the secret key to access AWS. Returns {@code null} if no access key is configured.
-     *
-     * @return the secret key
-     * @see #setSecretKey(String)
-     */
     public String getSecretKey() {
         return properties.get("secret-key");
     }
 
-    /**
-     * Gets the region where the EC2 instances running the Hazelcast members will be running.
-     *
-     * @return the region where the EC2 instances running the Hazelcast members will be running
-     * @see #setRegion(String)
-     */
     public String getRegion() {
         return properties.get("region");
     }
 
-    /**
-     * Gets the host header; the address where the EC2 API can be found.
-     *
-     * @return the host header; the address where the EC2 API can be found
-     */
     public String getHostHeader() {
         return properties.get("host-header");
-    }
-
-    /**
-     * Enables or disables the AWS join mechanism.
-     *
-     * @param enabled {@code true} if enabled, {@code false} otherwise
-     * @return the updated AwsConfig
-     */
-    public AwsConfig setEnabled(boolean enabled) {
-        this.enabled = enabled;
-        return this;
     }
 
     public int getConnectionTimeoutSeconds() {
         return Integer.parseInt(properties.get("connection-timeout-seconds"));
     }
 
-    /**
-     * Checks if the AWS join mechanism is enabled.
-     *
-     * @return {@code true} if enabled, {@code false} otherwise
-     */
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    /**
-     * Gets the security group name. If nothing has been configured, {@code null} is returned.
-     *
-     * @return the security group name; {@code null} if nothing has been configured
-     */
     public String getSecurityGroupName() {
         return properties.get("security-group-name");
     }
 
-    /**
-     * Gets the tag key. If nothing is specified, {@code null} is returned.
-     *
-     * @return the tag key or {@code null} if nothing is returned
-     */
     public String getTagKey() {
         return properties.get("tag-key");
     }
 
-    /**
-     * Gets the tag value. If nothing is specified, {@code null} is returned.
-     *
-     * @return the tag value or {@code null} if nothing is returned
-     */
     public String getTagValue() {
         return properties.get("tag-value");
     }
@@ -127,15 +67,6 @@ public class AwsConfig {
 
     public String getHzPort() {
         return properties.get("hz-port");
-    }
-
-    public AwsConfig addProperty(String key, String value) {
-        properties.put(key, value);
-        return this;
-    }
-
-    public Map<String, String> getProperties() {
-        return properties;
     }
 
     public AwsConfig setAccessKey(String accessKey) {
@@ -183,6 +114,11 @@ public class AwsConfig {
 
     public AwsConfig setIamRole(String iamRole) {
         this.properties.put("iam-role", iamRole);
+        return this;
+    }
+
+    public AwsConfig setEnabled(boolean enabled) {
+        this.enabled = enabled;
         return this;
     }
 
