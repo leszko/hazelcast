@@ -1018,10 +1018,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
     }
 
     private void handleDiscoveryAlias(WanPublisherConfig publisherConfig, Node node, String tag) {
-        DiscoveryAliasConfig discoveryAliasConfig = createDiscoveryAliasConfig(node, tag);
-        if (discoveryAliasConfig instanceof AwsConfig) {
-            publisherConfig.setAwsConfig((AwsConfig) discoveryAliasConfig);
-        }
+        publisherConfig.addDiscoveryAliasConfig(createDiscoveryAliasConfig(node, tag));
     }
 
     private DiscoveryAliasConfig createDiscoveryAliasConfig(Node node, String tag) {

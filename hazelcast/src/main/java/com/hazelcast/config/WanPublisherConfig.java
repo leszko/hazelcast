@@ -23,7 +23,9 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.nio.serialization.impl.Versioned;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.util.Preconditions.checkNotNull;
@@ -53,6 +55,7 @@ public class WanPublisherConfig implements IdentifiedDataSerializable, Versioned
     private String className;
     private Object implementation;
     private AwsConfig awsConfig = new AwsConfig();
+    private final List<DiscoveryAliasConfig> discoveryAliasConfigs = new ArrayList<DiscoveryAliasConfig>();
     private DiscoveryConfig discoveryConfig = new DiscoveryConfig();
     private WanSyncConfig wanSyncConfig = new WanSyncConfig();
 
@@ -273,6 +276,15 @@ public class WanPublisherConfig implements IdentifiedDataSerializable, Versioned
      */
     public WanPublisherConfig setAwsConfig(final AwsConfig awsConfig) {
         this.awsConfig = isNotNull(awsConfig, "awsConfig");
+        return this;
+    }
+
+    public List<DiscoveryAliasConfig> getDiscoveryAliasConfigs() {
+        return discoveryAliasConfigs;
+    }
+
+    public WanPublisherConfig addDiscoveryAliasConfig(DiscoveryAliasConfig discoveryAliasConfig) {
+        this.discoveryAliasConfigs.add(isNotNull(discoveryAliasConfig, "discoveryAliasConfig"));
         return this;
     }
 
