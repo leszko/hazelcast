@@ -23,16 +23,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Arrays.asList;
-
 public class DiscoveryAliasMapper {
-    public static final List<String> DISCOVERY_ALIASES = asList("aws");
+    public static final List<String> DISCOVERY_ALIASES = new ArrayList<String>();
+
+    private static final Map<String, String> ALIAS_MAPPINGS = new HashMap<String, String>();
+
+    static {
+        ALIAS_MAPPINGS.put("aws", "com.hazelcast.aws.AwsDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("gcp", "com.hazelcast.gcp.GcpDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("azure", "com.hazelcast.azure.AzureDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("kubernetes", "com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("eureka", "com.hazelcast.eureka.one.HazelcastKubernetesDiscoveryStrategy");
+
+        for (String alias : ALIAS_MAPPINGS.keySet()) {
+            DISCOVERY_ALIASES.add(alias);
+        }
+    }
 
     public List<DiscoveryStrategyConfig> map(JoinConfig joinConfig) {
         List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
         for (DiscoveryAliasConfig config : discoveryAliasConfigs(joinConfig)) {
             if (config.isEnabled()) {
-                result.add(createAwsDiscoveryStrategy(config));
+                result.add(createDiscoveryStrategyConfig(config));
             }
         }
         return result;
@@ -44,8 +56,8 @@ public class DiscoveryAliasMapper {
         return configs;
     }
 
-    private static DiscoveryStrategyConfig createAwsDiscoveryStrategy(DiscoveryAliasConfig config) {
-        String className = "com.hazelcast.aws.AwsDiscoveryStrategy";
+    private static DiscoveryStrategyConfig createDiscoveryStrategyConfig(DiscoveryAliasConfig config) {
+        String className = ALIAS_MAPPINGS.get(config.getTag());
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
         for (String key : config.getProperties().keySet()) {
             putIfNotNull(properties, key, config.getProperties().get(key));
