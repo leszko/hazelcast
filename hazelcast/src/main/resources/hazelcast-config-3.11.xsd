@@ -1815,6 +1815,7 @@
             <xs:element name="azure" type="discovery-strategy-alias" minOccurs="0"/>
             <xs:element name="kubernetes" type="discovery-strategy-alias" minOccurs="0"/>
             <xs:element name="eureka" type="discovery-strategy-alias" minOccurs="0"/>
+            <xs:element name="zookeeper" type="discovery-strategy-alias" minOccurs="0"/>
             <xs:element name="discovery-strategies" type="discovery-strategies" minOccurs="0" maxOccurs="1"/>
         </xs:all>
     </xs:complexType>
