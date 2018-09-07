@@ -41,9 +41,9 @@ public class DiscoveryAliasMapper {
         }
     }
 
-    public List<DiscoveryStrategyConfig> map(JoinConfig joinConfig) {
+    public List<DiscoveryStrategyConfig> map(List<DiscoveryAliasConfig> discoveryAliasConfigs) {
         List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
-        for (DiscoveryAliasConfig config : discoveryAliasConfigs(joinConfig)) {
+        for (DiscoveryAliasConfig config : discoveryAliasConfigs) {
             if (config.isEnabled()) {
                 result.add(createDiscoveryStrategyConfig(config));
             }
@@ -51,14 +51,8 @@ public class DiscoveryAliasMapper {
         return result;
     }
 
-    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(JoinConfig joinConfig) {
-        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(joinConfig.getDiscoveryAliasConfigs());
-        configs.add(joinConfig.getAwsConfig());
-        return configs;
-    }
-
     private static DiscoveryStrategyConfig createDiscoveryStrategyConfig(DiscoveryAliasConfig config) {
-        String className = ALIAS_MAPPINGS.get(config.getTag());
+        String className = ALIAS_MAPPINGS.get(config.getEnvironment());
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
         for (String key : config.getProperties().keySet()) {
             putIfNotNull(properties, key, config.getProperties().get(key));

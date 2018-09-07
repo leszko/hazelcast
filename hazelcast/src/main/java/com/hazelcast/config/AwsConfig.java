@@ -123,7 +123,7 @@ public class AwsConfig extends DiscoveryAliasConfig {
     }
 
     @Override
-    public String getTag() {
+    public String getEnvironment() {
         return "aws";
     }
 

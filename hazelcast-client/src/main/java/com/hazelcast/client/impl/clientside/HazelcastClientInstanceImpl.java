@@ -80,8 +80,12 @@ import com.hazelcast.concurrent.lock.LockServiceImpl;
 import com.hazelcast.concurrent.semaphore.SemaphoreService;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.CredentialsFactoryConfig;
+import com.hazelcast.config.DiscoveryAliasConfig;
+import com.hazelcast.config.DiscoveryAliasMapper;
 import com.hazelcast.config.DiscoveryConfig;
+import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.GroupConfig;
+import com.hazelcast.config.JoinConfig;
 import com.hazelcast.core.Client;
 import com.hazelcast.core.ClientService;
 import com.hazelcast.core.Cluster;
@@ -144,6 +148,7 @@ import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferService;
 import com.hazelcast.scheduledexecutor.IScheduledExecutorService;
 import com.hazelcast.scheduledexecutor.impl.DistributedScheduledExecutorService;
+import com.hazelcast.security.Credentials;
 import com.hazelcast.security.ICredentialsFactory;
 import com.hazelcast.spi.discovery.impl.DefaultDiscoveryServiceProvider;
 import com.hazelcast.spi.discovery.integration.DiscoveryMode;
@@ -164,6 +169,7 @@ import com.hazelcast.transaction.TransactionalTask;
 import com.hazelcast.transaction.impl.xa.XAService;
 import com.hazelcast.util.ServiceLoader;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -203,6 +209,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private final LoadBalancer loadBalancer;
     private final ClientExtension clientExtension;
     private final ICredentialsFactory credentialsFactory;
+    private final DiscoveryAliasMapper discoveryAliasMapper;
     private final DiscoveryService discoveryService;
     private final LoggingService loggingService;
     private final MetricsRegistryImpl metricsRegistry;
@@ -246,6 +253,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         loadBalancer = initLoadBalancer(config);
         transactionManager = new ClientTransactionManagerServiceImpl(this, loadBalancer);
         partitionService = new ClientPartitionServiceImpl(this);
+        discoveryAliasMapper = new DiscoveryAliasMapper();
         discoveryService = initDiscoveryService(config);
         Collection<AddressProvider> addressProviders = createAddressProviders(externalAddressProvider);
         AddressTranslator addressTranslator = createAddressTranslator();
@@ -423,10 +431,12 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private DiscoveryService initDiscoveryService(ClientConfig config) {
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
-        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED)) {
+        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED) &&
+                discoveryAliasMapper.map(discoveryAliasConfigs(config)).isEmpty()) {
             return null;
         }
 
+        List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(config));
         ILogger logger = loggingService.getLogger(DiscoveryService.class);
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         DiscoveryConfig discoveryConfig = networkConfig.getDiscoveryConfig().getAsReadOnly();
@@ -436,12 +446,25 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
             factory = new DefaultDiscoveryServiceProvider();
         }
 
-        DiscoveryServiceSettings settings = new DiscoveryServiceSettings().setConfigClassLoader(config.getClassLoader())
-                .setLogger(logger).setDiscoveryMode(DiscoveryMode.Client).setDiscoveryConfig(discoveryConfig);
+        DiscoveryServiceSettings settings = new DiscoveryServiceSettings()
+                .setConfigClassLoader(config.getClassLoader())
+                .setLogger(logger)
+                .setDiscoveryMode(DiscoveryMode.Client)
+                .setAdditionalDiscoveryStrategyConfigs(additionalDiscoveryConfigs)
+                .setDiscoveryConfig(discoveryConfig);
 
         DiscoveryService discoveryService = factory.newDiscoveryService(settings);
         discoveryService.start();
         return discoveryService;
+    }
+
+    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(ClientConfig config) {
+        ClientNetworkConfig networkConfig = config.getNetworkConfig();
+        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(networkConfig.getDiscoveryAliasConfigs());
+        if (networkConfig.getAwsConfig() != null) {
+            configs.add(networkConfig.getAwsConfig());
+        }
+        return configs;
     }
 
     private LoadBalancer initLoadBalancer(ClientConfig config) {

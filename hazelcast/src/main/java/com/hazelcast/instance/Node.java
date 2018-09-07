@@ -22,6 +22,7 @@ import com.hazelcast.cluster.Joiner;
 import com.hazelcast.cluster.impl.TcpIpJoiner;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigurationException;
+import com.hazelcast.config.DiscoveryAliasConfig;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.DiscoveryAliasMapper;
@@ -84,6 +85,7 @@ import com.hazelcast.util.FutureUtil;
 import com.hazelcast.version.MemberVersion;
 import com.hazelcast.version.Version;
 
+import java.lang.reflect.Constructor;
 import java.nio.channels.ServerSocketChannel;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -131,7 +133,7 @@ public class Node {
     public final NodeEngineImpl nodeEngine;
     public final ClientEngineImpl clientEngine;
 
-    public final DiscoveryAliasMapper discoveryAliasMapper;
+    private final DiscoveryAliasMapper discoveryAliasMapper;
 
     public final InternalPartitionServiceImpl partitionService;
     public final ClusterServiceImpl clusterService;
@@ -263,7 +265,7 @@ public class Node {
     }
 
     public DiscoveryService createDiscoveryService(JoinConfig joinConfig, Member localMember) {
-        List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(joinConfig);
+        List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(joinConfig));
         DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
         DiscoveryServiceProvider factory = discoveryConfig.getDiscoveryServiceProvider();
         if (factory == null) {
@@ -281,6 +283,14 @@ public class Node {
                         new SimpleDiscoveryNode(localMember.getAddress(), localMember.getAttributes()));
 
         return factory.newDiscoveryService(settings);
+    }
+
+    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(JoinConfig joinConfig) {
+        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(joinConfig.getDiscoveryAliasConfigs());
+        if (joinConfig.getAwsConfig() != null) {
+            configs.add(joinConfig.getAwsConfig());
+        }
+        return configs;
     }
 
     @SuppressWarnings({"checkstyle:npathcomplexity", "checkstyle:cyclomaticcomplexity"})
@@ -775,7 +785,7 @@ public class Node {
         JoinConfig join = config.getNetworkConfig().getJoin();
         join.verify();
 
-        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || !discoveryAliasMapper.map(join).isEmpty()) {
+        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || !discoveryAliasMapper.map(discoveryAliasConfigs(join)).isEmpty()) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
             return new DiscoveryJoiner(this, discoveryService, properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED));

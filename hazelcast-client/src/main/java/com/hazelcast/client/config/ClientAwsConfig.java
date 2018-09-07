@@ -22,6 +22,7 @@ import com.hazelcast.config.AwsConfig;
  * The AWSConfig contains the configuration for client
  * to connect to nodes in aws environment.
  */
+@Deprecated
 public class ClientAwsConfig extends AwsConfig {
     private boolean insideAws;
 

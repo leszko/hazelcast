@@ -673,7 +673,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         } else if ("properties".equals(targetChildName)) {
             fillProperties(targetChild, publisherConfig.getProperties());
         } else if (DISCOVERY_ALIASES.contains(targetChildName)) {
-            handleAWS(publisherConfig, targetChild, targetChildName);
+            handleDiscoveryAlias(publisherConfig, targetChild, targetChildName);
         } else if ("discovery-strategies".equals(targetChildName)) {
             handleDiscoveryStrategies(publisherConfig.getDiscoveryConfig(), targetChild);
         } else if ("wan-sync".equals(targetChildName)) {
@@ -954,7 +954,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             } else if ("tcp-ip".equals(name)) {
                 handleTcpIp(child);
             } else if (DISCOVERY_ALIASES.contains(name)) {
-                handleAWS(config.getNetworkConfig().getJoin(), child, name);
+                handleDiscoveryAlias(config.getNetworkConfig().getJoin(), child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(config.getNetworkConfig().getJoin().getDiscoveryConfig(), child);
             }
@@ -1013,36 +1013,36 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         discoveryConfig.addDiscoveryStrategyConfig(new DiscoveryStrategyConfig(clazz, properties));
     }
 
-    private void handleAWS(JoinConfig joinConfig, Node node, String tag) {
-        joinConfig.addDiscoveryAliasConfig(createAwsConfig(node, tag));
+    private void handleDiscoveryAlias(JoinConfig joinConfig, Node node, String tag) {
+        joinConfig.addDiscoveryAliasConfig(createDiscoveryAliasConfig(node, tag));
     }
 
-    private void handleAWS(WanPublisherConfig publisherConfig, Node node, String tag) {
-        DiscoveryAliasConfig discoveryAliasConfig = createAwsConfig(node, tag);
+    private void handleDiscoveryAlias(WanPublisherConfig publisherConfig, Node node, String tag) {
+        DiscoveryAliasConfig discoveryAliasConfig = createDiscoveryAliasConfig(node, tag);
         if (discoveryAliasConfig instanceof AwsConfig) {
             publisherConfig.setAwsConfig((AwsConfig) discoveryAliasConfig);
         }
     }
 
-    private DiscoveryAliasConfig createAwsConfig(Node node, String tag) {
-        DiscoveryAliasConfig awsConfig = new DiscoveryAliasConfig();
-        awsConfig.setTag(tag);
+    private DiscoveryAliasConfig createDiscoveryAliasConfig(Node node, String tag) {
+        DiscoveryAliasConfig config = new DiscoveryAliasConfig();
+        config.setEnvironment(tag);
         NamedNodeMap attributes = node.getAttributes();
         for (int a = 0; a < attributes.getLength(); a++) {
             Node att = attributes.item(a);
             String value = getTextContent(att).trim();
             if ("enabled".equals(lowerCaseInternal(att.getNodeName()))) {
-                awsConfig.setEnabled(getBooleanValue(value));
+                config.setEnabled(getBooleanValue(value));
             } else if (att.getNodeName().equals("connection-timeout-seconds")) {
-                awsConfig.addProperty("connection-timeout-seconds", value);
+                config.addProperty("connection-timeout-seconds", value);
             }
         }
         for (Node n : childElements(node)) {
             String key = cleanNodeName(n);
             String value = getTextContent(n).trim();
-            awsConfig.addProperty(key, value);
+            config.addProperty(key, value);
         }
-        return awsConfig;
+        return config;
     }
 
     private void handleMulticast(Node node) {
