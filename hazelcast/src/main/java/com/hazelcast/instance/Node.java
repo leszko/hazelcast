@@ -229,7 +229,10 @@ public class Node {
             clientEngine = new ClientEngineImpl(this);
             discoveryAliasMapper = new DiscoveryAliasMapper();
             connectionManager = nodeContext.createConnectionManager(this, serverSocketChannel);
-            discoveryService = createDiscoveryService(this.config.getNetworkConfig().getJoin(), localMember);
+            JoinConfig joinConfig = this.config.getNetworkConfig().getJoin();
+            DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
+            List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(joinConfig));
+            discoveryService = createDiscoveryService(discoveryConfig, additionalDiscoveryConfigs, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             clusterService = new ClusterServiceImpl(this, localMember);
             textCommandService = nodeExtension.createTextCommandService();
@@ -264,9 +267,7 @@ public class Node {
         return classLoader;
     }
 
-    public DiscoveryService createDiscoveryService(JoinConfig joinConfig, Member localMember) {
-        List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(joinConfig));
-        DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
+    public DiscoveryService createDiscoveryService(DiscoveryConfig discoveryConfig, List<DiscoveryStrategyConfig> additionalDiscoveryConfigs, Member localMember) {
         DiscoveryServiceProvider factory = discoveryConfig.getDiscoveryServiceProvider();
         if (factory == null) {
             factory = new DefaultDiscoveryServiceProvider();
