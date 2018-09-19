@@ -231,8 +231,8 @@ public class Node {
             connectionManager = nodeContext.createConnectionManager(this, serverSocketChannel);
             JoinConfig joinConfig = this.config.getNetworkConfig().getJoin();
             DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
-            List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(joinConfig));
-            discoveryService = createDiscoveryService(discoveryConfig, additionalDiscoveryConfigs, localMember);
+            List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(joinConfig));
+            discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             clusterService = new ClusterServiceImpl(this, localMember);
             textCommandService = nodeExtension.createTextCommandService();
@@ -267,7 +267,8 @@ public class Node {
         return classLoader;
     }
 
-    public DiscoveryService createDiscoveryService(DiscoveryConfig discoveryConfig, List<DiscoveryStrategyConfig> additionalDiscoveryConfigs, Member localMember) {
+    public DiscoveryService createDiscoveryService(DiscoveryConfig discoveryConfig,
+                                                   List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs, Member localMember) {
         DiscoveryServiceProvider factory = discoveryConfig.getDiscoveryServiceProvider();
         if (factory == null) {
             factory = new DefaultDiscoveryServiceProvider();
@@ -279,7 +280,7 @@ public class Node {
                 .setLogger(logger)
                 .setDiscoveryMode(DiscoveryMode.Member)
                 .setDiscoveryConfig(discoveryConfig)
-                .setAliasedDiscoveryStrategyConfigs(additionalDiscoveryConfigs)
+                .setAliasedDiscoveryStrategyConfigs(aliasedDiscoveryConfigs)
                 .setDiscoveryNode(
                         new SimpleDiscoveryNode(localMember.getAddress(), localMember.getAttributes()));
 
