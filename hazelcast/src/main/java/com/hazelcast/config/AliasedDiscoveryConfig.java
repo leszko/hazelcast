@@ -24,13 +24,13 @@ import java.util.Map;
 /**
  * Configuration for discovery strategy aliases, e.g. {@code <gcp>}.
  */
-public class DiscoveryAliasConfig {
+public class AliasedDiscoveryConfig {
     protected boolean enabled;
     protected final Map<String, String> properties = new HashMap<String, String>();
 
     private String environment;
 
-    public DiscoveryAliasConfig setEnabled(boolean enabled) {
+    public AliasedDiscoveryConfig setEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -39,7 +39,7 @@ public class DiscoveryAliasConfig {
         return enabled;
     }
 
-    public DiscoveryAliasConfig addProperty(String key, String value) {
+    public AliasedDiscoveryConfig addProperty(String key, String value) {
         properties.put(key, value);
         return this;
     }
@@ -52,7 +52,7 @@ public class DiscoveryAliasConfig {
         return environment;
     }
 
-    public DiscoveryAliasConfig setEnvironment(String environment) {
+    public AliasedDiscoveryConfig setEnvironment(String environment) {
         this.environment = environment;
         return this;
     }

@@ -20,9 +20,9 @@ import com.hazelcast.client.impl.ClientEngineImpl;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.cluster.Joiner;
 import com.hazelcast.cluster.impl.TcpIpJoiner;
+import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigurationException;
-import com.hazelcast.config.DiscoveryAliasConfig;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.DiscoveryAliasMapper;
@@ -279,15 +279,15 @@ public class Node {
                 .setLogger(logger)
                 .setDiscoveryMode(DiscoveryMode.Member)
                 .setDiscoveryConfig(discoveryConfig)
-                .setAdditionalDiscoveryStrategyConfigs(additionalDiscoveryConfigs)
+                .setAliasedDiscoveryStrategyConfigs(additionalDiscoveryConfigs)
                 .setDiscoveryNode(
                         new SimpleDiscoveryNode(localMember.getAddress(), localMember.getAttributes()));
 
         return factory.newDiscoveryService(settings);
     }
 
-    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(JoinConfig joinConfig) {
-        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(joinConfig.getDiscoveryAliasConfigs());
+    private static List<AliasedDiscoveryConfig> discoveryAliasConfigs(JoinConfig joinConfig) {
+        List<AliasedDiscoveryConfig> configs = new ArrayList<AliasedDiscoveryConfig>(joinConfig.getAliasedDiscoveryConfigs());
         if (joinConfig.getAwsConfig() != null) {
             configs.add(joinConfig.getAwsConfig());
         }

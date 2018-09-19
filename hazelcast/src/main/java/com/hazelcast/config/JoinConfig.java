@@ -33,7 +33,7 @@ public class JoinConfig {
 
     private AwsConfig awsConfig = new AwsConfig();
 
-    private final List<DiscoveryAliasConfig> discoveryAliasConfigs = new ArrayList<DiscoveryAliasConfig>();
+    private final List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig>();
 
     private DiscoveryConfig discoveryConfig = new DiscoveryConfig();
 
@@ -85,12 +85,12 @@ public class JoinConfig {
         return this;
     }
 
-    public List<DiscoveryAliasConfig> getDiscoveryAliasConfigs() {
-        return discoveryAliasConfigs;
+    public List<AliasedDiscoveryConfig> getAliasedDiscoveryConfigs() {
+        return aliasedDiscoveryConfigs;
     }
 
-    public JoinConfig addDiscoveryAliasConfig(DiscoveryAliasConfig discoveryAliasConfig) {
-        this.discoveryAliasConfigs.add(isNotNull(discoveryAliasConfig, "discoveryAliasConfig"));
+    public JoinConfig addDiscoveryAliasConfig(AliasedDiscoveryConfig aliasedDiscoveryConfig) {
+        this.aliasedDiscoveryConfigs.add(isNotNull(aliasedDiscoveryConfig, "aliasedDiscoveryConfig"));
         return this;
     }
 

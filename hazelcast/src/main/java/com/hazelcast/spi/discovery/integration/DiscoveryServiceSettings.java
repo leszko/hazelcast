@@ -91,7 +91,7 @@ public final class DiscoveryServiceSettings {
         return result;
     }
 
-    public DiscoveryServiceSettings setAdditionalDiscoveryStrategyConfigs(List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs) {
+    public DiscoveryServiceSettings setAliasedDiscoveryStrategyConfigs(List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs) {
         this.additionalDiscoveryStrategyConfigs = additionalDiscoveryStrategyConfigs;
         return this;
     }

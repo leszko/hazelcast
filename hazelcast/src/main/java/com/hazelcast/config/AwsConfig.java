@@ -16,18 +16,15 @@
 
 package com.hazelcast.config;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static com.hazelcast.util.Preconditions.checkHasText;
 
 /**
  * Configuration for the AWS Discovery Strategy.
  *
- * @deprecated Use {@link DiscoveryAliasConfig} instead.
+ * @deprecated Use {@link AliasedDiscoveryConfig} instead.
  */
 @Deprecated
-public class AwsConfig extends DiscoveryAliasConfig {
+public class AwsConfig extends AliasedDiscoveryConfig {
 
     public String getAccessKey() {
         return properties.get("access-key");

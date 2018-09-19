@@ -78,14 +78,13 @@ import com.hazelcast.concurrent.countdownlatch.CountDownLatchService;
 import com.hazelcast.concurrent.idgen.IdGeneratorService;
 import com.hazelcast.concurrent.lock.LockServiceImpl;
 import com.hazelcast.concurrent.semaphore.SemaphoreService;
+import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.CredentialsFactoryConfig;
-import com.hazelcast.config.DiscoveryAliasConfig;
 import com.hazelcast.config.DiscoveryAliasMapper;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.GroupConfig;
-import com.hazelcast.config.JoinConfig;
 import com.hazelcast.core.Client;
 import com.hazelcast.core.ClientService;
 import com.hazelcast.core.Cluster;
@@ -148,7 +147,6 @@ import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferService;
 import com.hazelcast.scheduledexecutor.IScheduledExecutorService;
 import com.hazelcast.scheduledexecutor.impl.DistributedScheduledExecutorService;
-import com.hazelcast.security.Credentials;
 import com.hazelcast.security.ICredentialsFactory;
 import com.hazelcast.spi.discovery.impl.DefaultDiscoveryServiceProvider;
 import com.hazelcast.spi.discovery.integration.DiscoveryMode;
@@ -436,7 +434,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
             return null;
         }
 
-        List<DiscoveryStrategyConfig> additionalDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(config));
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = discoveryAliasMapper.map(discoveryAliasConfigs(config));
         ILogger logger = loggingService.getLogger(DiscoveryService.class);
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         DiscoveryConfig discoveryConfig = networkConfig.getDiscoveryConfig().getAsReadOnly();
@@ -450,7 +448,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
                 .setConfigClassLoader(config.getClassLoader())
                 .setLogger(logger)
                 .setDiscoveryMode(DiscoveryMode.Client)
-                .setAdditionalDiscoveryStrategyConfigs(additionalDiscoveryConfigs)
+                .setAliasedDiscoveryStrategyConfigs(aliasedDiscoveryConfigs)
                 .setDiscoveryConfig(discoveryConfig);
 
         DiscoveryService discoveryService = factory.newDiscoveryService(settings);
@@ -458,9 +456,9 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         return discoveryService;
     }
 
-    private static List<DiscoveryAliasConfig> discoveryAliasConfigs(ClientConfig config) {
+    private static List<AliasedDiscoveryConfig> discoveryAliasConfigs(ClientConfig config) {
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
-        List<DiscoveryAliasConfig> configs = new ArrayList<DiscoveryAliasConfig>(networkConfig.getDiscoveryAliasConfigs());
+        List<AliasedDiscoveryConfig> configs = new ArrayList<AliasedDiscoveryConfig>(networkConfig.getAliasedDiscoveryConfigs());
         if (networkConfig.getAwsConfig() != null) {
             configs.add(networkConfig.getAwsConfig());
         }

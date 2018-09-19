@@ -1021,8 +1021,8 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         publisherConfig.addDiscoveryAliasConfig(createDiscoveryAliasConfig(node, tag));
     }
 
-    private DiscoveryAliasConfig createDiscoveryAliasConfig(Node node, String tag) {
-        DiscoveryAliasConfig config = new DiscoveryAliasConfig();
+    private AliasedDiscoveryConfig createDiscoveryAliasConfig(Node node, String tag) {
+        AliasedDiscoveryConfig config = new AliasedDiscoveryConfig();
         config.setEnvironment(tag);
         NamedNodeMap attributes = node.getAttributes();
         for (int a = 0; a < attributes.getLength(); a++) {

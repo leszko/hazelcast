@@ -55,7 +55,7 @@ public class WanPublisherConfig implements IdentifiedDataSerializable, Versioned
     private String className;
     private Object implementation;
     private AwsConfig awsConfig = new AwsConfig();
-    private final List<DiscoveryAliasConfig> discoveryAliasConfigs = new ArrayList<DiscoveryAliasConfig>();
+    private final List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig>();
     private DiscoveryConfig discoveryConfig = new DiscoveryConfig();
     private WanSyncConfig wanSyncConfig = new WanSyncConfig();
 
@@ -279,12 +279,12 @@ public class WanPublisherConfig implements IdentifiedDataSerializable, Versioned
         return this;
     }
 
-    public List<DiscoveryAliasConfig> getDiscoveryAliasConfigs() {
-        return discoveryAliasConfigs;
+    public List<AliasedDiscoveryConfig> getAliasedDiscoveryConfigs() {
+        return aliasedDiscoveryConfigs;
     }
 
-    public WanPublisherConfig addDiscoveryAliasConfig(DiscoveryAliasConfig discoveryAliasConfig) {
-        this.discoveryAliasConfigs.add(isNotNull(discoveryAliasConfig, "discoveryAliasConfig"));
+    public WanPublisherConfig addDiscoveryAliasConfig(AliasedDiscoveryConfig aliasedDiscoveryConfig) {
+        this.aliasedDiscoveryConfigs.add(isNotNull(aliasedDiscoveryConfig, "aliasedDiscoveryConfig"));
         return this;
     }
 

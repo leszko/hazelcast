@@ -22,7 +22,7 @@ import com.hazelcast.client.util.RoundRobinLB;
 import com.hazelcast.config.AbstractConfigBuilder;
 import com.hazelcast.config.ConfigLoader;
 import com.hazelcast.config.CredentialsFactoryConfig;
-import com.hazelcast.config.DiscoveryAliasConfig;
+import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.EvictionConfig;
@@ -598,7 +598,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
     }
 
     private void handleDiscoveryAlias(Node node, ClientNetworkConfig clientNetworkConfig, String tag) {
-        DiscoveryAliasConfig config = new DiscoveryAliasConfig();
+        AliasedDiscoveryConfig config = new AliasedDiscoveryConfig();
         config.setEnvironment(tag);
         NamedNodeMap atts = node.getAttributes();
         for (int i = 0; i < atts.getLength(); i++) {
