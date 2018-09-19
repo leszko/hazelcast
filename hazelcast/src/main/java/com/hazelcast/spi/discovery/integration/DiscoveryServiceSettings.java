@@ -35,7 +35,7 @@ public final class DiscoveryServiceSettings {
     private ILogger logger;
     private ClassLoader configClassLoader;
     private DiscoveryConfig discoveryConfig;
-    private List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs = new ArrayList<DiscoveryStrategyConfig>();
+    private List<DiscoveryStrategyConfig> aliasedDiscoveryStrategyConfigs = new ArrayList<DiscoveryStrategyConfig>();
     private DiscoveryMode discoveryMode;
 
     public DiscoveryNode getDiscoveryNode() {
@@ -71,7 +71,6 @@ public final class DiscoveryServiceSettings {
 
     public DiscoveryServiceSettings setDiscoveryConfig(DiscoveryConfig discoveryConfig) {
         this.discoveryConfig = discoveryConfig;
-
         return this;
     }
 
@@ -87,12 +86,13 @@ public final class DiscoveryServiceSettings {
     public List<DiscoveryStrategyConfig> getAllDiscoveryStrategyConfigs() {
         List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
         result.addAll(discoveryConfig.getDiscoveryStrategyConfigs());
-        result.addAll(additionalDiscoveryStrategyConfigs);
+        result.addAll(aliasedDiscoveryStrategyConfigs);
         return result;
     }
 
-    public DiscoveryServiceSettings setAliasedDiscoveryStrategyConfigs(List<DiscoveryStrategyConfig> additionalDiscoveryStrategyConfigs) {
-        this.additionalDiscoveryStrategyConfigs = additionalDiscoveryStrategyConfigs;
+    public DiscoveryServiceSettings setAliasedDiscoveryStrategyConfigs(List<DiscoveryStrategyConfig>
+                                                                               aliasedDiscoveryStrategyConfigs) {
+        this.aliasedDiscoveryStrategyConfigs = aliasedDiscoveryStrategyConfigs;
         return this;
     }
 }
