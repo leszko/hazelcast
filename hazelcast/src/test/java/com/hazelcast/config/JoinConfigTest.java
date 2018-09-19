@@ -42,26 +42,12 @@ public class JoinConfigTest {
         assertOk(true, true, false);
     }
 
-    public void assertOk(boolean tcp, boolean multicast, boolean aws) {
+    public static void assertOk(boolean tcp, boolean multicast, boolean aws) {
         JoinConfig config = new JoinConfig();
         config.getMulticastConfig().setEnabled(multicast);
         config.getTcpIpConfig().setEnabled(tcp);
         config.getAwsConfig().setEnabled(aws);
 
         config.verify();
-    }
-
-    public void assertNotOk(boolean tcp, boolean multicast, boolean aws) {
-        JoinConfig config = new JoinConfig();
-        config.getMulticastConfig().setEnabled(multicast);
-        config.getTcpIpConfig().setEnabled(tcp);
-        config.getAwsConfig().setEnabled(aws);
-
-        try {
-            config.verify();
-            fail();
-        } catch (IllegalStateException e) {
-
-        }
     }
 }
