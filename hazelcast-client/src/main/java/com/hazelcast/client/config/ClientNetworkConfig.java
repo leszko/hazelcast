@@ -325,7 +325,7 @@ public class ClientNetworkConfig {
         return aliasedDiscoveryConfigs;
     }
 
-    public ClientNetworkConfig addDiscoveryAliasConfig(AliasedDiscoveryConfig aliasedDiscoveryConfig) {
+    public ClientNetworkConfig addAliasedDiscoveryConfig(AliasedDiscoveryConfig aliasedDiscoveryConfig) {
         this.aliasedDiscoveryConfigs.add(isNotNull(aliasedDiscoveryConfig, "aliasedDiscoveryConfig"));
         return this;
     }

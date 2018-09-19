@@ -615,7 +615,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
             String value = getTextContent(n).trim();
             config.addProperty(key, value);
         }
-        clientNetworkConfig.addDiscoveryAliasConfig(config);
+        clientNetworkConfig.addAliasedDiscoveryConfig(config);
     }
 
     private void handleSSLConfig(Node node, ClientNetworkConfig clientNetworkConfig) {
