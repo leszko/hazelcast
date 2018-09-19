@@ -89,7 +89,7 @@
         <xs:attribute name="enabled" type="xs:boolean" use="optional" default="true">
             <xs:annotation>
                 <xs:documentation>
-                    Specifies whether the EC2 discovery is enabled or not. Value can be true or false.
+                    Specifies whether the the discovery stategy is enabled or not. Value can be true or false.
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
@@ -97,11 +97,7 @@
             <xs:annotation>
                 <xs:documentation>
                     The maximum amount of time Hazelcast is going to try to connect to a well known member
-                    before giving up. Setting its value too low value could mean that a member is not able
-                    to connect to a cluster. Setting it too high value means that member startup could slow
-                    down because of longer timeouts (e.g. when a well known member is not up). Increasing
-                    this value is recommended if you have many IPs listed and the members cannot properly
-                    build up the cluster. Its default value is 5.
+                    before giving up. Before using, please check if the given discovery strategy supports this property.
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
