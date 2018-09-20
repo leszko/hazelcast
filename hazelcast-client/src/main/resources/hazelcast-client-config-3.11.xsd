@@ -97,7 +97,7 @@
             <xs:annotation>
                 <xs:documentation>
                     The maximum amount of time Hazelcast is going to try to connect to a well known member
-                    before giving up. Before using, please check if the given discovery strategy supports this property.
+                    before giving up. Please check if the specific discovery strategy supports this property.
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>

@@ -389,12 +389,12 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private DiscoveryService initDiscoveryService(ClientConfig config) {
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
-        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED)
-                && AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config)).isEmpty()) {
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config));
+
+        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED) && aliasedDiscoveryConfigs.isEmpty()) {
             return null;
         }
 
-        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config));
         ILogger logger = loggingService.getLogger(DiscoveryService.class);
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         DiscoveryConfig discoveryConfig = networkConfig.getDiscoveryConfig().getAsReadOnly();

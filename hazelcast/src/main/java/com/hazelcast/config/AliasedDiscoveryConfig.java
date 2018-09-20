@@ -23,10 +23,9 @@ import java.util.Map;
  * Configuration for discovery strategy aliases, e.g. {@code <gcp>}.
  */
 public class AliasedDiscoveryConfig {
-    protected boolean enabled;
-    protected final Map<String, String> properties = new HashMap<String, String>();
-
+    private boolean enabled;
     private String environment;
+    private final Map<String, String> properties = new HashMap<String, String>();
 
     public AliasedDiscoveryConfig setEnabled(boolean enabled) {
         this.enabled = enabled;
