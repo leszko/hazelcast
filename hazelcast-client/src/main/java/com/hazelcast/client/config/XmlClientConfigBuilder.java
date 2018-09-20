@@ -491,7 +491,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
             } else if ("ssl".equals(nodeName)) {
                 handleSSLConfig(child, clientNetworkConfig);
             } else if (AliasedDiscoveryConfigMapper.supports(nodeName)) {
-                handleDiscoveryAlias(child, clientNetworkConfig, nodeName);
+                handleAliasedDiscoveryStrategy(child, clientNetworkConfig, nodeName);
             } else if ("discovery-strategies".equals(nodeName)) {
                 handleDiscoveryStrategies(child, clientNetworkConfig);
             } else if ("outbound-ports".equals(nodeName)) {
@@ -597,7 +597,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
         discoveryConfig.addDiscoveryStrategyConfig(new DiscoveryStrategyConfig(clazz, properties));
     }
 
-    private void handleDiscoveryAlias(Node node, ClientNetworkConfig clientNetworkConfig, String tag) {
+    private void handleAliasedDiscoveryStrategy(Node node, ClientNetworkConfig clientNetworkConfig, String tag) {
         AliasedDiscoveryConfig config = new AliasedDiscoveryConfig();
         config.setEnvironment(tag);
         NamedNodeMap atts = node.getAttributes();

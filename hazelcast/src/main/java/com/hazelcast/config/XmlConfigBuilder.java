@@ -672,7 +672,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         } else if ("properties".equals(targetChildName)) {
             fillProperties(targetChild, publisherConfig.getProperties());
         } else if (AliasedDiscoveryConfigMapper.supports(targetChildName)) {
-            handleDiscoveryAlias(publisherConfig, targetChild, targetChildName);
+            handleAliasedDiscoveryStrategy(publisherConfig, targetChild, targetChildName);
         } else if ("discovery-strategies".equals(targetChildName)) {
             handleDiscoveryStrategies(publisherConfig.getDiscoveryConfig(), targetChild);
         } else if ("wan-sync".equals(targetChildName)) {
@@ -953,7 +953,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             } else if ("tcp-ip".equals(name)) {
                 handleTcpIp(child);
             } else if (AliasedDiscoveryConfigMapper.supports(name)) {
-                handleDiscoveryAlias(config.getNetworkConfig().getJoin(), child, name);
+                handleAliasedDiscoveryStrategy(config.getNetworkConfig().getJoin(), child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(config.getNetworkConfig().getJoin().getDiscoveryConfig(), child);
             }
@@ -1012,11 +1012,11 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         discoveryConfig.addDiscoveryStrategyConfig(new DiscoveryStrategyConfig(clazz, properties));
     }
 
-    private void handleDiscoveryAlias(JoinConfig joinConfig, Node node, String tag) {
+    private void handleAliasedDiscoveryStrategy(JoinConfig joinConfig, Node node, String tag) {
         joinConfig.addDiscoveryAliasConfig(createDiscoveryAliasConfig(node, tag));
     }
 
-    private void handleDiscoveryAlias(WanPublisherConfig publisherConfig, Node node, String tag) {
+    private void handleAliasedDiscoveryStrategy(WanPublisherConfig publisherConfig, Node node, String tag) {
         publisherConfig.addDiscoveryAliasConfig(createDiscoveryAliasConfig(node, tag));
     }
 
