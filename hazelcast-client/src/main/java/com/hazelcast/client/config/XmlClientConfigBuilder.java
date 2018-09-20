@@ -23,7 +23,7 @@ import com.hazelcast.config.AbstractConfigBuilder;
 import com.hazelcast.config.ConfigLoader;
 import com.hazelcast.config.CredentialsFactoryConfig;
 import com.hazelcast.config.AliasedDiscoveryConfig;
-import com.hazelcast.config.AliasedDiscoveryStrategyMapper;
+import com.hazelcast.config.AliasedDiscoveryConfigMapper;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.EvictionConfig;
@@ -490,7 +490,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
                 handleSocketInterceptorConfig(child, clientNetworkConfig);
             } else if ("ssl".equals(nodeName)) {
                 handleSSLConfig(child, clientNetworkConfig);
-            } else if (AliasedDiscoveryStrategyMapper.supports(nodeName)) {
+            } else if (AliasedDiscoveryConfigMapper.supports(nodeName)) {
                 handleDiscoveryAlias(child, clientNetworkConfig, nodeName);
             } else if ("discovery-strategies".equals(nodeName)) {
                 handleDiscoveryStrategies(child, clientNetworkConfig);

@@ -29,10 +29,10 @@ import java.util.Map;
  * <p>
  * Note that the mapped strategies are only the ones that are officially supported by Hazelcast.
  */
-public final class AliasedDiscoveryStrategyMapper {
+public final class AliasedDiscoveryConfigMapper {
     private static final Map<String, String> ALIAS_MAPPINGS = new HashMap<String, String>();
 
-    private AliasedDiscoveryStrategyMapper() {
+    private AliasedDiscoveryConfigMapper() {
     }
 
     static {

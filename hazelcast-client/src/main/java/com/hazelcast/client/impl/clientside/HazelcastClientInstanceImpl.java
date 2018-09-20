@@ -77,7 +77,7 @@ import com.hazelcast.concurrent.semaphore.SemaphoreService;
 import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.CredentialsFactoryConfig;
-import com.hazelcast.config.AliasedDiscoveryStrategyMapper;
+import com.hazelcast.config.AliasedDiscoveryConfigMapper;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.GroupConfig;
@@ -390,11 +390,11 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
         if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED)
-                && AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs(config)).isEmpty()) {
+                && AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config)).isEmpty()) {
             return null;
         }
 
-        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs(config));
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config));
         ILogger logger = loggingService.getLogger(DiscoveryService.class);
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         DiscoveryConfig discoveryConfig = networkConfig.getDiscoveryConfig().getAsReadOnly();

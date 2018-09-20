@@ -671,7 +671,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             publisherConfig.setQueueCapacity(queueCapacity);
         } else if ("properties".equals(targetChildName)) {
             fillProperties(targetChild, publisherConfig.getProperties());
-        } else if (AliasedDiscoveryStrategyMapper.supports(targetChildName)) {
+        } else if (AliasedDiscoveryConfigMapper.supports(targetChildName)) {
             handleDiscoveryAlias(publisherConfig, targetChild, targetChildName);
         } else if ("discovery-strategies".equals(targetChildName)) {
             handleDiscoveryStrategies(publisherConfig.getDiscoveryConfig(), targetChild);
@@ -952,7 +952,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
                 handleMulticast(child);
             } else if ("tcp-ip".equals(name)) {
                 handleTcpIp(child);
-            } else if (AliasedDiscoveryStrategyMapper.supports(name)) {
+            } else if (AliasedDiscoveryConfigMapper.supports(name)) {
                 handleDiscoveryAlias(config.getNetworkConfig().getJoin(), child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(config.getNetworkConfig().getJoin().getDiscoveryConfig(), child);
