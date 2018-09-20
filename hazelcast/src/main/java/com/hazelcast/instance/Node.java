@@ -278,7 +278,7 @@ public class Node {
                 .setLogger(logger)
                 .setDiscoveryMode(DiscoveryMode.Member)
                 .setDiscoveryConfig(discoveryConfig)
-                .setAliasedDiscoveryStrategyConfigs(aliasedDiscoveryConfigs)
+                .setAliasedDiscoveryConfigs(aliasedDiscoveryConfigs)
                 .setDiscoveryNode(
                         new SimpleDiscoveryNode(localMember.getAddress(), localMember.getAttributes()));
 

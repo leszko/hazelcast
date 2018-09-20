@@ -408,7 +408,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
                 .setConfigClassLoader(config.getClassLoader())
                 .setLogger(logger)
                 .setDiscoveryMode(DiscoveryMode.Client)
-                .setAliasedDiscoveryStrategyConfigs(aliasedDiscoveryConfigs)
+                .setAliasedDiscoveryConfigs(aliasedDiscoveryConfigs)
                 .setDiscoveryConfig(discoveryConfig);
 
         DiscoveryService discoveryService = factory.newDiscoveryService(settings);

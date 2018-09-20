@@ -132,7 +132,7 @@ public class DefaultDiscoveryService
 
         try {
             Collection<DiscoveryStrategyConfig> discoveryStrategyConfigs = new ArrayList<DiscoveryStrategyConfig>(
-                    settings.getAllDiscoveryStrategyConfigs());
+                    settings.getAllDiscoveryConfigs());
 
             List<DiscoveryStrategyFactory> factories = collectFactories(discoveryStrategyConfigs, configClassLoader);
 

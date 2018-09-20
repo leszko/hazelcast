@@ -64,7 +64,7 @@ public final class AliasedDiscoveryConfigMapper {
         String className = ALIAS_MAPPINGS.get(config.getEnvironment());
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
         for (String key : config.getProperties().keySet()) {
-            putIfNotNull(properties, key, config.getProperties().get(key));
+            putIfKeyNotNull(properties, key, config.getProperties().get(key));
         }
         return new DiscoveryStrategyConfig(className, properties);
     }
@@ -75,7 +75,7 @@ public final class AliasedDiscoveryConfigMapper {
         }
     }
 
-    private static void putIfNotNull(Map<String, Comparable> properties, String key, String value) {
+    private static void putIfKeyNotNull(Map<String, Comparable> properties, String key, String value) {
         if (key != null) {
             properties.put(key, value);
         }

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Configuration for discovery strategy aliases, e.g. {@code <gcp>}.
+ * Configuration for discovery strategy aliases, e.g. {@literal <gcp>}.
  */
 public class AliasedDiscoveryConfig {
     private boolean enabled;
@@ -52,5 +52,11 @@ public class AliasedDiscoveryConfig {
     public AliasedDiscoveryConfig setEnvironment(String environment) {
         this.environment = environment;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "AliasedDiscoveryConfig{" + "enabled=" + enabled + ", environment='" + environment + '\'' + ", properties="
+                + properties + '}';
     }
 }

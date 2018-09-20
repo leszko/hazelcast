@@ -124,9 +124,4 @@ public class AwsConfig
     public String getEnvironment() {
         return "aws";
     }
-
-    @Override
-    public String toString() {
-        return "AwsConfig{" + "getProperties()=" + getProperties() + ", enabled=" + isEnabled() + '}';
-    }
 }
