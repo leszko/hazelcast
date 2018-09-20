@@ -1,18 +1,17 @@
 /*
  * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  ee the License for the specific language governing permissions and
- *  limitations under the License.
- *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.hazelcast.config;
@@ -22,10 +21,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DiscoveryAliasMapper {
-    public static final List<String> DISCOVERY_ALIASES = new ArrayList<String>();
-
+/**
+ * Maps Discovery Strategy aliases to Discovery Strategy classes.
+ * <p>
+ * For example, an XML configuration with {@literal <aws>} is mapped to the strategy class {@literal com.hazelcast.aws
+ * .AwsDiscoveryStrategy}.
+ * <p>
+ * Note that the mapped strategies are only the ones that are officially supported by Hazelcast.
+ */
+public final class DiscoveryAliasMapper {
     private static final Map<String, String> ALIAS_MAPPINGS = new HashMap<String, String>();
+
+    private DiscoveryAliasMapper() {
+    }
 
     static {
         ALIAS_MAPPINGS.put("aws", "com.hazelcast.aws.AwsDiscoveryStrategy");
@@ -34,13 +42,13 @@ public class DiscoveryAliasMapper {
         ALIAS_MAPPINGS.put("kubernetes", "com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy");
         ALIAS_MAPPINGS.put("eureka", "com.hazelcast.eureka.one.HazelcastKubernetesDiscoveryStrategy");
         ALIAS_MAPPINGS.put("zookeeper", "com.hazelcast.zookeeper.ZookeeperDiscoveryStrategy");
-
-        for (String alias : ALIAS_MAPPINGS.keySet()) {
-            DISCOVERY_ALIASES.add(alias);
-        }
     }
 
-    public List<DiscoveryStrategyConfig> map(List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs) {
+    public static boolean supports(String envioronment) {
+        return ALIAS_MAPPINGS.containsKey(envioronment);
+    }
+
+    public static List<DiscoveryStrategyConfig> map(List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs) {
         List<DiscoveryStrategyConfig> result = new ArrayList<DiscoveryStrategyConfig>();
         for (AliasedDiscoveryConfig config : aliasedDiscoveryConfigs) {
             if (config.isEnabled()) {
@@ -62,7 +70,7 @@ public class DiscoveryAliasMapper {
     }
 
     private static void validateConfig(AliasedDiscoveryConfig config) {
-        if (!DISCOVERY_ALIASES.contains(config.getEnvironment())) {
+        if (!ALIAS_MAPPINGS.containsKey(config.getEnvironment())) {
             throw new InvalidConfigurationException(String.format("Unknown environment tag: '%s'", config.getEnvironment()));
         }
     }

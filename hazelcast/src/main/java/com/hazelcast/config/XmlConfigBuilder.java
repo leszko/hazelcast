@@ -60,7 +60,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.config.DiscoveryAliasMapper.DISCOVERY_ALIASES;
 import static com.hazelcast.config.JobTrackerConfig.DEFAULT_COMMUNICATE_STATS;
 import static com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import static com.hazelcast.config.XmlElements.ATOMIC_LONG;
@@ -672,7 +671,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             publisherConfig.setQueueCapacity(queueCapacity);
         } else if ("properties".equals(targetChildName)) {
             fillProperties(targetChild, publisherConfig.getProperties());
-        } else if (DISCOVERY_ALIASES.contains(targetChildName)) {
+        } else if (DiscoveryAliasMapper.supports(targetChildName)) {
             handleDiscoveryAlias(publisherConfig, targetChild, targetChildName);
         } else if ("discovery-strategies".equals(targetChildName)) {
             handleDiscoveryStrategies(publisherConfig.getDiscoveryConfig(), targetChild);
@@ -953,7 +952,7 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
                 handleMulticast(child);
             } else if ("tcp-ip".equals(name)) {
                 handleTcpIp(child);
-            } else if (DISCOVERY_ALIASES.contains(name)) {
+            } else if (DiscoveryAliasMapper.supports(name)) {
                 handleDiscoveryAlias(config.getNetworkConfig().getJoin(), child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(config.getNetworkConfig().getJoin().getDiscoveryConfig(), child);

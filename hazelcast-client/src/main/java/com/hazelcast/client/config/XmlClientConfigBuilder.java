@@ -23,6 +23,7 @@ import com.hazelcast.config.AbstractConfigBuilder;
 import com.hazelcast.config.ConfigLoader;
 import com.hazelcast.config.CredentialsFactoryConfig;
 import com.hazelcast.config.AliasedDiscoveryConfig;
+import com.hazelcast.config.DiscoveryAliasMapper;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.EvictionConfig;
@@ -78,7 +79,6 @@ import static com.hazelcast.client.config.ClientXmlElements.SECURITY;
 import static com.hazelcast.client.config.ClientXmlElements.SERIALIZATION;
 import static com.hazelcast.client.config.ClientXmlElements.USER_CODE_DEPLOYMENT;
 import static com.hazelcast.client.config.ClientXmlElements.canOccurMultipleTimes;
-import static com.hazelcast.config.DiscoveryAliasMapper.DISCOVERY_ALIASES;
 import static com.hazelcast.util.StringUtil.LINE_SEPARATOR;
 import static com.hazelcast.util.StringUtil.upperCaseInternal;
 
@@ -490,7 +490,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
                 handleSocketInterceptorConfig(child, clientNetworkConfig);
             } else if ("ssl".equals(nodeName)) {
                 handleSSLConfig(child, clientNetworkConfig);
-            } else if (DISCOVERY_ALIASES.contains(nodeName)) {
+            } else if (DiscoveryAliasMapper.supports(nodeName)) {
                 handleDiscoveryAlias(child, clientNetworkConfig, nodeName);
             } else if ("discovery-strategies".equals(nodeName)) {
                 handleDiscoveryStrategies(child, clientNetworkConfig);

@@ -133,8 +133,6 @@ public class Node {
     public final NodeEngineImpl nodeEngine;
     public final ClientEngineImpl clientEngine;
 
-    private final DiscoveryAliasMapper discoveryAliasMapper;
-
     public final InternalPartitionServiceImpl partitionService;
     public final ClusterServiceImpl clusterService;
     public final MulticastService multicastService;
@@ -227,11 +225,10 @@ public class Node {
             healthMonitor = new HealthMonitor(this);
 
             clientEngine = new ClientEngineImpl(this);
-            discoveryAliasMapper = new DiscoveryAliasMapper();
             connectionManager = nodeContext.createConnectionManager(this, serverSocketChannel);
             JoinConfig joinConfig = this.config.getNetworkConfig().getJoin();
             DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
-            List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = discoveryAliasMapper.map(aliasedDiscoveryConfigs(joinConfig));
+            List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(joinConfig));
             discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             clusterService = new ClusterServiceImpl(this, localMember);
@@ -787,7 +784,7 @@ public class Node {
         JoinConfig join = config.getNetworkConfig().getJoin();
         join.verify();
 
-        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || !discoveryAliasMapper.map(aliasedDiscoveryConfigs(join)).isEmpty()) {
+        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || !DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(join)).isEmpty()) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
             return new DiscoveryJoiner(this, discoveryService, properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED));

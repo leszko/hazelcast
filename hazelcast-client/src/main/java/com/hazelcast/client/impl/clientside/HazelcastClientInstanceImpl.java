@@ -203,7 +203,6 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private final LoadBalancer loadBalancer;
     private final ClientExtension clientExtension;
     private final ICredentialsFactory credentialsFactory;
-    private final DiscoveryAliasMapper discoveryAliasMapper;
     private final DiscoveryService discoveryService;
     private final LoggingService loggingService;
     private final MetricsRegistryImpl metricsRegistry;
@@ -247,7 +246,6 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         loadBalancer = initLoadBalancer(config);
         transactionManager = new ClientTransactionManagerServiceImpl(this, loadBalancer);
         partitionService = new ClientPartitionServiceImpl(this);
-        discoveryAliasMapper = new DiscoveryAliasMapper();
         discoveryService = initDiscoveryService(config);
         Collection<AddressProvider> addressProviders = createAddressProviders(externalAddressProvider);
         AddressTranslator addressTranslator = createAddressTranslator();
@@ -368,7 +366,8 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     }
 
     @SuppressWarnings("checkstyle:booleanexpressioncomplexity")
-    private void isDiscoveryConfigurationConsistent(boolean addressListProvided, boolean discoverySpiEnabled, boolean hazelcastCloudEnabled) {
+    private void isDiscoveryConfigurationConsistent(boolean addressListProvided, boolean discoverySpiEnabled,
+                                                    boolean hazelcastCloudEnabled) {
         int count = 0;
         if (addressListProvided) {
             count++;
@@ -390,12 +389,12 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private DiscoveryService initDiscoveryService(ClientConfig config) {
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
-        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED) &&
-                discoveryAliasMapper.map(aliasedDiscoveryConfigs(config)).isEmpty()) {
+        if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED)
+                && DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(config)).isEmpty()) {
             return null;
         }
 
-        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = discoveryAliasMapper.map(aliasedDiscoveryConfigs(config));
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(config));
         ILogger logger = loggingService.getLogger(DiscoveryService.class);
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         DiscoveryConfig discoveryConfig = networkConfig.getDiscoveryConfig().getAsReadOnly();
