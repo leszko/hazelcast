@@ -25,7 +25,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class DiscoveryAliasMapperTest {
+public class AliasedDiscoveryStrategyMapperTest {
     @Test
     public void map() {
         // given
@@ -46,7 +46,7 @@ public class DiscoveryAliasMapperTest {
         );
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs);
 
         // then
         DiscoveryStrategyConfig gcpConfig = discoveryConfigs.get(0);
@@ -68,7 +68,7 @@ public class DiscoveryAliasMapperTest {
                 new AliasedDiscoveryConfig().setEnvironment("gcp").setEnabled(false));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs);
 
         // then
         assertTrue(discoveryConfigs.isEmpty());
@@ -81,7 +81,7 @@ public class DiscoveryAliasMapperTest {
                 new AliasedDiscoveryConfig().setEnvironment("gcp").setEnabled(true).addProperty(null, "value"));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs);
 
         // then
         assertTrue(discoveryConfigs.get(0).getProperties().isEmpty());
@@ -94,7 +94,7 @@ public class DiscoveryAliasMapperTest {
                 new AliasedDiscoveryConfig().setEnvironment("unknown").setEnabled(true));
 
         // when
-        DiscoveryAliasMapper.map(aliasedDiscoveryConfigs);
+        AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs);
 
         // then
         // throws exception

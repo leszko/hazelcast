@@ -25,7 +25,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigurationException;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
-import com.hazelcast.config.DiscoveryAliasMapper;
+import com.hazelcast.config.AliasedDiscoveryStrategyMapper;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.config.ListenerConfig;
 import com.hazelcast.config.MemberAttributeConfig;
@@ -228,7 +228,8 @@ public class Node {
             connectionManager = nodeContext.createConnectionManager(this, serverSocketChannel);
             JoinConfig joinConfig = this.config.getNetworkConfig().getJoin();
             DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
-            List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(joinConfig));
+            List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs =
+                    AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs(joinConfig));
             discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             clusterService = new ClusterServiceImpl(this, localMember);
@@ -784,7 +785,8 @@ public class Node {
         JoinConfig join = config.getNetworkConfig().getJoin();
         join.verify();
 
-        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || !DiscoveryAliasMapper.map(aliasedDiscoveryConfigs(join)).isEmpty()) {
+        if (properties.getBoolean(DISCOVERY_SPI_ENABLED)
+                || !AliasedDiscoveryStrategyMapper.map(aliasedDiscoveryConfigs(join)).isEmpty()) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
             return new DiscoveryJoiner(this, discoveryService, properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED));

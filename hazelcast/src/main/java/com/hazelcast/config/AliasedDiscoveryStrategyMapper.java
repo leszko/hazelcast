@@ -22,17 +22,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Maps Discovery Strategy aliases to Discovery Strategy classes.
+ * Maps Discovery Strategy aliases to Discovery Strategy configs.
  * <p>
  * For example, an XML configuration with {@literal <aws>} is mapped to the strategy class {@literal com.hazelcast.aws
  * .AwsDiscoveryStrategy}.
  * <p>
  * Note that the mapped strategies are only the ones that are officially supported by Hazelcast.
  */
-public final class DiscoveryAliasMapper {
+public final class AliasedDiscoveryStrategyMapper {
     private static final Map<String, String> ALIAS_MAPPINGS = new HashMap<String, String>();
 
-    private DiscoveryAliasMapper() {
+    private AliasedDiscoveryStrategyMapper() {
     }
 
     static {
