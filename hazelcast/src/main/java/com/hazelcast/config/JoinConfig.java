@@ -161,6 +161,7 @@ public class JoinConfig {
                 + "multicastConfig=" + multicastConfig
                 + ", tcpIpConfig=" + tcpIpConfig
                 + ", awsConfig=" + awsConfig
+                + ", aliasedDiscoveryConfigs=" + aliasedDiscoveryConfigs
                 + ", discoveryProvidersConfig=" + discoveryConfig
                 + '}';
     }

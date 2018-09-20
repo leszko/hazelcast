@@ -323,6 +323,7 @@ public class WanPublisherConfig implements IdentifiedDataSerializable, Versioned
                 + ", className='" + className + '\''
                 + ", implementation=" + implementation
                 + ", awsConfig=" + awsConfig
+                + ", aliasedDiscoveryConfigs=" + aliasedDiscoveryConfigs
                 + ", discoveryConfig=" + discoveryConfig
                 + '}';
     }
