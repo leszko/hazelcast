@@ -41,7 +41,6 @@ public final class AliasedDiscoveryConfigMapper {
         ALIAS_MAPPINGS.put("azure", "com.hazelcast.azure.AzureDiscoveryStrategy");
         ALIAS_MAPPINGS.put("kubernetes", "com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy");
         ALIAS_MAPPINGS.put("eureka", "com.hazelcast.eureka.one.HazelcastKubernetesDiscoveryStrategy");
-        ALIAS_MAPPINGS.put("zookeeper", "com.hazelcast.zookeeper.ZookeeperDiscoveryStrategy");
     }
 
     public static boolean supports(String envioronment) {
