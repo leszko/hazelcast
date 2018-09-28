@@ -201,13 +201,17 @@ public class XmlClientConfigBuilderTest extends HazelcastTestSupport {
 
         AwsConfig awsConfig = networkConfig.getAwsConfig();
         assertTrue(awsConfig.isEnabled());
-        assertEquals("TEST_ACCESS_KEY", awsConfig.getProperties().get("access-key"));
-        assertEquals("TEST_SECRET_KEY", awsConfig.getProperties().get("secret-key"));
-        assertEquals("us-east-1", awsConfig.getProperties().get("region"));
-        assertEquals("ec2.amazonaws.com", awsConfig.getProperties().get("host-header"));
-        assertEquals("type", awsConfig.getProperties().get("tag-key"));
-        assertEquals("hz-nodes", awsConfig.getProperties().get("tag-value"));
-        assertEquals("11", awsConfig.getProperties().get("connection-timeout-seconds"));
+        assertEquals("TEST_ACCESS_KEY", awsConfig.getProperty("access-key"));
+        assertEquals("TEST_SECRET_KEY", awsConfig.getProperty("secret-key"));
+        assertEquals("us-east-1", awsConfig.getProperty("region"));
+        assertEquals("ec2.amazonaws.com", awsConfig.getProperty("host-header"));
+        assertEquals("type", awsConfig.getProperty("tag-key"));
+        assertEquals("hz-nodes", awsConfig.getProperty("tag-value"));
+        assertEquals("11", awsConfig.getProperty("connection-timeout-seconds"));
+        assertFalse(networkConfig.getGcpConfig().isEnabled());
+        assertFalse(networkConfig.getAzureConfig().isEnabled());
+        assertFalse(networkConfig.getKubernetesConfig().isEnabled());
+        assertFalse(networkConfig.getEurekaConfig().isEnabled());
     }
 
     @Test
@@ -274,13 +278,13 @@ public class XmlClientConfigBuilderTest extends HazelcastTestSupport {
 
         assertEquals("com.hazelcast.nio.ssl.BasicSSLContextFactory", sslConfig.getFactoryClassName());
         assertEquals(7, sslConfig.getProperties().size());
-        assertEquals("TLS", sslConfig.getProperties().get("protocol"));
-        assertEquals("/opt/hazelcast-client.truststore", sslConfig.getProperties().get("trustStore"));
-        assertEquals("secret.123456", sslConfig.getProperties().get("trustStorePassword"));
-        assertEquals("JKS", sslConfig.getProperties().get("trustStoreType"));
-        assertEquals("/opt/hazelcast-client.keystore", sslConfig.getProperties().get("keyStore"));
-        assertEquals("keystorePassword123", sslConfig.getProperties().get("keyStorePassword"));
-        assertEquals("JKS", sslConfig.getProperties().get("keyStoreType"));
+        assertEquals("TLS", sslConfig.getProperty("protocol"));
+        assertEquals("/opt/hazelcast-client.truststore", sslConfig.getProperty("trustStore"));
+        assertEquals("secret.123456", sslConfig.getProperty("trustStorePassword"));
+        assertEquals("JKS", sslConfig.getProperty("trustStoreType"));
+        assertEquals("/opt/hazelcast-client.keystore", sslConfig.getProperty("keyStore"));
+        assertEquals("keystorePassword123", sslConfig.getProperty("keyStorePassword"));
+        assertEquals("JKS", sslConfig.getProperty("keyStoreType"));
     }
 
     @Test
