@@ -16,9 +16,7 @@
 
 package com.hazelcast.config;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import static com.hazelcast.util.Preconditions.isNotNull;
 
@@ -33,7 +31,13 @@ public class JoinConfig {
 
     private AwsConfig awsConfig = new AwsConfig();
 
-    private final List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig>();
+    private GcpConfig gcpConfig = new GcpConfig();
+
+    private AzureConfig azureConfig = new AzureConfig();
+
+    private KubernetesConfig kubernetesConfig = new KubernetesConfig();
+
+    private EurekaConfig eurekaConfig = new EurekaConfig();
 
     private DiscoveryConfig discoveryConfig = new DiscoveryConfig();
 
@@ -85,12 +89,39 @@ public class JoinConfig {
         return this;
     }
 
-    public List<AliasedDiscoveryConfig> getAliasedDiscoveryConfigs() {
-        return aliasedDiscoveryConfigs;
+    public GcpConfig getGcpConfig() {
+        return gcpConfig;
     }
 
-    public JoinConfig addDiscoveryAliasConfig(AliasedDiscoveryConfig aliasedDiscoveryConfig) {
-        this.aliasedDiscoveryConfigs.add(isNotNull(aliasedDiscoveryConfig, "aliasedDiscoveryConfig"));
+    public JoinConfig setGcpConfig(final GcpConfig gcpConfig) {
+        this.gcpConfig = isNotNull(gcpConfig, "gcpConfig");
+        return this;
+    }
+
+    public AzureConfig getAzureConfig() {
+        return azureConfig;
+    }
+
+    public JoinConfig setAzureConfig(final AzureConfig azureConfig) {
+        this.azureConfig = isNotNull(azureConfig, "azureConfig");
+        return this;
+    }
+
+    public KubernetesConfig getKubernetesConfig() {
+        return kubernetesConfig;
+    }
+
+    public JoinConfig setKubernetesConfig(final KubernetesConfig kubernetesConfig) {
+        this.kubernetesConfig = isNotNull(kubernetesConfig, "kubernetesConfig");
+        return this;
+    }
+
+    public EurekaConfig getEurekaConfig() {
+        return eurekaConfig;
+    }
+
+    public JoinConfig setEurekaConfig(final EurekaConfig eurekaConfig) {
+        this.eurekaConfig = isNotNull(eurekaConfig, "eurekaConfig");
         return this;
     }
 
@@ -161,8 +192,11 @@ public class JoinConfig {
                 + "multicastConfig=" + multicastConfig
                 + ", tcpIpConfig=" + tcpIpConfig
                 + ", awsConfig=" + awsConfig
-                + ", aliasedDiscoveryConfigs=" + aliasedDiscoveryConfigs
-                + ", discoveryProvidersConfig=" + discoveryConfig
+                + ", gcpConfig=" + gcpConfig
+                + ", azureConfig=" + azureConfig
+                + ", kubernetesConfig=" + kubernetesConfig
+                + ", eurekaConfig=" + eurekaConfig
+                + ", discoveryConfig=" + discoveryConfig
                 + '}';
     }
 }

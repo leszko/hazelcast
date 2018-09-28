@@ -16,8 +16,8 @@
 
 package com.hazelcast.client.config;
 
+import com.hazelcast.config.AwsConfig;
 import com.hazelcast.config.CredentialsFactoryConfig;
-import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.EntryListenerConfig;
 import com.hazelcast.config.EvictionConfig;
 import com.hazelcast.config.EvictionPolicy;
@@ -199,16 +199,15 @@ public class XmlClientConfigBuilderTest extends HazelcastTestSupport {
         assertEquals("com.hazelcast.examples.MySocketInterceptor", socketInterceptorConfig.getClassName());
         assertEquals("bar", socketInterceptorConfig.getProperty("foo"));
 
-        AliasedDiscoveryConfig awsAliasConfig = networkConfig.getAliasedDiscoveryConfigs().get(0);
-        assertEquals("aws", awsAliasConfig.getEnvironment());
-        assertTrue(awsAliasConfig.isEnabled());
-        assertEquals("TEST_ACCESS_KEY", awsAliasConfig.getProperties().get("access-key"));
-        assertEquals("TEST_SECRET_KEY", awsAliasConfig.getProperties().get("secret-key"));
-        assertEquals("us-east-1", awsAliasConfig.getProperties().get("region"));
-        assertEquals("ec2.amazonaws.com", awsAliasConfig.getProperties().get("host-header"));
-        assertEquals("type", awsAliasConfig.getProperties().get("tag-key"));
-        assertEquals("hz-nodes", awsAliasConfig.getProperties().get("tag-value"));
-        assertEquals("11", awsAliasConfig.getProperties().get("connection-timeout-seconds"));
+        AwsConfig awsConfig = networkConfig.getAwsConfig();
+        assertTrue(awsConfig.isEnabled());
+        assertEquals("TEST_ACCESS_KEY", awsConfig.getProperties().get("access-key"));
+        assertEquals("TEST_SECRET_KEY", awsConfig.getProperties().get("secret-key"));
+        assertEquals("us-east-1", awsConfig.getProperties().get("region"));
+        assertEquals("ec2.amazonaws.com", awsConfig.getProperties().get("host-header"));
+        assertEquals("type", awsConfig.getProperties().get("tag-key"));
+        assertEquals("hz-nodes", awsConfig.getProperties().get("tag-value"));
+        assertEquals("11", awsConfig.getProperties().get("connection-timeout-seconds"));
     }
 
     @Test

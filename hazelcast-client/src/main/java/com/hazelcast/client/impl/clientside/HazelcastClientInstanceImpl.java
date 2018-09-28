@@ -77,7 +77,7 @@ import com.hazelcast.concurrent.semaphore.SemaphoreService;
 import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.CredentialsFactoryConfig;
-import com.hazelcast.config.AliasedDiscoveryConfigMapper;
+import com.hazelcast.config.AliasedDiscoveryConfigUtils;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.GroupConfig;
@@ -163,7 +163,7 @@ import com.hazelcast.transaction.TransactionalTask;
 import com.hazelcast.transaction.impl.xa.XAService;
 import com.hazelcast.util.ServiceLoader;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -389,7 +389,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private DiscoveryService initDiscoveryService(ClientConfig config) {
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
-        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs(config));
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs(config));
 
         if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED) && aliasedDiscoveryConfigs.isEmpty()) {
             return null;
@@ -418,11 +418,8 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
 
     private static List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs(ClientConfig config) {
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
-        List<AliasedDiscoveryConfig> configs = new ArrayList<AliasedDiscoveryConfig>(networkConfig.getAliasedDiscoveryConfigs());
-        if (networkConfig.getAwsConfig() != null) {
-            configs.add(networkConfig.getAwsConfig());
-        }
-        return configs;
+        return Arrays.asList(networkConfig.getAwsConfig(), networkConfig.getGcpConfig(), networkConfig.getAzureConfig(),
+                networkConfig.getKubernetesConfig(), networkConfig.getEurekaConfig());
     }
 
     private LoadBalancer initLoadBalancer(ClientConfig config) {

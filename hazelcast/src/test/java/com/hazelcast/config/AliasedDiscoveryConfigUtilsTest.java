@@ -25,28 +25,18 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class AliasedDiscoveryConfigMapperTest {
+public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void map() {
         // given
         List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig>();
         aliasedDiscoveryConfigs
-                .add(new AliasedDiscoveryConfig()
-                        .setEnabled(true)
-                        .setEnvironment("gcp")
-                        .addProperty("projects", "hazelcast-33")
-                        .addProperty("zones", "us-east1-b")
-                );
-        aliasedDiscoveryConfigs.add(new AliasedDiscoveryConfig()
-                .setEnabled(true)
-                .setEnvironment("aws")
-                .addProperty("access-key", "someAccessKey")
-                .addProperty("secret-key", "someSecretKey")
-                .addProperty("region", "eu-central-1")
-        );
+                .add(new GcpConfig().setEnabled(true).setProperty("projects", "hazelcast-33").setProperty("zones", "us-east1-b"));
+        aliasedDiscoveryConfigs.add(new AwsConfig().setEnabled(true).setProperty("access-key", "someAccessKey")
+                .setProperty("secret-key", "someSecretKey").setProperty("region", "eu-central-1"));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
 
         // then
         DiscoveryStrategyConfig gcpConfig = discoveryConfigs.get(0);
@@ -64,11 +54,10 @@ public class AliasedDiscoveryConfigMapperTest {
     @Test
     public void skipNotEnabledConfigs() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(
-                new AliasedDiscoveryConfig().setEnvironment("gcp").setEnabled(false));
+        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(new GcpConfig().setEnabled(false));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
 
         // then
         assertTrue(discoveryConfigs.isEmpty());
@@ -77,11 +66,11 @@ public class AliasedDiscoveryConfigMapperTest {
     @Test
     public void skipPropertyWithNullKey() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(
-                new AliasedDiscoveryConfig().setEnvironment("gcp").setEnabled(true).addProperty(null, "value"));
+        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections
+                .singletonList(new GcpConfig().setEnabled(true).setProperty(null, "value"));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
 
         // then
         assertTrue(discoveryConfigs.get(0).getProperties().isEmpty());
@@ -90,11 +79,12 @@ public class AliasedDiscoveryConfigMapperTest {
     @Test(expected = InvalidConfigurationException.class)
     public void validateUnknownEnvironments() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(
-                new AliasedDiscoveryConfig().setEnvironment("unknown").setEnabled(true));
+        AliasedDiscoveryConfig aliasedDiscoveryConfig = new AliasedDiscoveryConfig() {
+        };
+        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(aliasedDiscoveryConfig.setEnabled(true));
 
         // when
-        AliasedDiscoveryConfigMapper.map(aliasedDiscoveryConfigs);
+        AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
 
         // then
         // throws exception

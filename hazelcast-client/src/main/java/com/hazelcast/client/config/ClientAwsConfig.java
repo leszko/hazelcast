@@ -16,13 +16,12 @@
 
 package com.hazelcast.client.config;
 
-import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.AwsConfig;
 
 /**
  * The AWSConfig contains the configuration for client to connect to nodes in aws environment.
  *
- * @deprecated Use {@link AliasedDiscoveryConfig} instead.
+ * @deprecated Use {@link AwsConfig} instead.
  */
 @Deprecated
 public class ClientAwsConfig extends AwsConfig {
@@ -35,6 +34,7 @@ public class ClientAwsConfig extends AwsConfig {
      *
      * @return boolean true if client is inside aws environment.
      */
+    @Deprecated
     public boolean isInsideAws() {
         return insideAws;
     }
@@ -45,6 +45,7 @@ public class ClientAwsConfig extends AwsConfig {
      *
      * @param insideAws isInsideAws
      */
+    @Deprecated
     public ClientAwsConfig setInsideAws(boolean insideAws) {
         this.insideAws = insideAws;
         return this;
