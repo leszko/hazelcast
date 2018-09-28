@@ -175,6 +175,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.hazelcast.client.spi.properties.ClientProperty.DISCOVERY_SPI_ENABLED;
 import static com.hazelcast.client.spi.properties.ClientProperty.HAZELCAST_CLOUD_DISCOVERY_TOKEN;
 import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allUsePublicAddress;
 import static com.hazelcast.util.ExceptionUtil.rethrow;
@@ -339,7 +340,13 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
 
         List<String> addresses = networkConfig.getAddresses();
         boolean addressListProvided = addresses.size() != 0;
-        boolean discoverySpiEnabled = discoveryService != null;
+        boolean awsDiscoveryEnabled = networkConfig.getAwsConfig() != null && networkConfig.getAwsConfig().isEnabled();
+        boolean gcpDiscoveryEnabled = networkConfig.getGcpConfig() != null && networkConfig.getGcpConfig().isEnabled();
+        boolean azureDiscoveryEnabled = networkConfig.getAzureConfig() != null && networkConfig.getAzureConfig().isEnabled();
+        boolean kubernetesDiscoveryEnabled = networkConfig.getKubernetesConfig() != null
+                && networkConfig.getKubernetesConfig().isEnabled();
+        boolean eurekaDiscoveryEnabled = networkConfig.getEurekaConfig() != null && networkConfig.getEurekaConfig().isEnabled();
+        boolean discoverySpiEnabled = discoverySpiEnabled(networkConfig);
         String cloudDiscoveryToken = properties.getString(HAZELCAST_CLOUD_DISCOVERY_TOKEN);
         if (cloudDiscoveryToken != null && cloudConfig.isEnabled()) {
             throw new IllegalStateException("Ambiguous hazelcast.cloud configuration. "
@@ -347,9 +354,10 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
                     + "Hazelcast cloud discovery together. Use only one.");
         }
         boolean hazelcastCloudEnabled = cloudDiscoveryToken != null || cloudConfig.isEnabled();
-        isDiscoveryConfigurationConsistent(addressListProvided, discoverySpiEnabled, hazelcastCloudEnabled);
+        isDiscoveryConfigurationConsistent(addressListProvided, awsDiscoveryEnabled, gcpDiscoveryEnabled, azureDiscoveryEnabled,
+                kubernetesDiscoveryEnabled, eurekaDiscoveryEnabled, discoverySpiEnabled, hazelcastCloudEnabled);
 
-        if (discoverySpiEnabled) {
+        if (discoveryService != null) {
             return new DiscoveryAddressTranslator(discoveryService, usePublicAddress(config));
         } else if (hazelcastCloudEnabled) {
             String discoveryToken;
@@ -365,16 +373,38 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         return new DefaultAddressTranslator();
     }
 
+    private boolean discoverySpiEnabled(ClientNetworkConfig networkConfig) {
+        return (networkConfig.getDiscoveryConfig() != null && networkConfig.getDiscoveryConfig().isEnabled())
+                || Boolean.parseBoolean(properties.getString(DISCOVERY_SPI_ENABLED));
+    }
+
     private boolean usePublicAddress(ClientConfig config) {
         return getProperties().getBoolean(ClientProperty.DISCOVERY_SPI_PUBLIC_IP_ENABLED)
                 || allUsePublicAddress(aliasedDiscoveryConfigs(config));
     }
 
-    @SuppressWarnings("checkstyle:booleanexpressioncomplexity")
-    private void isDiscoveryConfigurationConsistent(boolean addressListProvided, boolean discoverySpiEnabled,
-                                                    boolean hazelcastCloudEnabled) {
+    @SuppressWarnings({"checkstyle:booleanexpressioncomplexity", "checkstyle:npathcomplexity"})
+    private void isDiscoveryConfigurationConsistent(boolean addressListProvided, boolean awsDiscoveryEnabled,
+                                                    boolean gcpDiscoveryEnabled, boolean azureDiscoveryEnabled,
+                                                    boolean kubernetesDiscoveryEnabled, boolean eurekaDiscoveryEnabled,
+                                                    boolean discoverySpiEnabled, boolean hazelcastCloudEnabled) {
         int count = 0;
         if (addressListProvided) {
+            count++;
+        }
+        if (awsDiscoveryEnabled) {
+            count++;
+        }
+        if (gcpDiscoveryEnabled) {
+            count++;
+        }
+        if (azureDiscoveryEnabled) {
+            count++;
+        }
+        if (kubernetesDiscoveryEnabled) {
+            count++;
+        }
+        if (eurekaDiscoveryEnabled) {
             count++;
         }
         if (discoverySpiEnabled) {
@@ -386,6 +416,11 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         if (count > 1) {
             throw new IllegalStateException("Only one discovery method can be enabled at a time. "
                     + "cluster members given explicitly : " + addressListProvided
+                    + ", aws discovery: " + awsDiscoveryEnabled
+                    + ", gcp discovery: " + gcpDiscoveryEnabled
+                    + ", azure discovery: " + azureDiscoveryEnabled
+                    + ", kubernetes discovery: " + kubernetesDiscoveryEnabled
+                    + ", eureka discovery: " + eurekaDiscoveryEnabled
                     + ", discovery spi enabled : " + discoverySpiEnabled
                     + ", hazelcast.cloud enabled : " + hazelcastCloudEnabled);
         }

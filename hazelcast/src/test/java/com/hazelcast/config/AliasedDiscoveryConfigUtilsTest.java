@@ -38,6 +38,8 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void tagFor() {
         assertEquals("gcp", AliasedDiscoveryConfigUtils.tagFor(GcpConfig.class));
+        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(AwsConfig.class));
+        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(new AwsConfig() { }.getClass()));
         assertNull(AliasedDiscoveryConfigUtils.tagFor(AliasedDiscoveryConfig.class));
     }
 
@@ -75,7 +77,7 @@ public class AliasedDiscoveryConfigUtilsTest {
         List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig<?>>();
         aliasedDiscoveryConfigs
                 .add(new GcpConfig().setEnabled(true).setProperty("projects", "hazelcast-33").setProperty("zones", "us-east1-b"));
-        aliasedDiscoveryConfigs.add(new AwsConfig().setEnabled(true).setProperty("access-key", "someAccessKey")
+        aliasedDiscoveryConfigs.add(new AwsConfig() { }.setEnabled(true).setProperty("access-key", "someAccessKey")
                 .setProperty("secret-key", "someSecretKey").setProperty("region", "eu-central-1"));
 
         // when

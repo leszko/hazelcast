@@ -223,4 +223,10 @@ public class AwsConfig
         this.getProperties().put("iam-role", iamRole);
         return this;
     }
+
+    @Override
+    public AwsConfig setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        return this;
+    }
 }

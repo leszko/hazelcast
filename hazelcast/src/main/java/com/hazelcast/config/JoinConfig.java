@@ -150,18 +150,36 @@ public class JoinConfig {
      *
      * @throws IllegalStateException when the join config is not valid
      */
+    @SuppressWarnings("checkstyle:npathcomplexity")
     public void verify() {
-        if (getTcpIpConfig().isEnabled() && getMulticastConfig().isEnabled()) {
-            throw new InvalidConfigurationException("TCP/IP and Multicast join can't be enabled at the same time");
+        int countEnabled = 0;
+        if (getTcpIpConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getMulticastConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getAwsConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getGcpConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getAzureConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getKubernetesConfig().isEnabled()) {
+            countEnabled++;
+        }
+        if (getEurekaConfig().isEnabled()) {
+            countEnabled++;
         }
 
-        if (getTcpIpConfig().isEnabled() && getAwsConfig().isEnabled()) {
-            throw new InvalidConfigurationException("TCP/IP and AWS join can't be enabled at the same time");
+        if (countEnabled > 1) {
+            throw new InvalidConfigurationException("Multiple join configuration cannot be enabled at the same time. Enable only "
+                    + "one of: TCP/IP, Multicast, AWS, GCP, Azure, Kubernetes, or Eureka");
         }
 
-        if (getMulticastConfig().isEnabled() && getAwsConfig().isEnabled()) {
-            throw new InvalidConfigurationException("Multicast and AWS join can't be enabled at the same time");
-        }
         verifyDiscoveryProviderConfig();
     }
 
@@ -177,11 +195,6 @@ public class JoinConfig {
             if (getMulticastConfig().isEnabled()) {
                 throw new InvalidConfigurationException(
                         "Multicast and DiscoveryProviders join can't be enabled at the same time");
-            }
-
-            if (getAwsConfig().isEnabled()) {
-                throw new InvalidConfigurationException(
-                        "AWS and DiscoveryProviders join can't be enabled at the same time");
             }
         }
     }

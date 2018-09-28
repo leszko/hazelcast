@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static java.util.Arrays.asList;
 
@@ -58,7 +59,13 @@ public final class AliasedDiscoveryConfigUtils {
      * Returns an XML tag (e.g. {@literal <gcp>}) for the given config class.
      */
     public static String tagFor(Class clazz) {
-        return CONFIG_TO_XML_TAG.get(clazz);
+        for (Entry<Class, String> entry : CONFIG_TO_XML_TAG.entrySet()) {
+            Class baseClazz = entry.getKey();
+            if (baseClazz.isAssignableFrom(clazz)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     public static List<DiscoveryStrategyConfig> createDiscoveryStrategyConfigs(JoinConfig config) {
@@ -82,7 +89,7 @@ public final class AliasedDiscoveryConfigUtils {
     private static DiscoveryStrategyConfig createDiscoveryStrategyConfig(AliasedDiscoveryConfig<?> config) {
         validateConfig(config);
 
-        String className = CONFIG_TO_DISCOVERY_STRATEGY.get(config.getClass());
+        String className = discoveryStrategyFrom(config.getClass());
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
         for (String key : config.getProperties().keySet()) {
             putIfKeyNotNull(properties, key, config.getProperties().get(key));
@@ -91,10 +98,20 @@ public final class AliasedDiscoveryConfigUtils {
     }
 
     private static void validateConfig(AliasedDiscoveryConfig config) {
-        if (!CONFIG_TO_DISCOVERY_STRATEGY.containsKey(config.getClass())) {
+        if (discoveryStrategyFrom(config.getClass()) == null) {
             throw new InvalidConfigurationException(
                     String.format("Invalid configuration class: '%s'", config.getClass().getName()));
         }
+    }
+
+    private static String discoveryStrategyFrom(Class clazz) {
+        for (Entry<Class, String> entry : CONFIG_TO_DISCOVERY_STRATEGY.entrySet()) {
+            Class baseClazz = entry.getKey();
+            if (baseClazz.isAssignableFrom(clazz)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     private static void putIfKeyNotNull(Map<String, Comparable> properties, String key, String value) {
@@ -145,6 +162,11 @@ public final class AliasedDiscoveryConfigUtils {
                 config.getEurekaConfig());
     }
 
+    /**
+     * Checks whether all aliased discovery configs have the tag {@literal <use-public-ip>trye</use-public-ip}.
+     * <p>
+     * Note that if no config is enabled, then the method returns {@literal false}.
+     */
     public static boolean allUsePublicAddress(List<AliasedDiscoveryConfig<?>> configs) {
         boolean atLeastOneEnabled = false;
         for (AliasedDiscoveryConfig config : configs) {

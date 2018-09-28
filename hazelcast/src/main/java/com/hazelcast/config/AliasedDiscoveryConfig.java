@@ -26,6 +26,7 @@ import java.util.Map;
  */
 public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>> {
     private static final String USE_PUBLIC_IP_PROPERTY = "use-public-ip";
+
     private boolean enabled;
     private boolean usePublicIp;
     private final Map<String, String> properties = new HashMap<String, String>();
