@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigs;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom;
 import static com.hazelcast.internal.config.ConfigUtils.lookupByPattern;
 import static java.text.MessageFormat.format;
 import static java.util.Collections.singletonMap;
@@ -934,7 +934,8 @@ class ConfigCompatibilityChecker {
             return c1 == c2 || !(c1 == null || c2 == null)
                     && isCompatible(c1.getMulticastConfig(), c2.getMulticastConfig())
                     && isCompatible(c1.getTcpIpConfig(), c2.getTcpIpConfig())
-                    && new AliasedDiscoveryConfigsChecker().check(aliasedDiscoveryConfigs(c1), aliasedDiscoveryConfigs(c2))
+                    && new AliasedDiscoveryConfigsChecker().check(AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom(c1), AliasedDiscoveryConfigUtils
+                    .aliasedDiscoveryConfigsFrom(c2))
                     && new DiscoveryConfigChecker().check(c1.getDiscoveryConfig(), c2.getDiscoveryConfig());
         }
 
@@ -1008,10 +1009,10 @@ class ConfigCompatibilityChecker {
         }
     }
 
-    private static class AliasedDiscoveryConfigsChecker extends ConfigChecker<List<AliasedDiscoveryConfig>> {
+    private static class AliasedDiscoveryConfigsChecker extends ConfigChecker<List<AliasedDiscoveryConfig<?>>> {
 
         @Override
-        boolean check(List<AliasedDiscoveryConfig> t1, List<AliasedDiscoveryConfig> t2) {
+        boolean check(List<AliasedDiscoveryConfig<?>> t1, List<AliasedDiscoveryConfig<?>> t2) {
             Map<Class, AliasedDiscoveryConfig> m1 = mapByClass(t1);
             Map<Class, AliasedDiscoveryConfig> m2 = mapByClass(t2);
 
@@ -1030,7 +1031,7 @@ class ConfigCompatibilityChecker {
             return true;
         }
 
-        private static Map<Class, AliasedDiscoveryConfig> mapByClass(List<AliasedDiscoveryConfig> configs) {
+        private static Map<Class, AliasedDiscoveryConfig> mapByClass(List<AliasedDiscoveryConfig<?>> configs) {
             Map<Class, AliasedDiscoveryConfig> result = new HashMap<Class, AliasedDiscoveryConfig>();
             for (AliasedDiscoveryConfig c : configs) {
                 if (c.isEnabled()) {
@@ -1077,7 +1078,7 @@ class ConfigCompatibilityChecker {
                     && nullSafeEqual(c1.getQueueCapacity(), c2.getQueueCapacity())
                     && nullSafeEqual(c1.getQueueFullBehavior(), c2.getQueueFullBehavior())
                     && nullSafeEqual(c1.getInitialPublisherState(), c2.getInitialPublisherState())
-                    && new AliasedDiscoveryConfigsChecker().check(aliasedDiscoveryConfigs(c1), aliasedDiscoveryConfigs(c2))
+                    && new AliasedDiscoveryConfigsChecker().check(aliasedDiscoveryConfigsFrom(c1), aliasedDiscoveryConfigsFrom(c2))
                     && new DiscoveryConfigChecker().check(c1.getDiscoveryConfig(), c2.getDiscoveryConfig())
                     && new WanSyncConfigChecker().check(c1.getWanSyncConfig(), c2.getWanSyncConfig())
                     && nullSafeEqual(c1.getClassName(), c2.getClassName())

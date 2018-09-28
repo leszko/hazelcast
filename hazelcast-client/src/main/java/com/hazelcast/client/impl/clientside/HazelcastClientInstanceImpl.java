@@ -176,7 +176,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.client.spi.properties.ClientProperty.HAZELCAST_CLOUD_DISCOVERY_TOKEN;
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allAliasedDiscoveryConfigUsePublicAddress;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allUsePublicAddress;
 import static com.hazelcast.util.ExceptionUtil.rethrow;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 import static java.lang.System.currentTimeMillis;
@@ -367,7 +367,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
 
     private boolean usePublicAddress(ClientConfig config) {
         return getProperties().getBoolean(ClientProperty.DISCOVERY_SPI_PUBLIC_IP_ENABLED)
-                || allAliasedDiscoveryConfigUsePublicAddress(aliasedDiscoveryConfigs(config));
+                || allUsePublicAddress(aliasedDiscoveryConfigs(config));
     }
 
     @SuppressWarnings("checkstyle:booleanexpressioncomplexity")
@@ -421,7 +421,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         return discoveryService;
     }
 
-    private static List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs(ClientConfig config) {
+    private static List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs(ClientConfig config) {
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
         return Arrays.asList(networkConfig.getAwsConfig(), networkConfig.getGcpConfig(), networkConfig.getAzureConfig(),
                 networkConfig.getKubernetesConfig(), networkConfig.getEurekaConfig());

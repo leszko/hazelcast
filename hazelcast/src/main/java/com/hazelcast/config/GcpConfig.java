@@ -20,5 +20,5 @@ package com.hazelcast.config;
  * Configuration for the GCP Discovery Strategy.
  */
 public class GcpConfig
-        extends AliasedDiscoveryConfig {
+        extends AliasedDiscoveryConfig<GcpConfig> {
 }

@@ -100,8 +100,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigs;
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allAliasedDiscoveryConfigUsePublicAddress;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allUsePublicAddress;
 import static com.hazelcast.instance.MemberImpl.NA_MEMBER_LIST_JOIN_VERSION;
 import static com.hazelcast.instance.NodeShutdownHelper.shutdownNodeByFiringEvents;
 import static com.hazelcast.internal.cluster.impl.MulticastService.createMulticastService;
@@ -230,7 +229,7 @@ public class Node {
             JoinConfig joinConfig = this.config.getNetworkConfig().getJoin();
             DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
             List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs =
-                    AliasedDiscoveryConfigUtils.map(joinConfig);
+                    AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(joinConfig);
             discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             clusterService = new ClusterServiceImpl(this, localMember);
@@ -779,7 +778,7 @@ public class Node {
         join.verify();
 
         if (properties.getBoolean(DISCOVERY_SPI_ENABLED)
-                || !AliasedDiscoveryConfigUtils.map(join).isEmpty()) {
+                || !AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(join).isEmpty()) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
             return new DiscoveryJoiner(this, discoveryService, usePublicAddress(join));
@@ -800,7 +799,7 @@ public class Node {
 
     private boolean usePublicAddress(JoinConfig join) {
         return properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED)
-                || allAliasedDiscoveryConfigUsePublicAddress(aliasedDiscoveryConfigs(join));
+                || allUsePublicAddress(AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom(join));
     }
 
     private Joiner createAwsJoiner() {

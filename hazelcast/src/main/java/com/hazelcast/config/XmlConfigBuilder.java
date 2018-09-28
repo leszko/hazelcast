@@ -60,7 +60,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.getAliasedDiscoveryConfig;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.getConfigByTag;
 import static com.hazelcast.config.JobTrackerConfig.DEFAULT_COMMUNICATE_STATS;
 import static com.hazelcast.config.MapStoreConfig.InitialLoadMode;
 import static com.hazelcast.config.XmlElements.ATOMIC_LONG;
@@ -1014,12 +1014,12 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
     }
 
     private void handleAliasedDiscoveryStrategy(JoinConfig joinConfig, Node node, String tag) {
-        AliasedDiscoveryConfig aliasedDiscoveryConfig = getAliasedDiscoveryConfig(joinConfig, tag);
+        AliasedDiscoveryConfig aliasedDiscoveryConfig = AliasedDiscoveryConfigUtils.getConfigByTag(joinConfig, tag);
         updateConfig(aliasedDiscoveryConfig, node);
     }
 
     private void handleAliasedDiscoveryStrategy(WanPublisherConfig publisherConfig, Node node, String tag) {
-        AliasedDiscoveryConfig aliasedDiscoveryConfig = getAliasedDiscoveryConfig(publisherConfig, tag);
+        AliasedDiscoveryConfig aliasedDiscoveryConfig = getConfigByTag(publisherConfig, tag);
         updateConfig(aliasedDiscoveryConfig, node);
     }
 
@@ -1587,8 +1587,10 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
         String timeUnitStr = getAttribute(node, "time-unit");
         ExpiryPolicyType expiryPolicyType = ExpiryPolicyType.valueOf(upperCaseInternal(expiryPolicyTypeStr));
         if (expiryPolicyType != ExpiryPolicyType.ETERNAL && (isNullOrEmpty(durationAmountStr) || isNullOrEmpty(timeUnitStr))) {
-            throw new InvalidConfigurationException("Both of the \"duration-amount\" or \"time-unit\" attributes "
-                    + "are required for expiry policy factory configuration " + "(except \"ETERNAL\" expiry policy type)");
+            throw new InvalidConfigurationException(
+                    "Both of the \"duration-amount\" or \"time-unit\" attributes "
+                            + "are required for expiry policy factory configuration "
+                            + "(except \"ETERNAL\" expiry policy type)");
         }
         DurationConfig durationConfig = null;
         if (expiryPolicyType != ExpiryPolicyType.ETERNAL) {
@@ -1629,7 +1631,8 @@ public class XmlConfigBuilder extends AbstractConfigBuilder implements ConfigBui
             );
         }
         if (evictionPolicy != null) {
-            evictionConfig.setEvictionPolicy(EvictionPolicy.valueOf(upperCaseInternal(getTextContent(evictionPolicy))));
+            evictionConfig.setEvictionPolicy(EvictionPolicy.valueOf(upperCaseInternal(getTextContent(evictionPolicy)))
+            );
         }
         if (comparatorClassName != null) {
             evictionConfig.setComparatorClassName(getTextContent(comparatorClassName));

@@ -19,17 +19,60 @@ package com.hazelcast.config;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AliasedDiscoveryConfigUtilsTest {
+
+    @Test
+    public void supports() {
+        assertTrue(AliasedDiscoveryConfigUtils.supports("gcp"));
+        assertFalse(AliasedDiscoveryConfigUtils.supports("unknown"));
+    }
+
+    @Test
+    public void tagFor() {
+        assertEquals("gcp", AliasedDiscoveryConfigUtils.tagFor(GcpConfig.class));
+        assertNull(AliasedDiscoveryConfigUtils.tagFor(AliasedDiscoveryConfig.class));
+    }
+
+    @Test
+    public void createDiscoveryStrategyConfigsFromJoinConfig() {
+        // given
+        JoinConfig config = new JoinConfig();
+        config.getGcpConfig().setEnabled(true);
+
+        // when
+        List<DiscoveryStrategyConfig> result = AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(config);
+
+        // then
+        assertEquals(1, result.size());
+        assertEquals("com.hazelcast.gcp.GcpDiscoveryStrategy", result.get(0).getClassName());
+    }
+
+    @Test
+    public void createDiscoveryStrategyConfigsFromWanPublisherConfig() {
+        // given
+        WanPublisherConfig config = new WanPublisherConfig();
+        config.getGcpConfig().setEnabled(true);
+
+        // when
+        List<DiscoveryStrategyConfig> result = AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(config);
+
+        // then
+        assertEquals(1, result.size());
+        assertEquals("com.hazelcast.gcp.GcpDiscoveryStrategy", result.get(0).getClassName());
+    }
+
     @Test
     public void map() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig>();
+        List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig<?>>();
         aliasedDiscoveryConfigs
                 .add(new GcpConfig().setEnabled(true).setProperty("projects", "hazelcast-33").setProperty("zones", "us-east1-b"));
         aliasedDiscoveryConfigs.add(new AwsConfig().setEnabled(true).setProperty("access-key", "someAccessKey")
@@ -54,10 +97,11 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void skipNotEnabledConfigs() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(new GcpConfig().setEnabled(false));
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        configs.add(new GcpConfig().setEnabled(false));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(configs);
 
         // then
         assertTrue(discoveryConfigs.isEmpty());
@@ -66,11 +110,11 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void skipPropertyWithNullKey() {
         // given
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections
-                .singletonList(new GcpConfig().setEnabled(true).setProperty(null, "value"));
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        configs.add(new GcpConfig().setEnabled(true).setProperty(null, "value"));
 
         // when
-        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
+        List<DiscoveryStrategyConfig> discoveryConfigs = AliasedDiscoveryConfigUtils.map(configs);
 
         // then
         assertTrue(discoveryConfigs.get(0).getProperties().isEmpty());
@@ -80,13 +124,102 @@ public class AliasedDiscoveryConfigUtilsTest {
     public void validateUnknownEnvironments() {
         // given
         AliasedDiscoveryConfig aliasedDiscoveryConfig = new AliasedDiscoveryConfig() {
-        };
-        List<AliasedDiscoveryConfig> aliasedDiscoveryConfigs = Collections.singletonList(aliasedDiscoveryConfig.setEnabled(true));
+        }.setEnabled(true);
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        configs.add(aliasedDiscoveryConfig);
 
         // when
-        AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs);
+        AliasedDiscoveryConfigUtils.map(configs);
 
         // then
         // throws exception
+    }
+
+    @Test
+    public void getConfigByTagFromJoinConfig() {
+        // given
+        JoinConfig config = new JoinConfig();
+
+        // when
+        AliasedDiscoveryConfig result = AliasedDiscoveryConfigUtils.getConfigByTag(config, "gcp");
+
+        // then
+        assertEquals(GcpConfig.class, result.getClass());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getConfigByInvalidTagFromJoinConfig() {
+        // given
+        JoinConfig config = new JoinConfig();
+
+        // when
+        AliasedDiscoveryConfigUtils.getConfigByTag(config, "unknown");
+
+        // then
+        // throw exception
+    }
+
+    @Test
+    public void getConfigByTagFromWanPublisherConfig() {
+        // given
+        WanPublisherConfig config = new WanPublisherConfig();
+
+        // when
+        AliasedDiscoveryConfig result = AliasedDiscoveryConfigUtils.getConfigByTag(config, "gcp");
+
+        // then
+        assertEquals(GcpConfig.class, result.getClass());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void getConfigByInvalidTagFromWanPublisherConfig() {
+        // given
+        WanPublisherConfig config = new WanPublisherConfig();
+
+        // when
+        AliasedDiscoveryConfigUtils.getConfigByTag(config, "unknown");
+
+        // then
+        // throw exception
+    }
+
+    @Test
+    public void allUsePublicAddressTrue() {
+        // given
+        AwsConfig awsConfig = new AwsConfig().setEnabled(true).setUsePublicIp(true);
+        GcpConfig gcpConfig = new GcpConfig().setEnabled(true).setUsePublicIp(true);
+        List<AliasedDiscoveryConfig<?>> configs = asList(awsConfig, gcpConfig);
+
+        // when
+        boolean result = AliasedDiscoveryConfigUtils.allUsePublicAddress(configs);
+
+        // then
+        assertTrue(result);
+    }
+
+    @Test
+    public void allUsePublicAddressFalse() {
+        // given
+        AwsConfig awsConfig = new AwsConfig().setEnabled(true).setUsePublicIp(true);
+        GcpConfig gcpConfig = new GcpConfig().setEnabled(true).setUsePublicIp(false);
+        List<AliasedDiscoveryConfig<?>> configs = asList(awsConfig, gcpConfig);
+
+        // when
+        boolean result = AliasedDiscoveryConfigUtils.allUsePublicAddress(configs);
+
+        // then
+        assertFalse(result);
+    }
+
+    @Test
+    public void allUsePublicAddressEmpty() {
+        // given
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+
+        // when
+        boolean result = AliasedDiscoveryConfigUtils.allUsePublicAddress(configs);
+
+        // then
+        assertFalse(result);
     }
 }

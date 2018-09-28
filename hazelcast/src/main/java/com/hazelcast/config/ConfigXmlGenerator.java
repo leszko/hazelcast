@@ -45,7 +45,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
-import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigs;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom;
 import static com.hazelcast.config.PermissionConfig.PermissionType.ALL;
 import static com.hazelcast.config.PermissionConfig.PermissionType.CONFIG;
 import static com.hazelcast.config.PermissionConfig.PermissionType.TRANSACTION;
@@ -691,7 +691,7 @@ public class ConfigXmlGenerator {
            .node("queue-capacity", p.getQueueCapacity())
            .appendProperties(p.getProperties());
         wanReplicationSyncGenerator(gen, p.getWanSyncConfig());
-        aliasedDiscoveryConfigsGenerator(gen, aliasedDiscoveryConfigs(p));
+        aliasedDiscoveryConfigsGenerator(gen, aliasedDiscoveryConfigsFrom(p));
         discoveryStrategyConfigXmlGenerator(gen, p.getDiscoveryConfig());
         gen.close();
     }
@@ -734,7 +734,7 @@ public class ConfigXmlGenerator {
         gen.open("join");
         multicastConfigXmlGenerator(gen, join);
         tcpConfigXmlGenerator(gen, join);
-        aliasedDiscoveryConfigsGenerator(gen, aliasedDiscoveryConfigs(join));
+        aliasedDiscoveryConfigsGenerator(gen, AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom(join));
         discoveryStrategyConfigXmlGenerator(gen, join.getDiscoveryConfig());
         gen.close();
 
@@ -1101,28 +1101,12 @@ public class ConfigXmlGenerator {
                 .close();
     }
 
-    private static void awsConfigXmlGenerator(XmlGenerator gen, AwsConfig c) {
-        if (c == null || !c.isEnabled()) {
-            return;
-        }
-        gen.open("aws", "enabled", c.isEnabled())
-                .node("access-key", c.getAccessKey())
-                .node("secret-key", c.getSecretKey())
-                .node("iam-role", c.getIamRole())
-                .node("region", c.getRegion())
-                .node("host-header", c.getHostHeader())
-                .node("security-group-name", c.getSecurityGroupName())
-                .node("tag-key", c.getTagKey())
-                .node("tag-value", c.getTagValue())
-                .close();
-    }
-
-    private static void aliasedDiscoveryConfigsGenerator(XmlGenerator gen, List<AliasedDiscoveryConfig> configs) {
+    private static void aliasedDiscoveryConfigsGenerator(XmlGenerator gen, List<AliasedDiscoveryConfig<?>> configs) {
         if (configs == null) {
             return;
         }
         for (AliasedDiscoveryConfig<?> c : configs) {
-            gen.open(AliasedDiscoveryConfigUtils.toTag(c.getClass()), "enabled", c.isEnabled());
+            gen.open(AliasedDiscoveryConfigUtils.tagFor(c.getClass()), "enabled", c.isEnabled());
             for (String key : c.getProperties().keySet()) {
                 gen.node(key, c.getProperties().get(key));
             }

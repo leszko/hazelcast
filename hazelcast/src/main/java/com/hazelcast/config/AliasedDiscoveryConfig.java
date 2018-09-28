@@ -48,12 +48,12 @@ public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>
         return (T) this;
     }
 
-    public Map<String, String> getProperties() {
-        return properties;
-    }
-
     public String getProperty(String name) {
         return properties.get(name);
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
     }
 
     public T setUsePublicIp(boolean usePublicIp) {
@@ -67,6 +67,7 @@ public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>
 
     @Override
     public String toString() {
-        return "AliasedDiscoveryConfig{" + "enabled=" + enabled + ", properties=" + properties + '}';
+        return "AliasedDiscoveryConfig{" + "enabled=" + enabled + ", usePublicIp=" + usePublicIp + ", properties=" + properties
+                + '}';
     }
 }
