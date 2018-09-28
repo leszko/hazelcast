@@ -25,7 +25,7 @@ import com.hazelcast.config.AwsConfig;
  */
 @Deprecated
 public class ClientAwsConfig extends AwsConfig {
-    private boolean insideAws;
+    private static final String INSIDE_AWS_PROPERTY = "inside-aws";
 
     /**
      * If client is inside aws, it will use private ip addresses directly,
@@ -36,7 +36,7 @@ public class ClientAwsConfig extends AwsConfig {
      */
     @Deprecated
     public boolean isInsideAws() {
-        return insideAws;
+        return !isUsePublicIp();
     }
 
     /**
@@ -47,7 +47,17 @@ public class ClientAwsConfig extends AwsConfig {
      */
     @Deprecated
     public ClientAwsConfig setInsideAws(boolean insideAws) {
-        this.insideAws = insideAws;
+        setUsePublicIp(!insideAws);
+        return this;
+    }
+
+    @Override
+    public ClientAwsConfig setProperty(String key, String value) {
+        if (INSIDE_AWS_PROPERTY.equals(key)) {
+            setInsideAws(Boolean.parseBoolean(value));
+        } else {
+            super.setProperty(key, value);
+        }
         return this;
     }
 }

@@ -176,6 +176,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.client.spi.properties.ClientProperty.HAZELCAST_CLOUD_DISCOVERY_TOKEN;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allAliasedDiscoveryConfigUsePublicAddress;
 import static com.hazelcast.util.ExceptionUtil.rethrow;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 import static java.lang.System.currentTimeMillis;
@@ -349,8 +350,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         isDiscoveryConfigurationConsistent(addressListProvided, discoverySpiEnabled, hazelcastCloudEnabled);
 
         if (discoverySpiEnabled) {
-            return new DiscoveryAddressTranslator(discoveryService,
-                    getProperties().getBoolean(ClientProperty.DISCOVERY_SPI_PUBLIC_IP_ENABLED));
+            return new DiscoveryAddressTranslator(discoveryService, usePublicAddress(config));
         } else if (hazelcastCloudEnabled) {
             String discoveryToken;
             if (cloudConfig.isEnabled()) {
@@ -363,6 +363,11 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         }
 
         return new DefaultAddressTranslator();
+    }
+
+    private boolean usePublicAddress(ClientConfig config) {
+        return getProperties().getBoolean(ClientProperty.DISCOVERY_SPI_PUBLIC_IP_ENABLED)
+                || allAliasedDiscoveryConfigUsePublicAddress(aliasedDiscoveryConfigs(config));
     }
 
     @SuppressWarnings("checkstyle:booleanexpressioncomplexity")

@@ -139,4 +139,17 @@ public final class AliasedDiscoveryConfigUtils {
         return asList(config.getAwsConfig(), config.getGcpConfig(), config.getAzureConfig(), config.getKubernetesConfig(),
                 config.getEurekaConfig());
     }
+
+    public static boolean allAliasedDiscoveryConfigUsePublicAddress(List<AliasedDiscoveryConfig> configs) {
+        boolean atLeastOneEnabled = false;
+        for (AliasedDiscoveryConfig config : configs) {
+            if (config.isEnabled()) {
+                atLeastOneEnabled = true;
+                if (!config.isUsePublicIp()) {
+                    return false;
+                }
+            }
+        }
+        return atLeastOneEnabled;
+    }
 }

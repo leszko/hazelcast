@@ -25,7 +25,9 @@ import java.util.Map;
  * @param <T> Subclass that extends {@link AliasedDiscoveryConfig}.
  */
 public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>> {
+    private static final String USE_PUBLIC_IP_PROPERTY = "use-public-ip";
     private boolean enabled;
+    private boolean usePublicIp;
     private final Map<String, String> properties = new HashMap<String, String>();
 
     public T setEnabled(boolean enabled) {
@@ -38,7 +40,11 @@ public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>
     }
 
     public T setProperty(String key, String value) {
-        properties.put(key, value);
+        if (USE_PUBLIC_IP_PROPERTY.equals(key)) {
+            usePublicIp = Boolean.parseBoolean(value);
+        } else {
+            properties.put(key, value);
+        }
         return (T) this;
     }
 
@@ -48,6 +54,15 @@ public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>
 
     public String getProperty(String name) {
         return properties.get(name);
+    }
+
+    public T setUsePublicIp(boolean usePublicIp) {
+        this.usePublicIp = usePublicIp;
+        return (T) this;
+    }
+
+    public boolean isUsePublicIp() {
+        return usePublicIp;
     }
 
     @Override

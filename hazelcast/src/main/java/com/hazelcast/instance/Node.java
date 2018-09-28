@@ -100,6 +100,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.aliasedDiscoveryConfigs;
+import static com.hazelcast.config.AliasedDiscoveryConfigUtils.allAliasedDiscoveryConfigUsePublicAddress;
 import static com.hazelcast.instance.MemberImpl.NA_MEMBER_LIST_JOIN_VERSION;
 import static com.hazelcast.instance.NodeShutdownHelper.shutdownNodeByFiringEvents;
 import static com.hazelcast.internal.cluster.impl.MulticastService.createMulticastService;
@@ -780,7 +782,7 @@ public class Node {
                 || !AliasedDiscoveryConfigUtils.map(join).isEmpty()) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
-            return new DiscoveryJoiner(this, discoveryService, properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED));
+            return new DiscoveryJoiner(this, discoveryService, usePublicAddress(join));
         } else {
             if (join.getMulticastConfig().isEnabled() && multicastService != null) {
                 logger.info("Creating MulticastJoiner");
@@ -794,6 +796,11 @@ public class Node {
             }
         }
         return null;
+    }
+
+    private boolean usePublicAddress(JoinConfig join) {
+        return properties.getBoolean(DISCOVERY_SPI_PUBLIC_IP_ENABLED)
+                || allAliasedDiscoveryConfigUsePublicAddress(aliasedDiscoveryConfigs(join));
     }
 
     private Joiner createAwsJoiner() {
