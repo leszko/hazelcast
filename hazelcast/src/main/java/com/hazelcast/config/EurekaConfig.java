@@ -21,4 +21,7 @@ package com.hazelcast.config;
  */
 public class EurekaConfig
         extends AliasedDiscoveryConfig<EurekaConfig> {
+    public EurekaConfig() {
+        super("eureka");
+    }
 }

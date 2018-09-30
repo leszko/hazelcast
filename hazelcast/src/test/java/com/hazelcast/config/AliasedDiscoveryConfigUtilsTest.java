@@ -37,10 +37,10 @@ public class AliasedDiscoveryConfigUtilsTest {
 
     @Test
     public void tagFor() {
-        assertEquals("gcp", AliasedDiscoveryConfigUtils.tagFor(GcpConfig.class));
-        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(AwsConfig.class));
-        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(new AwsConfig() { }.getClass()));
-        assertNull(AliasedDiscoveryConfigUtils.tagFor(AliasedDiscoveryConfig.class));
+        assertEquals("gcp", AliasedDiscoveryConfigUtils.tagFor(new GcpConfig()));
+        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(new AwsConfig()));
+        assertEquals("aws", AliasedDiscoveryConfigUtils.tagFor(new AwsConfig() { }));
+        assertNull(AliasedDiscoveryConfigUtils.tagFor(new AliasedDiscoveryConfig(null) { }));
     }
 
     @Test
@@ -125,7 +125,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test(expected = InvalidConfigurationException.class)
     public void validateUnknownEnvironments() {
         // given
-        AliasedDiscoveryConfig aliasedDiscoveryConfig = new AliasedDiscoveryConfig() {
+        AliasedDiscoveryConfig aliasedDiscoveryConfig = new AliasedDiscoveryConfig("invalid-tag") {
         }.setEnabled(true);
         List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
         configs.add(aliasedDiscoveryConfig);

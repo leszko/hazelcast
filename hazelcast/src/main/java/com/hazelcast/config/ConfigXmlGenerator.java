@@ -1106,7 +1106,7 @@ public class ConfigXmlGenerator {
             return;
         }
         for (AliasedDiscoveryConfig<?> c : configs) {
-            gen.open(AliasedDiscoveryConfigUtils.tagFor(c.getClass()), "enabled", c.isEnabled());
+            gen.open(AliasedDiscoveryConfigUtils.tagFor(c), "enabled", c.isEnabled());
             for (String key : c.getProperties().keySet()) {
                 gen.node(key, c.getProperties().get(key));
             }

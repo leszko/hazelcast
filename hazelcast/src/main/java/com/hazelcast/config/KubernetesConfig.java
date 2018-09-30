@@ -21,5 +21,7 @@ package com.hazelcast.config;
  */
 public class KubernetesConfig
         extends AliasedDiscoveryConfig<KubernetesConfig> {
-
+    public KubernetesConfig() {
+        super("kubernetes");
+    }
 }

@@ -21,4 +21,7 @@ package com.hazelcast.config;
  */
 public class GcpConfig
         extends AliasedDiscoveryConfig<GcpConfig> {
+    public GcpConfig() {
+        super("gcp");
+    }
 }

@@ -25,6 +25,10 @@ public class AwsConfig
         extends AliasedDiscoveryConfig<AwsConfig> {
     private static final int CONNECTION_TIMEOUT = 5;
 
+    public AwsConfig() {
+        super("aws");
+    }
+
     /**
      * Gets Access Key.
      *

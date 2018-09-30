@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import static java.util.Arrays.asList;
 
@@ -28,44 +27,31 @@ import static java.util.Arrays.asList;
  * Utility class for Aliased Discovery Configs.
  */
 public final class AliasedDiscoveryConfigUtils {
-    private static final Map<Class, String> CONFIG_TO_DISCOVERY_STRATEGY = new HashMap<Class, String>();
-    private static final Map<Class, String> CONFIG_TO_XML_TAG = new HashMap<Class, String>();
+    private static final Map<String, String> ALIAS_MAPPINGS = new HashMap<String, String>();
 
     private AliasedDiscoveryConfigUtils() {
     }
 
     static {
-        CONFIG_TO_DISCOVERY_STRATEGY.put(AwsConfig.class, "com.hazelcast.aws.AwsDiscoveryStrategy");
-        CONFIG_TO_DISCOVERY_STRATEGY.put(GcpConfig.class, "com.hazelcast.gcp.GcpDiscoveryStrategy");
-        CONFIG_TO_DISCOVERY_STRATEGY.put(AzureConfig.class, "com.hazelcast.azure.AzureDiscoveryStrategy");
-        CONFIG_TO_DISCOVERY_STRATEGY.put(KubernetesConfig.class, "com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy");
-        CONFIG_TO_DISCOVERY_STRATEGY.put(EurekaConfig.class, "com.hazelcast.eureka.one.HazelcastKubernetesDiscoveryStrategy");
-
-        CONFIG_TO_XML_TAG.put(AwsConfig.class, "aws");
-        CONFIG_TO_XML_TAG.put(GcpConfig.class, "gcp");
-        CONFIG_TO_XML_TAG.put(AzureConfig.class, "azure");
-        CONFIG_TO_XML_TAG.put(KubernetesConfig.class, "kubernetes");
-        CONFIG_TO_XML_TAG.put(EurekaConfig.class, "eureka");
+        ALIAS_MAPPINGS.put("aws", "com.hazelcast.aws.AwsDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("gcp", "com.hazelcast.gcp.GcpDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("azure", "com.hazelcast.azure.AzureDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("kubernetes", "com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy");
+        ALIAS_MAPPINGS.put("eureka", "com.hazelcast.eureka.one.HazelcastKubernetesDiscoveryStrategy");
     }
 
     /**
      * Checks whether the given XML {@code tag} is supported.
      */
     public static boolean supports(String tag) {
-        return CONFIG_TO_XML_TAG.containsValue(tag);
+        return ALIAS_MAPPINGS.containsKey(tag);
     }
 
     /**
-     * Returns an XML tag (e.g. {@literal <gcp>}) for the given config class.
+     * Returns an XML tag (e.g. {@literal <gcp>}) for the given config.
      */
-    public static String tagFor(Class clazz) {
-        for (Entry<Class, String> entry : CONFIG_TO_XML_TAG.entrySet()) {
-            Class baseClazz = entry.getKey();
-            if (baseClazz.isAssignableFrom(clazz)) {
-                return entry.getValue();
-            }
-        }
-        return null;
+    public static String tagFor(AliasedDiscoveryConfig config) {
+        return config.getTag();
     }
 
     public static List<DiscoveryStrategyConfig> createDiscoveryStrategyConfigs(JoinConfig config) {
@@ -89,7 +75,7 @@ public final class AliasedDiscoveryConfigUtils {
     private static DiscoveryStrategyConfig createDiscoveryStrategyConfig(AliasedDiscoveryConfig<?> config) {
         validateConfig(config);
 
-        String className = discoveryStrategyFrom(config.getClass());
+        String className = discoveryStrategyFrom(config);
         Map<String, Comparable> properties = new HashMap<String, Comparable>();
         for (String key : config.getProperties().keySet()) {
             putIfKeyNotNull(properties, key, config.getProperties().get(key));
@@ -98,20 +84,14 @@ public final class AliasedDiscoveryConfigUtils {
     }
 
     private static void validateConfig(AliasedDiscoveryConfig config) {
-        if (discoveryStrategyFrom(config.getClass()) == null) {
+        if (!ALIAS_MAPPINGS.containsKey(config.getTag())) {
             throw new InvalidConfigurationException(
                     String.format("Invalid configuration class: '%s'", config.getClass().getName()));
         }
     }
 
-    private static String discoveryStrategyFrom(Class clazz) {
-        for (Entry<Class, String> entry : CONFIG_TO_DISCOVERY_STRATEGY.entrySet()) {
-            Class baseClazz = entry.getKey();
-            if (baseClazz.isAssignableFrom(clazz)) {
-                return entry.getValue();
-            }
-        }
-        return null;
+    private static String discoveryStrategyFrom(AliasedDiscoveryConfig config) {
+        return ALIAS_MAPPINGS.get(config.getTag());
     }
 
     private static void putIfKeyNotNull(Map<String, Comparable> properties, String key, String value) {

@@ -21,4 +21,7 @@ package com.hazelcast.config;
  */
 public class AzureConfig
         extends AliasedDiscoveryConfig<AzureConfig> {
+    public AzureConfig() {
+        super("azure");
+    }
 }
