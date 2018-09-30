@@ -21,6 +21,7 @@ import com.hazelcast.cardinality.CardinalityEstimator;
 import com.hazelcast.cardinality.impl.CardinalityEstimatorService;
 import com.hazelcast.client.ClientExtension;
 import com.hazelcast.client.LoadBalancer;
+import com.hazelcast.client.config.ClientAliasedDiscoveryConfigUtils;
 import com.hazelcast.client.config.ClientCloudConfig;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -380,7 +381,7 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
 
     private boolean usePublicAddress(ClientConfig config) {
         return getProperties().getBoolean(ClientProperty.DISCOVERY_SPI_PUBLIC_IP_ENABLED)
-                || allUsePublicAddress(aliasedDiscoveryConfigs(config));
+                || allUsePublicAddress(ClientAliasedDiscoveryConfigUtils.aliasedDiscoveryConfigsFrom(config));
     }
 
     @SuppressWarnings({"checkstyle:booleanexpressioncomplexity", "checkstyle:npathcomplexity"})
@@ -429,7 +430,8 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
     private DiscoveryService initDiscoveryService(ClientConfig config) {
         // Prevent confusing behavior where the DiscoveryService is started
         // and strategies are resolved but the AddressProvider is never registered
-        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs = AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigs(config));
+        List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs =
+                ClientAliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(config);
 
         if (!properties.getBoolean(ClientProperty.DISCOVERY_SPI_ENABLED) && aliasedDiscoveryConfigs.isEmpty()) {
             return null;
@@ -454,12 +456,6 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         DiscoveryService discoveryService = factory.newDiscoveryService(settings);
         discoveryService.start();
         return discoveryService;
-    }
-
-    private static List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs(ClientConfig config) {
-        ClientNetworkConfig networkConfig = config.getNetworkConfig();
-        return Arrays.asList(networkConfig.getAwsConfig(), networkConfig.getGcpConfig(), networkConfig.getAzureConfig(),
-                networkConfig.getKubernetesConfig(), networkConfig.getEurekaConfig());
     }
 
     private LoadBalancer initLoadBalancer(ClientConfig config) {

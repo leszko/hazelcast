@@ -26,6 +26,7 @@ import java.util.Map;
  */
 public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>> {
     private static final String USE_PUBLIC_IP_PROPERTY = "use-public-ip";
+    private static final String ENABLED_PROPERTY = "enabled";
 
     private final String tag;
     private boolean enabled;
@@ -48,6 +49,8 @@ public abstract class AliasedDiscoveryConfig<T extends AliasedDiscoveryConfig<T>
     public T setProperty(String key, String value) {
         if (USE_PUBLIC_IP_PROPERTY.equals(key)) {
             usePublicIp = Boolean.parseBoolean(value);
+        } else if (ENABLED_PROPERTY.equals(key)) {
+            enabled = Boolean.parseBoolean(value);
         } else {
             properties.put(key, value);
         }

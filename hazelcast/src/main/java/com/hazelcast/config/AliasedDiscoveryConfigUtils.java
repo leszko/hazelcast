@@ -159,4 +159,20 @@ public final class AliasedDiscoveryConfigUtils {
         }
         return atLeastOneEnabled;
     }
+
+    public static AliasedDiscoveryConfig newConfigFor(String tag) {
+        if ("aws".equals(tag)) {
+            return new AwsConfig();
+        } else if ("gcp".equals(tag)) {
+            return new GcpConfig();
+        } else if ("azure".equals(tag)) {
+            return new AzureConfig();
+        } else if ("kubernetes".equals(tag)) {
+            return new KubernetesConfig();
+        } else if ("eureka".equals(tag)) {
+            return new EurekaConfig();
+        } else {
+            throw new IllegalArgumentException(String.format("Invalid tag: '%s'", tag));
+        }
+    }
 }

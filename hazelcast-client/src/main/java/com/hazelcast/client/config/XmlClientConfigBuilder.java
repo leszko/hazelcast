@@ -598,7 +598,7 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
     }
 
     private void handleAliasedDiscoveryStrategy(Node node, ClientNetworkConfig clientNetworkConfig, String tag) {
-        AliasedDiscoveryConfig config = getAliasedDiscoveryConfig(clientNetworkConfig, tag);
+        AliasedDiscoveryConfig config = ClientAliasedDiscoveryConfigUtils.getConfigByTag(clientNetworkConfig, tag);
         NamedNodeMap atts = node.getAttributes();
         for (int i = 0; i < atts.getLength(); i++) {
             Node att = atts.item(i);
@@ -613,22 +613,6 @@ public class XmlClientConfigBuilder extends AbstractConfigBuilder {
             String key = cleanNodeName(n);
             String value = getTextContent(n).trim();
             config.setProperty(key, value);
-        }
-    }
-
-    private static AliasedDiscoveryConfig getAliasedDiscoveryConfig(ClientNetworkConfig config, String tag) {
-        if ("aws".equals(tag)) {
-            return config.getAwsConfig();
-        } else if ("gcp".equals(tag)) {
-            return config.getGcpConfig();
-        } else if ("azure".equals(tag)) {
-            return config.getAzureConfig();
-        } else if ("kubernetes".equals(tag)) {
-            return config.getKubernetesConfig();
-        } else if ("eureka".equals(tag)) {
-            return config.getEurekaConfig();
-        } else {
-            throw new InvalidConfigurationException(String.format("Invalid configuration tag: '%s'", tag));
         }
     }
 
