@@ -810,15 +810,7 @@ public class HazelcastConfigBeanDefinitionParser extends AbstractHazelcastBeanDe
 
         private void handleAliasedDiscoveryStrategy(Node node, BeanDefinitionBuilder builder, String name) {
             AliasedDiscoveryConfig config = AliasedDiscoveryConfigUtils.newConfigFor(name);
-            NamedNodeMap attributes = node.getAttributes();
-            if (attributes != null) {
-                for (int i = 0; i < attributes.getLength(); i++) {
-                    Node attribute = attributes.item(i);
-                    config.setProperty(attribute.getNodeName(), attribute.getNodeValue());
-                }
-            }
-            String propertyName = String.format("%sConfig", name);
-            builder.addPropertyValue(propertyName, config);
+            fillAttributesForAliasedDiscoveryStrategy(config, node, builder, name);
         }
 
         public void handleReliableTopic(Node node) {
