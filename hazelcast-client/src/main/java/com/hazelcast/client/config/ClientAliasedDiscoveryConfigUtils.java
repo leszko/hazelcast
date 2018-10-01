@@ -24,6 +24,8 @@ import com.hazelcast.config.InvalidConfigurationException;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Arrays.asList;
+
 /**
  * Utility class for Aliased Discovery Configs in Hazelcast Client.
  */
@@ -34,7 +36,7 @@ public class ClientAliasedDiscoveryConfigUtils {
 
     public static List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigsFrom(ClientConfig config) {
         ClientNetworkConfig networkConfig = config.getNetworkConfig();
-        return Arrays.asList(networkConfig.getAwsConfig(), networkConfig.getGcpConfig(), networkConfig.getAzureConfig(),
+        return asList(networkConfig.getAwsConfig(), networkConfig.getGcpConfig(), networkConfig.getAzureConfig(),
                 networkConfig.getKubernetesConfig(), networkConfig.getEurekaConfig());
     }
 
