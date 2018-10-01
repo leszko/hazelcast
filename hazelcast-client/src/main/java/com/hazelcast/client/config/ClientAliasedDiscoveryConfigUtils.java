@@ -20,12 +20,9 @@ import com.hazelcast.config.AliasedDiscoveryConfig;
 import com.hazelcast.config.AliasedDiscoveryConfigUtils;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.WanPublisherConfig;
 
 import java.util.Arrays;
 import java.util.List;
-
-import static java.util.Arrays.asList;
 
 /**
  * Utility class for Aliased Discovery Configs in Hazelcast Client.
@@ -41,7 +38,6 @@ public class ClientAliasedDiscoveryConfigUtils {
                 networkConfig.getKubernetesConfig(), networkConfig.getEurekaConfig());
     }
 
-
     public static AliasedDiscoveryConfig getConfigByTag(ClientNetworkConfig config, String tag) {
         if ("aws".equals(tag)) {
             return config.getAwsConfig();
@@ -55,6 +51,14 @@ public class ClientAliasedDiscoveryConfigUtils {
             return config.getEurekaConfig();
         } else {
             throw new InvalidConfigurationException(String.format("Invalid configuration tag: '%s'", tag));
+        }
+    }
+
+    public static AliasedDiscoveryConfig newAliasedDiscoveryConfig(String name) {
+        if ("aws".equals(name)) {
+            return new ClientAwsConfig();
+        } else {
+            return AliasedDiscoveryConfigUtils.newConfigFor(name);
         }
     }
 }

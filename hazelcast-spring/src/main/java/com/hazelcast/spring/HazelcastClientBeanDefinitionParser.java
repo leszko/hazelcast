@@ -17,6 +17,7 @@
 package com.hazelcast.spring;
 
 import com.hazelcast.client.HazelcastClient;
+import com.hazelcast.client.config.ClientAliasedDiscoveryConfigUtils;
 import com.hazelcast.client.config.ClientAwsConfig;
 import com.hazelcast.client.config.ClientCloudConfig;
 import com.hazelcast.client.config.ClientConfig;
@@ -293,7 +294,7 @@ public class HazelcastClientBeanDefinitionParser extends AbstractHazelcastBeanDe
         }
 
         private void handleAliasedDiscoveryStrategy(Node node, BeanDefinitionBuilder builder, String name) {
-            AliasedDiscoveryConfig config = newAliasedDiscoveryConfig(name);
+            AliasedDiscoveryConfig config = ClientAliasedDiscoveryConfigUtils.newAliasedDiscoveryConfig(name);
             NamedNodeMap attributes = node.getAttributes();
             if (attributes != null) {
                 for (int i = 0; i < attributes.getLength(); i++) {
@@ -303,14 +304,6 @@ public class HazelcastClientBeanDefinitionParser extends AbstractHazelcastBeanDe
             }
             String propertyName = String.format("%sConfig", name);
             builder.addPropertyValue(propertyName, config);
-        }
-
-        private AliasedDiscoveryConfig newAliasedDiscoveryConfig(String name) {
-            if ("aws".equals(name)) {
-                return new ClientAwsConfig();
-            } else {
-                return AliasedDiscoveryConfigUtils.newConfigFor(name);
-            }
         }
 
         private void handleSSLConfig(Node node, BeanDefinitionBuilder networkConfigBuilder) {
