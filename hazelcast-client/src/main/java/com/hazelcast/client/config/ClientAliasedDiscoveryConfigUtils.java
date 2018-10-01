@@ -21,7 +21,6 @@ import com.hazelcast.config.AliasedDiscoveryConfigUtils;
 import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.InvalidConfigurationException;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.asList;
