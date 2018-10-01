@@ -28,7 +28,11 @@ import static java.util.Arrays.asList;
 /**
  * Utility class for Aliased Discovery Configs in Hazelcast Client.
  */
-public class ClientAliasedDiscoveryConfigUtils {
+public final class ClientAliasedDiscoveryConfigUtils {
+
+    private ClientAliasedDiscoveryConfigUtils() {
+    }
+
     public static List<DiscoveryStrategyConfig> createDiscoveryStrategyConfigs(ClientConfig config) {
         return AliasedDiscoveryConfigUtils.map(aliasedDiscoveryConfigsFrom(config));
     }
