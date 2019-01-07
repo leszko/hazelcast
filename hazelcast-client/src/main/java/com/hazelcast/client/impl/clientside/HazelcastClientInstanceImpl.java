@@ -55,6 +55,7 @@ import com.hazelcast.client.spi.impl.ClientTransactionManagerServiceImpl;
 import com.hazelcast.client.spi.impl.ClientUserCodeDeploymentService;
 import com.hazelcast.client.spi.impl.DefaultAddressProvider;
 import com.hazelcast.client.spi.impl.DefaultAddressTranslator;
+import com.hazelcast.client.spi.impl.MembershipAddressTranslator;
 import com.hazelcast.client.spi.impl.NonSmartClientInvocationService;
 import com.hazelcast.client.spi.impl.SmartClientInvocationService;
 import com.hazelcast.client.spi.impl.discovery.DiscoveryAddressProvider;
@@ -249,10 +250,12 @@ public class HazelcastClientInstanceImpl implements HazelcastInstance, Serializa
         partitionService = new ClientPartitionServiceImpl(this);
         discoveryService = initDiscoveryService(config);
         AddressProvider addressProvider = createAddressProvider(externalAddressProvider);
-        AddressTranslator addressTranslator = createAddressTranslator();
+//        AddressTranslator addressTranslator = createAddressTranslator();
+        MembershipAddressTranslator addressTranslator = new MembershipAddressTranslator();
         connectionManager = (ClientConnectionManagerImpl) clientConnectionManagerFactory
                 .createConnectionManager(this, addressTranslator, addressProvider);
         clusterService = new ClientClusterServiceImpl(this);
+        clusterService.addMembershipListener(addressTranslator);
 
 
         invocationService = initInvocationService();

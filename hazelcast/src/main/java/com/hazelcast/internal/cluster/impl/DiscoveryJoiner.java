@@ -77,6 +77,9 @@ public class DiscoveryJoiner
         for (DiscoveryNode discoveryNode : discoveredNodes) {
             Address discoveredAddress = usePublicAddress ? discoveryNode.getPublicAddress() : discoveryNode.getPrivateAddress();
             if (localAddress.equals(discoveredAddress)) {
+                Address publicAddress = discoveryNode.getPublicAddress();
+                localMember.setStringAttribute("publicAddress",
+                        String.format("%s:%d", publicAddress.getHost(), publicAddress.getPort()));
                 continue;
             }
             possibleMembers.add(discoveredAddress);
