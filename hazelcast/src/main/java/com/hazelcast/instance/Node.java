@@ -252,7 +252,8 @@ public class Node {
             DiscoveryConfig discoveryConfig = joinConfig.getDiscoveryConfig().getAsReadOnly();
             List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs =
                     AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(joinConfig);
-            discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, localMember);
+            boolean isAutoDetectionEnabled = joinConfig.getAutoDetectionConfig().isEnabled();
+            discoveryService = createDiscoveryService(discoveryConfig, aliasedDiscoveryConfigs, isAutoDetectionEnabled, localMember);
             clusterService = new ClusterServiceImpl(this, localMember);
             partitionService = new InternalPartitionServiceImpl(this);
             textCommandService = nodeExtension.createTextCommandService();
@@ -299,7 +300,7 @@ public class Node {
     }
 
     public DiscoveryService createDiscoveryService(DiscoveryConfig discoveryConfig,
-                                                   List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs, Member localMember) {
+                                                   List<DiscoveryStrategyConfig> aliasedDiscoveryConfigs, boolean isAutoDetectionEnabled, Member localMember) {
         DiscoveryServiceProvider factory = discoveryConfig.getDiscoveryServiceProvider();
         if (factory == null) {
             factory = new DefaultDiscoveryServiceProvider();
@@ -312,6 +313,7 @@ public class Node {
                 .setDiscoveryMode(DiscoveryMode.Member)
                 .setDiscoveryConfig(discoveryConfig)
                 .setAliasedDiscoveryConfigs(aliasedDiscoveryConfigs)
+                .setAutoDetectionEnabled(isAutoDetectionEnabled)
                 .setDiscoveryNode(
                         new SimpleDiscoveryNode(localMember.getAddress(), localMember.getAttributes()));
 
