@@ -139,7 +139,7 @@ public class DefaultDiscoveryService
             List<DiscoveryStrategy> discoveryStrategies = new ArrayList<DiscoveryStrategy>();
 
             if (settings.isAutoDetectionEnabled()) {
-                logger.info("Discovery Strategy Autodetection enabled, looking for available discovery methods");
+                logger.info("Discovery Strategy auto-detection enabled, looking for available discovery methods");
                 DiscoveryStrategyFactory foundFactory = null;
                 for (DiscoveryStrategyFactory factory : factories) {
                     if (factory.isApplicableToCurrentEnvironment()) {
@@ -150,7 +150,7 @@ public class DefaultDiscoveryService
 
                         }
                     } else {
-                        logger.info(String.format("Discovery Factory '%s' not applicable to the current runtime environment", factory.getClass()));
+                        logger.info(String.format("Discovery Factory '%s' is not applicable to the current runtime environment", factory.getClass()));
                     }
                 }
                 if (foundFactory != null) {

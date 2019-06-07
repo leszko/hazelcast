@@ -429,7 +429,7 @@ public class Node {
                     createThreadName(hazelcastInstance.getName(), "MulticastThread"));
             multicastServiceThread.start();
         }
-        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || isAnyAliasedConfigEnabled(join)) {
+        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || isAnyAliasedConfigEnabled(join) || isAutoDetectionEnabled(join)) {
             discoveryService.start();
 
             // Discover local metadata from environment and merge into member attributes
@@ -811,7 +811,7 @@ public class Node {
         JoinConfig join = getActiveMemberNetworkConfig(config).getJoin();
         join.verify();
 
-        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || isAnyAliasedConfigEnabled(join)) {
+        if (properties.getBoolean(DISCOVERY_SPI_ENABLED) || isAnyAliasedConfigEnabled(join) || isAutoDetectionEnabled(join)) {
             //TODO: Auto-Upgrade Multicast+AWS configuration!
             logger.info("Activating Discovery SPI Joiner");
             return new DiscoveryJoiner(this, discoveryService, usePublicAddress(join));
@@ -832,6 +832,10 @@ public class Node {
 
     private static boolean isAnyAliasedConfigEnabled(JoinConfig join) {
         return !AliasedDiscoveryConfigUtils.createDiscoveryStrategyConfigs(join).isEmpty();
+    }
+
+    private static boolean isAutoDetectionEnabled(JoinConfig join) {
+        return join.getAutoDetectionConfig().isEnabled();
     }
 
     private boolean usePublicAddress(JoinConfig join) {

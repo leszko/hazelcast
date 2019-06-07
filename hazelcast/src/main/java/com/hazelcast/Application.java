@@ -17,13 +17,17 @@
 package com.hazelcast;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.XmlConfigBuilder;
+import com.hazelcast.config.YamlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 
 public class Application {
     public static void main(String[] args) {
-        Config config = new Config();
-        config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
-        config.getNetworkConfig().getJoin().getAutoDetectionConfig().setEnabled(true);
+//        Config config = new XmlConfigBuilder(Application.class.getClassLoader().getResourceAsStream("hazelcast-rafal.xml")).build();
+        Config config = new YamlConfigBuilder(Application.class.getClassLoader().getResourceAsStream("hazelcast-rafal.yaml")).build();
+//        Config config = new Config();
+//        config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+//        config.getNetworkConfig().getJoin().getAutoDetectionConfig().setEnabled(true);
 
         Hazelcast.newHazelcastInstance(config);
         System.out.println("Ala ma kota");

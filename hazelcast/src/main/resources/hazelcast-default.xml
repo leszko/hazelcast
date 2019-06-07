@@ -90,6 +90,7 @@
             </eureka>
             <discovery-strategies>
             </discovery-strategies>
+            <auto-detection enabled="false"/>
         </join>
         <interfaces enabled="false">
             <interface>10.10.1.*</interface>

@@ -1065,6 +1065,8 @@ class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
                 handleAliasedDiscoveryStrategy(joinConfig, child, name);
             } else if ("discovery-strategies".equals(name)) {
                 handleDiscoveryStrategies(joinConfig.getDiscoveryConfig(), child);
+            } else if ("auto-detection".equals(name)) {
+                handleAutoDetection(child, advancedNetworkConfig);
             }
         }
         joinConfig.verify();
@@ -1187,6 +1189,19 @@ class MemberDomConfigProcessor extends AbstractDomConfigProcessor {
                 multicastConfig.setMulticastTimeToLive(parseInt(value));
             } else if ("trusted-interfaces".equals(cleanNodeName(n))) {
                 handleTrustedInterfaces(multicastConfig, n);
+            }
+        }
+    }
+
+    private void handleAutoDetection(Node node, boolean advancedNetworkConfig) {
+        JoinConfig join = joinConfig(advancedNetworkConfig);
+        AutoDetectionConfig autoDetectionConfig = join.getAutoDetectionConfig();
+        NamedNodeMap attributes = node.getAttributes();
+        for (int a = 0; a < attributes.getLength(); a++) {
+            Node att = attributes.item(a);
+            String value = getTextContent(att).trim();
+            if ("enabled".equals(lowerCaseInternal(att.getNodeName()))) {
+                autoDetectionConfig.setEnabled(getBooleanValue(value));
             }
         }
     }
