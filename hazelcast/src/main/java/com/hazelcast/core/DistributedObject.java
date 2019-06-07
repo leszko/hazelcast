@@ -16,6 +16,12 @@
 
 package com.hazelcast.core;
 
+import com.hazelcast.topic.ITopic;
+import com.hazelcast.collection.IQueue;
+import com.hazelcast.transaction.TransactionalMap;
+import com.hazelcast.transaction.TransactionalMultiMap;
+import com.hazelcast.transaction.TransactionalQueue;
+
 /**
  * Base interface for all distributed objects.
  *

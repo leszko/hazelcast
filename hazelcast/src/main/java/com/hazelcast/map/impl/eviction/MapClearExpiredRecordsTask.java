@@ -24,7 +24,7 @@ import com.hazelcast.map.impl.operation.ClearExpiredOperation;
 import com.hazelcast.map.impl.operation.EvictBatchBackupOperation;
 import com.hazelcast.map.impl.recordstore.RecordStore;
 import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.properties.HazelcastProperty;
 
 import java.util.Collection;
@@ -76,13 +76,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *           config.setProperty({@value PROP_CLEANUP_OPERATION_COUNT}, "3");
  *           Hazelcast.newHazelcastInstance(config);
  *       </pre>
- * </p>
  * <p>
  * System-wide setting example:
  * <pre>
  *        System.setProperty({@value PROP_CLEANUP_OPERATION_COUNT}, "3");
  *    </pre>
- * </p>
  */
 public class MapClearExpiredRecordsTask
         extends ClearExpiredRecordsTask<PartitionContainer, RecordStore> {

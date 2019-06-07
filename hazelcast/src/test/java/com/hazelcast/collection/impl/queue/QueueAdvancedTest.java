@@ -20,7 +20,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.ListenerConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.IQueue;
+import com.hazelcast.collection.IQueue;
 import com.hazelcast.core.MemberAttributeEvent;
 import com.hazelcast.core.MembershipEvent;
 import com.hazelcast.core.MembershipListener;
@@ -380,7 +380,7 @@ public class QueueAdvancedTest extends HazelcastTestSupport {
 
     /**
      * Test case for issue 289.
-     * <p/>
+     * <p>
      * 1. Create HazelcastInstance h1 and h2, then get a queue from each (same queue name)
      * 2. Put a message on queue from h2
      * 3. Take a message off on queue from h1

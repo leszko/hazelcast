@@ -22,7 +22,7 @@ import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MapLoader;
-import com.hazelcast.core.TransactionalMap;
+import com.hazelcast.transaction.TransactionalMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryLoadedListener;
 import com.hazelcast.test.AssertTask;
@@ -312,7 +312,7 @@ public class InterceptorTest extends HazelcastTestSupport {
         }
     }
 
-    static class EntryPutProcessor extends AbstractEntryProcessor<Integer, String> {
+    static class EntryPutProcessor implements EntryProcessor<Integer, String, String> {
 
         String value;
 
@@ -321,7 +321,7 @@ public class InterceptorTest extends HazelcastTestSupport {
         }
 
         @Override
-        public Object process(Map.Entry<Integer, String> entry) {
+        public String process(Map.Entry<Integer, String> entry) {
             return entry.setValue(value);
         }
     }

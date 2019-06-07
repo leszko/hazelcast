@@ -19,6 +19,7 @@ package com.hazelcast.test;
 import classloading.ThreadLocalLeakTestUtils;
 import com.hazelcast.client.impl.ClientEngineImpl;
 import com.hazelcast.cluster.ClusterState;
+import com.hazelcast.collection.ISet;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
@@ -55,7 +56,7 @@ import com.hazelcast.partition.Partition;
 import com.hazelcast.partition.PartitionService;
 import com.hazelcast.query.impl.Indexes;
 import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationparker.impl.OperationParkerImpl;
 import com.hazelcast.spi.impl.operationservice.impl.OperationServiceImpl;
@@ -316,7 +317,7 @@ public abstract class HazelcastTestSupport {
 
     /**
      * Returns the partition ID from a non-partitioned Hazelcast data
-     * structures like {@link com.hazelcast.core.ISet}.
+     * structures like {@link ISet}.
      * <p>
      * The partition ID is read via reflection from the internal
      * {@code partitionId} field. This is needed to support proxied
@@ -1341,7 +1342,7 @@ public abstract class HazelcastTestSupport {
      * This form of eventual completion check has no strict time bounds.
      * Instead, it lets the checked test to continue as long as there is
      * progress observed within the provided stall tolerance time bound.
-     * <p/>
+     * <p>
      * This check may be useful for tests that can provide progress
      * information to prevent unnecessary failures due to unexpectedly
      * slow progress.
