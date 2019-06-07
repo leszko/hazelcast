@@ -153,7 +153,6 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${maven.jar.plugin.version}</version>
                 <configuration>
-                    <forceCreation>true</forceCreation>
                     <archive>
                         <index>true</index>
                         <compress>true</compress>
