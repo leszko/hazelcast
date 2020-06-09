@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.map.impl.operation;
 
-import com.hazelcast.core.IMapEvent;
+import com.hazelcast.map.IMapEvent;
 import com.hazelcast.map.MapInterceptor;
 import com.hazelcast.map.impl.InterceptorRegistry;
 import com.hazelcast.map.impl.ListenerAdapter;
@@ -30,7 +30,7 @@ import com.hazelcast.map.impl.querycache.accumulator.AccumulatorInfoSupplier;
 import com.hazelcast.map.impl.querycache.publisher.MapPublisherRegistry;
 import com.hazelcast.map.impl.querycache.publisher.PublisherContext;
 import com.hazelcast.map.impl.querycache.publisher.PublisherRegistry;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -45,7 +45,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 public class PostJoinMapOperation extends Operation implements IdentifiedDataSerializable, TargetAware {
 
@@ -174,7 +174,7 @@ public class PostJoinMapOperation extends Operation implements IdentifiedDataSer
 
         out.writeInt(interceptorInfoList.size());
         for (InterceptorInfo interceptorInfo : interceptorInfoList) {
-            interceptorInfo.writeData(out);
+            out.writeObject(interceptorInfo);
         }
         int size = infoList.size();
         out.writeInt(size);
@@ -189,9 +189,7 @@ public class PostJoinMapOperation extends Operation implements IdentifiedDataSer
 
         int interceptorsCount = in.readInt();
         for (int i = 0; i < interceptorsCount; i++) {
-            InterceptorInfo info = new InterceptorInfo();
-            info.readData(in);
-            interceptorInfoList.add(info);
+            interceptorInfoList.add(in.readObject());
         }
         int accumulatorsCount = in.readInt();
         if (accumulatorsCount < 1) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.hazelcast.config;
 
 import com.hazelcast.collection.ItemListener;
+import com.hazelcast.internal.config.ConfigDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
@@ -28,8 +29,6 @@ import java.io.IOException;
 public class ItemListenerConfig extends ListenerConfig {
 
     private boolean includeValue = true;
-
-    private transient ItemListenerConfigReadOnly readOnly;
 
     public ItemListenerConfig() {
     }
@@ -48,20 +47,6 @@ public class ItemListenerConfig extends ListenerConfig {
         includeValue = config.isIncludeValue();
         implementation = config.getImplementation();
         className = config.getClassName();
-    }
-
-    /**
-     * Gets immutable version of this configuration.
-     *
-     * @return immutable version of this configuration
-     * @deprecated this method will be removed in 4.0; it is meant for internal usage only
-     */
-    @Override
-    public ItemListenerConfigReadOnly getAsReadOnly() {
-        if (readOnly == null) {
-            readOnly = new ItemListenerConfigReadOnly(this);
-        }
-        return readOnly;
     }
 
     @Override
@@ -103,11 +88,7 @@ public class ItemListenerConfig extends ListenerConfig {
 
         ItemListenerConfig that = (ItemListenerConfig) o;
 
-        if (includeValue != that.includeValue) {
-            return false;
-        }
-
-        return true;
+        return includeValue == that.includeValue;
     }
 
     @Override

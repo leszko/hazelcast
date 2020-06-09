@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,19 @@ package com.hazelcast.map.impl.operation;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 
 import java.io.IOException;
 
 public class DeleteOperation extends BaseRemoveOperation {
+
+    // package private for testing purposes
+    boolean disableWanReplicationEvent;
     private boolean success;
 
     public DeleteOperation(String name, Data dataKey, boolean disableWanReplicationEvent) {
-        super(name, dataKey, disableWanReplicationEvent);
+        super(name, dataKey);
+        this.disableWanReplicationEvent = disableWanReplicationEvent;
     }
 
     public DeleteOperation() {
@@ -36,6 +40,11 @@ public class DeleteOperation extends BaseRemoveOperation {
     @Override
     protected void runInternal() {
         success = recordStore.delete(dataKey, getCallerProvenance());
+    }
+
+    @Override
+    protected boolean disableWanReplicationEvent() {
+        return disableWanReplicationEvent;
     }
 
     @Override

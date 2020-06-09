@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,8 +55,8 @@ public class TestSpringClientFailoverContext {
         ClientFailoverConfig failoverConfig = blueGreenClient.client.getFailoverConfig();
         List<ClientConfig> clientConfigs = failoverConfig.getClientConfigs();
         assertEquals(2, clientConfigs.size());
-        assertEquals("spring-group", clientConfigs.get(0).getGroupConfig().getName());
-        assertEquals("alternativeClusterName", clientConfigs.get(1).getGroupConfig().getName());
+        assertEquals("spring-cluster", clientConfigs.get(0).getClusterName());
+        assertEquals("alternativeClusterName", clientConfigs.get(1).getClusterName());
         assertEquals(5, failoverConfig.getTryCount());
         blueGreenClient.shutdown();
     }

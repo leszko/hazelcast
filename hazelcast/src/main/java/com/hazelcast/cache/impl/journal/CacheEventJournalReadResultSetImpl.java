@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package com.hazelcast.cache.impl.journal;
 
 import com.hazelcast.cache.impl.CacheDataSerializerHook;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
-import com.hazelcast.nio.serialization.SerializableByConvention;
+import com.hazelcast.cache.EventJournalCacheEvent;
+import com.hazelcast.internal.serialization.SerializableByConvention;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.ringbuffer.impl.ReadResultSetImpl;
-import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.internal.serialization.SerializationService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.function.Function;
@@ -69,7 +69,7 @@ public class CacheEventJournalReadResultSetImpl<K, V, T> extends ReadResultSetIm
     }
 
     @SerializableByConvention
-    private static class ProjectionAdapter<K, V, T> extends Projection<InternalEventJournalCacheEvent, T> {
+    private static class ProjectionAdapter<K, V, T> implements Projection<InternalEventJournalCacheEvent, T> {
 
         private final Function<? super EventJournalCacheEvent<K, V>, ? extends T> projection;
 

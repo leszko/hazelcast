@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,36 @@
 
 package com.hazelcast.core;
 
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
- * HazelcastJsonValue is a wrapper for Json formatted strings. It is
- * preferred to store HazelcastJsonValue instead of Strings for Json
- * formatted strings. Users can run predicates/aggregations and use
- * indexes on the attributes of the underlying Json strings.
+ * HazelcastJsonValue is a wrapper for JSON formatted strings. It is preferred
+ * to store HazelcastJsonValue instead of Strings for JSON-formatted strings.
+ * It allows you to run predicates/aggregations and use indexes on the
+ * attributes of the underlying JSON strings.
  *
- * HazelcastJsonValue is queried using Hazelcast's querying language.
- * See {@link com.hazelcast.query.Predicates}.
+ * <p>HazelcastJsonValue can be queried for fields in Hazelcast's queries. See
+ * {@link com.hazelcast.query.Predicates}.
  *
- * In terms of querying, numbers in Json strings are treated as either
- * {@code Long} or {@code Double}. Strings, booleans and null are
+ * <p>When querying, numbers in JSON strings are treated as either
+ * {@code Long} or {@code Double}. Strings, booleans and nulls are
  * treated as their Java counterparts.
  *
- * HazelcastJsonValue keeps given string as it is. Strings are not
- * checked for being valid. Ill-formatted json strings may cause false
- * positive or false negative results in queries. {@code null} string
- * is not allowed.
+ * <p>HazelcastJsonValue stores the given string as is. It is not validated.
+ * Ill-formatted JSON strings may cause false positive or false negative
+ * results in queries. {@code null} string is not allowed.
  */
 public final class HazelcastJsonValue {
 
     private final String string;
 
     /**
-     * Creates a HazelcastJsonValue from given string.
+     * Creates a HazelcastJsonValue from the given string.
      *
-     * @param string a non null Json string
+     * @param string a non-null JSON string
      */
     public HazelcastJsonValue(String string) {
-        checkNotNull(string);
-        this.string = string;
+        this.string = checkNotNull(string);
     }
 
     /**
@@ -68,13 +66,12 @@ public final class HazelcastJsonValue {
             return false;
         }
 
-        HazelcastJsonValue jsonValue = (HazelcastJsonValue) o;
-
-        return string != null ? string.equals(jsonValue.string) : jsonValue.string == null;
+        HazelcastJsonValue that = (HazelcastJsonValue) o;
+        return string.equals(that.string);
     }
 
     @Override
     public int hashCode() {
-        return string != null ? string.hashCode() : 0;
+        return string.hashCode();
     }
 }

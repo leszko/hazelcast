@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,15 @@ package com.hazelcast.map.impl.querycache.subscriber;
 
 import com.hazelcast.config.QueryCacheConfig;
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.QueryCache;
-import com.hazelcast.query.impl.Indexes;
 import com.hazelcast.query.impl.getters.Extractors;
 
+import java.util.UUID;
+
 /**
- * Internal interface which adds some internally used methods
- * to {@code QueryCache} interface.
+ * Internal interface which adds some internally
+ * used methods to {@code QueryCache} interface.
  *
  * @param <K> the key type for this {@code QueryCache}
  * @param <V> the value type for this {@code QueryCache}
@@ -35,16 +36,17 @@ public interface InternalQueryCache<K, V> extends QueryCache<K, V> {
     void set(K key, V value, EntryEventType eventType);
 
     /**
-     * Used during initial population of query cache. Initially fetched data
-     * from cluster will be written to query cache by the help of this method.
+     * Used during initial population of query cache.
+     * Initially fetched data from cluster will be
+     * written to query cache by the help of this method.
      */
     void prepopulate(K key, V value);
 
     void delete(Object key, EntryEventType eventType);
 
     /**
-     * Scans all entries in this {@link QueryCache} to remove matching ones
-     * with supplied {@code partitionId}
+     * Scans all entries in this {@link QueryCache} to remove
+     * matching ones with supplied {@code partitionId}
      *
      * @return number of entries removed
      */
@@ -52,13 +54,11 @@ public interface InternalQueryCache<K, V> extends QueryCache<K, V> {
 
     IMap<K, V> getDelegate();
 
-    Indexes getIndexes();
-
     void clear();
 
-    void setPublisherListenerId(String publisherListenerId);
+    UUID getPublisherListenerId();
 
-    String getPublisherListenerId();
+    void setPublisherListenerId(UUID publisherListenerId);
 
     /**
      * @return internally used ID for this query cache
@@ -68,8 +68,8 @@ public interface InternalQueryCache<K, V> extends QueryCache<K, V> {
     /**
      * Used to quit pre-population when max size is reached.
      *
-     * @return {@code true} if this query cache is at its max capacity,
-     * otherwise return {@code false}
+     * @return {@code true} if this query cache is at
+     * its max capacity, otherwise return {@code false}
      * @see QueryCacheConfig#isPopulate()
      */
     boolean reachedMaxCapacity();
@@ -84,10 +84,14 @@ public interface InternalQueryCache<K, V> extends QueryCache<K, V> {
      *
      * Recreation steps are:
      * <ul>
-     * <li>Reset local subscribers' state, clear all cache entries so far.</li>
-     * <li>Recreate/reset publisher (server) side
-     * resources by using this subscribers'metadata e.g. on
-     * server restart we can recreate server side resources.</li>
+     * <li>
+     * Reset local subscribers' state, clear all cached entries
+     * </li>
+     * <li>
+     * Recreate/reset publisher (server) side resources
+     * by using this subscribers'metadata e.g. on server
+     * restart we can recreate server side resources.
+     * </li>
      * </ul>
      */
     void recreate();

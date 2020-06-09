@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.hazelcast.internal.ascii;
 
+import com.hazelcast.cluster.impl.MemberImpl;
 import com.hazelcast.config.AdvancedNetworkConfig;
 import com.hazelcast.config.SSLConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.internal.ascii.rest.HttpCommandProcessor;
-import com.hazelcast.nio.IOUtil;
+import com.hazelcast.internal.nio.IOUtil;
 import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -56,16 +56,58 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.hazelcast.instance.EndpointQualifier.REST;
 import static com.hazelcast.internal.ascii.rest.HttpCommand.CONTENT_TYPE_PLAIN_TEXT;
-import static com.hazelcast.test.HazelcastTestSupport.getNode;
-import static com.hazelcast.util.StringUtil.bytesToString;
+import static com.hazelcast.internal.util.StringUtil.bytesToString;
+import static com.hazelcast.test.Accessors.getNode;
 
 @SuppressWarnings("SameParameterValue")
 public class HTTPCommunicator {
 
-    private final HazelcastInstance instance;
+    public static final String URI_MAPS = "maps/";
+    public static final String URI_QUEUES = "queues/";
+
+    // Instance
+    public static final String URI_INSTANCE = "instance";
+
+    // Cluster
+    public static final String URI_CLUSTER = "cluster";
+    public static final String URI_CLUSTER_STATE_URL = "management/cluster/state";
+    public static final String URI_CHANGE_CLUSTER_STATE_URL = "management/cluster/changeState";
+    public static final String URI_CLUSTER_VERSION_URL = "management/cluster/version";
+    public static final String URI_SHUTDOWN_CLUSTER_URL = "management/cluster/clusterShutdown";
+    public static final String URI_SHUTDOWN_NODE_CLUSTER_URL = "management/cluster/memberShutdown";
+    public static final String URI_CLUSTER_NODES_URL = "management/cluster/nodes";
+
+    // Hot restart
+    public static final String URI_FORCESTART_CLUSTER_URL = "management/cluster/forceStart";
+    public static final String URI_PARTIALSTART_CLUSTER_URL = "management/cluster/partialStart";
+    public static final String URI_HOT_RESTART_BACKUP_CLUSTER_URL = "management/cluster/hotBackup";
+    public static final String URI_HOT_RESTART_BACKUP_INTERRUPT_CLUSTER_URL = "management/cluster/hotBackupInterrupt";
+
+    // WAN
+    public static final String URI_WAN_SYNC_MAP = "wan/sync/map";
+    public static final String URI_WAN_SYNC_ALL_MAPS = "wan/sync/allmaps";
+    public static final String URI_WAN_CLEAR_QUEUES = "wan/clearWanQueues";
+    public static final String URI_ADD_WAN_CONFIG = "wan/addWanConfig";
+    public static final String URI_WAN_PAUSE_PUBLISHER = "wan/pausePublisher";
+    public static final String URI_WAN_STOP_PUBLISHER = "wan/stopPublisher";
+    public static final String URI_WAN_RESUME_PUBLISHER = "wan/resumePublisher";
+    public static final String URI_WAN_CONSISTENCY_CHECK_MAP = "wan/consistencyCheck/map";
+
+    // License info
+    public static final String URI_LICENSE_INFO = "license";
+
+    // CP Subsystem
+    public static final String URI_RESET_CP_SUBSYSTEM_URL = "cp-subsystem/reset";
+    public static final String URI_CP_GROUPS_URL = "cp-subsystem/groups";
+    public static final String URI_CP_SESSIONS_SUFFIX = "/sessions";
+    public static final String URI_REMOVE_SUFFIX = "/remove";
+    public static final String URI_CP_MEMBERS_URL = "cp-subsystem/members";
+    public static final String URI_LOCAL_CP_MEMBER_URL = URI_CP_MEMBERS_URL + "/local";
+
     private final String address;
     private final boolean sslEnabled;
     private boolean enableChunkedStreaming;
@@ -79,7 +121,6 @@ public class HTTPCommunicator {
     }
 
     public HTTPCommunicator(HazelcastInstance instance, String baseRestAddress) {
-        this.instance = instance;
 
         AdvancedNetworkConfig anc = instance.getConfig().getAdvancedNetworkConfig();
         SSLConfig sslConfig;
@@ -98,6 +139,10 @@ public class HTTPCommunicator {
             this.baseRestAddress = baseRestAddress;
         }
         this.address = protocol + this.baseRestAddress + "/hazelcast/rest/";
+    }
+
+    public String getUrl(String suffix) {
+        return address + suffix;
     }
 
     public HTTPCommunicator setTlsProtocol(String tlsProtocol) {
@@ -130,17 +175,17 @@ public class HTTPCommunicator {
     }
 
     public ConnectionResponse queuePoll(String queueName, long timeout) throws IOException {
-        String url = address + "queues/" + queueName + "/" + timeout;
+        String url = getUrl(URI_QUEUES + queueName + "/" + timeout);
         return doGet(url);
     }
 
     public int queueSize(String queueName) throws IOException {
-        String url = address + "queues/" + queueName + "/size";
+        String url = getUrl(URI_QUEUES + queueName + "/size");
         return Integer.parseInt(doGet(url).response);
     }
 
     public int queueOffer(String queueName, String data) throws IOException {
-        final String url = address + "queues/" + queueName;
+        final String url = getUrl(URI_QUEUES + queueName);
         return doPost(url, data).responseCode;
     }
 
@@ -149,7 +194,7 @@ public class HTTPCommunicator {
     }
 
     public ConnectionResponse mapGet(String mapName, String key) throws IOException {
-        String url = address + "maps/" + mapName + "/" + key;
+        String url = getUrl(URI_MAPS + mapName + "/" + key);
         return doGet(url);
     }
 
@@ -159,13 +204,23 @@ public class HTTPCommunicator {
     }
 
     public String getClusterInfo() throws IOException {
-        String url = address + "cluster";
+        String url = getUrl("cluster");
+        return doGet(url).response;
+    }
+
+    public String getInstanceInfo() throws IOException {
+        String url = getUrl(URI_INSTANCE);
         return doGet(url).response;
     }
 
     public String getLicenseInfo() throws IOException {
-        String url = address + "license";
+        String url = getUrl(URI_LICENSE_INFO);
         return doGet(url).response;
+    }
+
+    public ConnectionResponse setLicense(String clusterName, String clusterPassword, String licenseKey) throws IOException {
+        String url = getUrl(URI_LICENSE_INFO);
+        return doPost(url, clusterName, clusterPassword, licenseKey);
     }
 
     public int getFailingClusterHealthWithTrailingGarbage() throws IOException {
@@ -188,175 +243,172 @@ public class HTTPCommunicator {
     }
 
     public int mapPut(String mapName, String key, String value) throws IOException {
-        final String url = address + "maps/" + mapName + "/" + key;
+        String url = getUrl(URI_MAPS + mapName + "/" + key);
         return doPost(url, value).responseCode;
     }
 
     public int mapDeleteAll(String mapName) throws IOException {
-        String url = address + "maps/" + mapName;
+        String url = getUrl(URI_MAPS + mapName);
         return doDelete(url).responseCode;
     }
 
     public int mapDelete(String mapName, String key) throws IOException {
-        String url = address + "maps/" + mapName + "/" + key;
+        String url = getUrl(URI_MAPS + mapName + "/" + key);
         return doDelete(url).responseCode;
     }
 
-    public ConnectionResponse shutdownCluster(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/clusterShutdown";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse shutdownCluster(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_SHUTDOWN_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public String shutdownMember(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/memberShutdown";
-        return doPost(url, groupName, groupPassword).response;
+    public ConnectionResponse shutdownMember(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_SHUTDOWN_NODE_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public String getClusterState(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/state";
-        return doPost(url, groupName, groupPassword).response;
+    public ConnectionResponse getClusterState(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_CLUSTER_STATE_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse changeClusterState(String groupName, String groupPassword, String newState) throws IOException {
-        String url = address + "management/cluster/changeState";
-        return doPost(url, groupName, groupPassword, newState);
+    public ConnectionResponse changeClusterState(String clusterName, String clusterPassword, String newState) throws IOException {
+        String url = getUrl(URI_CHANGE_CLUSTER_STATE_URL);
+        return doPost(url, clusterName, clusterPassword, newState);
     }
 
     public String getClusterVersion() throws IOException {
-        String url = address + "management/cluster/version";
+        String url = getUrl(URI_CLUSTER_VERSION_URL);
         return doGet(url).response;
     }
 
-    public ConnectionResponse changeClusterVersion(String groupName, String groupPassword, String version) throws IOException {
-        String url = address + "management/cluster/version";
-        return doPost(url, groupName, groupPassword, version);
+    public ConnectionResponse changeClusterVersion(String clusterName, String clusterPassword, String version) throws IOException {
+        String url = getUrl(URI_CLUSTER_VERSION_URL);
+        return doPost(url, clusterName, clusterPassword, version);
     }
 
-    public ConnectionResponse hotBackup(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/hotBackup";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse hotBackup(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_HOT_RESTART_BACKUP_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse hotBackupInterrupt(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/hotBackupInterrupt";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse hotBackupInterrupt(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_HOT_RESTART_BACKUP_INTERRUPT_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse forceStart(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/forceStart";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse forceStart(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_FORCESTART_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse changeManagementCenterUrl(String groupName,
-                                                        String groupPassword, String newUrl) throws IOException {
-        String url = address + "mancenter/changeurl";
-        return doPost(url, groupName, groupPassword, newUrl);
+    public ConnectionResponse partialStart(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_PARTIALSTART_CLUSTER_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse partialStart(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/partialStart";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse listClusterNodes(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_CLUSTER_NODES_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public String listClusterNodes(String groupName, String groupPassword) throws IOException {
-        String url = address + "management/cluster/nodes";
-        return doPost(url, groupName, groupPassword).response;
+    public String syncMapOverWAN(String clusterName, String clusterPassword,
+                                 String wanRepName, String publisherId, String mapName) throws IOException {
+        String url = getUrl(URI_WAN_SYNC_MAP);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId, mapName).response;
     }
 
-    public String syncMapOverWAN(String wanRepName, String publisherId, String mapName) throws IOException {
-        String url = address + "mancenter/wan/sync/map";
-        return doPost(url, wanRepName, publisherId, mapName).response;
+    public String syncMapsOverWAN(String clusterName, String clusterPassword,
+                                  String wanRepName, String publisherId) throws IOException {
+        String url = getUrl(URI_WAN_SYNC_ALL_MAPS);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId).response;
     }
 
-    public String syncMapsOverWAN(String wanRepName, String publisherId) throws IOException {
-        String url = address + "mancenter/wan/sync/allmaps";
-        return doPost(url, wanRepName, publisherId).response;
+    public String wanMapConsistencyCheck(String clusterName, String clusterPassword,
+                                         String wanRepName, String publisherId, String mapName) throws IOException {
+        String url = getUrl(URI_WAN_CONSISTENCY_CHECK_MAP);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId, mapName).response;
     }
 
-    public String wanMapConsistencyCheck(String wanRepName, String publisherId, String mapName) throws IOException {
-        String url = address + "mancenter/wan/consistencyCheck/map";
-        return doPost(url, wanRepName, publisherId, mapName).response;
+    public String wanPausePublisher(String clusterName, String clusterPassword,
+                                    String wanRepName, String publisherId) throws IOException {
+        String url = getUrl(URI_WAN_PAUSE_PUBLISHER);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId).response;
     }
 
-    public String wanPausePublisher(String wanRepName, String publisherId) throws IOException {
-        String url = address + "mancenter/wan/pausePublisher";
-        return doPost(url, wanRepName, publisherId).response;
+    public String wanStopPublisher(String clusterName, String clusterPassword,
+                                   String wanRepName, String publisherId) throws IOException {
+        String url = getUrl(URI_WAN_STOP_PUBLISHER);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId).response;
     }
 
-    public String wanStopPublisher(String wanRepName, String publisherId) throws IOException {
-        String url = address + "mancenter/wan/stopPublisher";
-        return doPost(url, wanRepName, publisherId).response;
+    public String wanResumePublisher(String clusterName, String clusterPassword,
+                                     String wanRepName, String publisherId) throws IOException {
+        String url = getUrl(URI_WAN_RESUME_PUBLISHER);
+        return doPost(url, clusterName, clusterPassword, wanRepName, publisherId).response;
     }
 
-    public String wanResumePublisher(String wanRepName, String publisherId) throws IOException {
-        String url = address + "mancenter/wan/resumePublisher";
-        return doPost(url, wanRepName, publisherId).response;
+    public String wanClearQueues(String clusterName, String clusterPassword,
+                                 String wanRepName, String targetClusterName) throws IOException {
+        String url = getUrl(URI_WAN_CLEAR_QUEUES);
+        return doPost(url, clusterName, clusterPassword, wanRepName, targetClusterName).response;
     }
 
-    public String wanClearQueues(String wanRepName, String targetGroupName) throws IOException {
-        String url = address + "mancenter/wan/clearWanQueues";
-        return doPost(url, wanRepName, targetGroupName).response;
-    }
-
-    public String addWanConfig(String wanRepConfigJson) throws IOException {
-        String url = address + "mancenter/wan/addWanConfig";
-        return doPost(url, wanRepConfigJson).response;
-    }
-
-    public String updatePermissions(String groupName, String groupPassword, String permConfJson) throws IOException {
-        String url = address + "mancenter/security/permissions";
-        return doPost(url, groupName, groupPassword, permConfJson).response;
+    public String addWanConfig(String clusterName, String clusterPassword,
+                               String wanRepConfigJson) throws IOException {
+        String url = getUrl(URI_ADD_WAN_CONFIG);
+        return doPost(url, clusterName, clusterPassword, wanRepConfigJson).response;
     }
 
     public ConnectionResponse getCPGroupIds() throws IOException {
-        String url = address + "cp-subsystem/groups";
+        String url = getUrl(URI_CP_GROUPS_URL);
         return doGet(url);
     }
 
     public ConnectionResponse getCPGroupByName(String name) throws IOException {
-        String url = address + "cp-subsystem/groups/" + name;
+        String url = getUrl(URI_CP_GROUPS_URL + "/" + name);
         return doGet(url);
     }
 
     public ConnectionResponse getLocalCPMember() throws IOException {
-        String url = address + "cp-subsystem/members/local";
+        String url = getUrl(URI_LOCAL_CP_MEMBER_URL);
         return doGet(url);
     }
 
     public ConnectionResponse getCPMembers() throws IOException {
-        String url = address + "cp-subsystem/members";
+        String url = getUrl(URI_CP_MEMBERS_URL);
         return doGet(url);
     }
 
-    public ConnectionResponse forceDestroyCPGroup(String cpGroupName, String groupName, String groupPassword) throws IOException {
-        String url = address + "cp-subsystem/groups/" + cpGroupName + "/remove";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse forceDestroyCPGroup(String cpGroupName, String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_CP_GROUPS_URL + "/" + cpGroupName + URI_REMOVE_SUFFIX);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse removeCPMember(String cpMemberUid, String groupName, String groupPassword) throws IOException {
-        String url = address + "cp-subsystem/members/" + cpMemberUid + "/remove";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse removeCPMember(UUID cpMemberUid, String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_CP_MEMBERS_URL + "/" + cpMemberUid + URI_REMOVE_SUFFIX);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse promoteCPMember(String groupName, String groupPassword) throws IOException {
-        String url = address + "cp-subsystem/members";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse promoteCPMember(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_CP_MEMBERS_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse restart(String groupName, String groupPassword) throws IOException {
-        String url = address + "cp-subsystem/restart";
-        return doPost(url, groupName, groupPassword);
+    public ConnectionResponse restart(String clusterName, String clusterPassword) throws IOException {
+        String url = getUrl(URI_RESET_CP_SUBSYSTEM_URL);
+        return doPost(url, clusterName, clusterPassword);
     }
 
-    public ConnectionResponse getCPSessions(String groupName) throws IOException {
-        String url = address + "cp-subsystem/groups/" + groupName + "/sessions";
+    public ConnectionResponse getCPSessions(String clusterName) throws IOException {
+        String url = getUrl(URI_CP_GROUPS_URL + "/" + clusterName + URI_CP_SESSIONS_SUFFIX);
         return doGet(url);
     }
 
-    public ConnectionResponse forceCloseCPSession(String cpGroupName, long sessionId, String groupName, String groupPassword)
+    public ConnectionResponse forceCloseCPSession(String cpGroupName, long sessionId, String clusterName, String clusterPassword)
             throws IOException {
-        String url = address + "cp-subsystem/groups/" + cpGroupName + "/sessions/" + sessionId + "/remove";
-        return doPost(url, groupName, groupPassword);
+        String url = getUrl(URI_CP_GROUPS_URL + "/" + cpGroupName + URI_CP_SESSIONS_SUFFIX + "/" + sessionId + URI_REMOVE_SUFFIX);
+        return doPost(url, clusterName, clusterPassword);
     }
 
     static class ConnectionResponse {
@@ -411,12 +463,12 @@ public class HTTPCommunicator {
         }
     }
 
-    private ConnectionResponse doPost(String url, String... params) throws IOException {
+    public ConnectionResponse doPost(String url, String... params) throws IOException {
         CloseableHttpClient client = newClient();
 
         List<NameValuePair> nameValuePairs = new ArrayList<>(params.length);
         for (String param : params) {
-            nameValuePairs.add(new BasicNameValuePair(param, null));
+            nameValuePairs.add(new BasicNameValuePair(param == null ? "" : param, null));
         }
         String data = URLEncodedUtils.format(nameValuePairs, Consts.UTF_8);
 
@@ -483,41 +535,42 @@ public class HTTPCommunicator {
     }
 
     public ConnectionResponse headRequestToMapURI() throws IOException {
-        String url = address + "maps/";
+        String url = getUrl(URI_MAPS);
         return doHead(url);
     }
 
     public ConnectionResponse headRequestToQueueURI() throws IOException {
-        String url = address + "queues/";
+        String url = getUrl(URI_QUEUES);
         return doHead(url);
     }
 
     public ConnectionResponse headRequestToUndefinedURI() throws IOException {
-        String url = address + "undefined";
+        String url = getUrl("undefined");
         return doHead(url);
     }
 
     public ConnectionResponse getRequestToUndefinedURI() throws IOException {
-        String url = address + "undefined";
+        String url = getUrl("undefined");
         return doGet(url);
     }
 
     public ConnectionResponse postRequestToUndefinedURI() throws IOException {
-        String url = address + "undefined";
+        String url = getUrl("undefined");
         return doPost(url);
     }
+
     public ConnectionResponse deleteRequestToUndefinedURI() throws IOException {
-        String url = address + "undefined";
+        String url = getUrl("undefined");
         return doDelete(url);
     }
 
     public ConnectionResponse headRequestToClusterInfoURI() throws IOException {
-        String url = address + "cluster";
+        String url = getUrl(URI_CLUSTER);
         return doHead(url);
     }
 
     public ConnectionResponse getBadRequestURI() throws IOException {
-        String url = address + "maps/name";
+        String url = getUrl(URI_MAPS + "name");
         return doGet(url);
     }
 
@@ -527,7 +580,7 @@ public class HTTPCommunicator {
     }
 
     public ConnectionResponse deleteBadRequestURI() throws IOException {
-        String url = address + "queues/name";
+        String url = getUrl(URI_QUEUES + "name");
         return doDelete(url);
     }
 
@@ -537,12 +590,17 @@ public class HTTPCommunicator {
     }
 
     public ConnectionResponse headRequestToClusterVersionURI() throws IOException {
-        String url = "http:/" + baseRestAddress + HttpCommandProcessor.URI_CLUSTER_VERSION_URL;
+        String url = getUrl(URI_CLUSTER_VERSION_URL);
         return doHead(url);
     }
 
     public ConnectionResponse headRequestToGarbageClusterHealthURI() throws IOException {
         String url = "http:/" + baseRestAddress + HttpCommandProcessor.URI_HEALTH_URL + "garbage";
+        return doHead(url);
+    }
+
+    public ConnectionResponse headRequestToInstanceURI() throws IOException {
+        String url = getUrl(URI_INSTANCE);
         return doHead(url);
     }
 

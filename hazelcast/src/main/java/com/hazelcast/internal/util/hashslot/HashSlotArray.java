@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.hazelcast.internal.util.hashslot;
 import com.hazelcast.internal.memory.MemoryAccessor;
 import com.hazelcast.internal.util.hashslot.impl.HashSlotArray16byteKeyNoValue;
 import com.hazelcast.internal.util.hashslot.impl.HashSlotArray8byteKeyNoValue;
-import com.hazelcast.nio.Disposable;
+import com.hazelcast.internal.nio.Disposable;
 
 /** <p>
  * A <i>Flyweight</i> object that manages the backbone array of an off-heap open-addressed hashtable.

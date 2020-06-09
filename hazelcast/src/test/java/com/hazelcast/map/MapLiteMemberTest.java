@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,10 @@ package com.hazelcast.map;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
-import com.hazelcast.query.EntryObject;
 import com.hazelcast.query.PredicateBuilder;
-import com.hazelcast.test.AssertTask;
+import com.hazelcast.query.PredicateBuilder.EntryObject;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
@@ -99,13 +98,9 @@ public class MapLiteMemberTest
         map.addEntryListener(listener, true);
         map.put(1, 2);
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run()
-                    throws Exception {
-                assertEquals(1, listener.key);
-                assertEquals(2, listener.value);
-            }
+        assertTrueEventually(() -> {
+            assertEquals(1, listener.key);
+            assertEquals(2, listener.value);
         });
     }
 
@@ -139,7 +134,7 @@ public class MapLiteMemberTest
     public static void testMapValuesQuery(final IMap<Integer, Object> map) {
         map.put(1, 2);
 
-        EntryObject entryObject = new PredicateBuilder().getEntryObject();
+        EntryObject entryObject = Predicates.newPredicateBuilder().getEntryObject();
         PredicateBuilder predicateBuilder = entryObject.key().equal(1);
         Collection values = map.values(predicateBuilder);
 
@@ -150,7 +145,7 @@ public class MapLiteMemberTest
     public static void testMapKeysQuery(final IMap<Integer, Object> map) {
         map.put(1, 2);
 
-        EntryObject entryObject = new PredicateBuilder().getEntryObject();
+        EntryObject entryObject = Predicates.newPredicateBuilder().getEntryObject();
         PredicateBuilder predicateBuilder = entryObject.key().equal(1);
         Collection values = map.keySet(predicateBuilder);
 
@@ -205,10 +200,10 @@ public class MapLiteMemberTest
         }
     }
 
-    private static class DummyEntryProcessor implements EntryProcessor<Object, Object, String> {
+    private static class DummyEntryProcessor implements EntryProcessor<Integer, Object, String> {
 
         @Override
-        public String process(java.util.Map.Entry<Object, Object> entry) {
+        public String process(java.util.Map.Entry<Integer, Object> entry) {
             entry.setValue("dummy");
             return "done";
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@ import com.hazelcast.core.HazelcastJsonValue;
 import com.hazelcast.core.TypeConverter;
 import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.map.impl.StoreAdapter;
+import com.hazelcast.map.impl.record.Record;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.Portable;
-import com.hazelcast.query.Metadata;
 import com.hazelcast.query.QueryException;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.query.impl.getters.MultiResult;
@@ -46,14 +47,32 @@ public abstract class QueryableEntry<K, V> implements Extractable, Map.Entry<K, 
     protected InternalSerializationService serializationService;
     protected Extractors extractors;
 
-    private Metadata metadata;
+    private StoreAdapter storeAdapter;
+    private Record record;
 
+    // overridden in some subclasses
     public Metadata getMetadata() {
-        return metadata;
+        // record is not set in plenty of internal unit tests
+        if (record != null) {
+            return record.getMetadata();
+        }
+        return null;
     }
 
-    public void setMetadata(Metadata metadata) {
-        this.metadata = metadata;
+    public Record getRecord() {
+        return record;
+    }
+
+    public void setRecord(Record record) {
+        this.record = record;
+    }
+
+    public StoreAdapter getStoreAdapter() {
+        return storeAdapter;
+    }
+
+    public void setStoreAdapter(StoreAdapter storeAdapter) {
+        this.storeAdapter = storeAdapter;
     }
 
     @Override
@@ -103,7 +122,7 @@ public abstract class QueryableEntry<K, V> implements Extractable, Map.Entry<K, 
             boolean isKey = startsWithKeyConstant(attributeName);
             attributeName = getAttributeName(isKey, attributeName);
             Object target = getTargetObject(isKey);
-            Object metadata = getMetadataOrNull(this.metadata, isKey);
+            Object metadata = getMetadataOrNull(this. getMetadata(), isKey);
             result = extractAttributeValueFromTargetObject(extractors, attributeName, target, metadata);
         }
         if (result instanceof HazelcastJsonValue) {
@@ -155,7 +174,7 @@ public abstract class QueryableEntry<K, V> implements Extractable, Map.Entry<K, 
     }
 
     private static boolean startsWithKeyConstant(String attributeName) {
-        return attributeName.startsWith(KEY_ATTRIBUTE_NAME.value());
+        return attributeName.startsWith(KEY_ATTRIBUTE_NAME.value() + ".");
     }
 
     private static String getAttributeName(boolean isKey, String attributeName) {

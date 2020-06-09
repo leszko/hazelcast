@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,9 +110,10 @@ public class AdvancedNetworkConfig {
      * // setup WAN replication
      * WanReplicationConfig wanReplicationConfig = new WanReplicationConfig();
      * // WAN publisher config references endpoint config by name
-     * WanPublisherConfig publisherConfig = new WanPublisherConfig().setEndpoint("wan-tokyo");
-     * publisherConfig.getProperties().put("endpoints", "tokyo.hazelcast.com:8765");
-     * wanReplicationConfig.addWanPublisherConfig(publisherConfig);
+     * WanBatchReplicationPublisherConfig publisherConfig = new WanBatchReplicationPublisherConfig()
+     *                 .setEndpoint("wan-tokyo")
+     *                 .setTargetEndpoints("tokyo.hazelcast.com:8765");
+     * wanReplicationConfig.addWanBatchReplicationPublisherConfig(publisherConfig);
      * config.addWanReplicationConfig(wanReplicationConfig);
      *
      * HazelcastInstance active = Hazelcast.newHazelcastInstance(config);
@@ -307,7 +308,7 @@ public class AdvancedNetworkConfig {
         }
 
         @Override
-        public void setPortCount(int portCount) {
+        public NetworkConfig setPortCount(int portCount) {
             throw new UnsupportedOperationException();
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.hazelcast.map.impl.eviction;
 
 import com.hazelcast.map.impl.recordstore.RecordStore;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 
 import static java.lang.Integer.getInteger;
 
@@ -37,7 +37,7 @@ public interface Evictor {
         }
 
         @Override
-        public void forceEvict(RecordStore recordStore) {
+        public void forceEvictByPercentage(RecordStore recordStore, double evictionPercentage) {
 
         }
 
@@ -68,13 +68,14 @@ public interface Evictor {
     void evict(RecordStore recordStore, Data excludedKey);
 
     /**
-     * Evicts provided record-store forcibly. This type
+     * Evicts provided record store forcibly. This type
      * of eviction is used when regular eviction is not
      * enough to provide free space for newly added entries.
      *
-     * @param recordStore the recordStore
+     * @param recordStore        the record store
+     * @param evictionPercentage percentage of the entries to evict from the record store
      */
-    void forceEvict(RecordStore recordStore);
+    void forceEvictByPercentage(RecordStore recordStore, double evictionPercentage);
 
     /**
      * Check whether the supplied record-store needs eviction.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,58 +16,51 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.internal.services.ServiceNamespace;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.PartitionContainer;
-import com.hazelcast.map.impl.record.Record;
-import com.hazelcast.map.impl.record.RecordInfo;
-import com.hazelcast.map.impl.record.RecordReplicationInfo;
 import com.hazelcast.map.impl.recordstore.RecordStore;
 import com.hazelcast.memory.NativeOutOfMemoryError;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.operationservice.Operation;
-import com.hazelcast.spi.ServiceNamespace;
-import com.hazelcast.spi.serialization.SerializationService;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
-
-import static com.hazelcast.map.impl.record.Records.buildRecordInfo;
 
 /**
- * Replicates all IMap-states of this partition to a replica partition.
+ * Replicates all IMap-states of this partition to a repReservedCapacityCounterTestlica partition.
  */
 public class MapReplicationOperation extends Operation
         implements IdentifiedDataSerializable {
 
-    // keep these fields `protected`, extended in another context.
-    protected final MapReplicationStateHolder mapReplicationStateHolder = new MapReplicationStateHolder(this);
-    protected final WriteBehindStateHolder writeBehindStateHolder = new WriteBehindStateHolder(this);
-    protected final MapNearCacheStateHolder mapNearCacheStateHolder = new MapNearCacheStateHolder(this);
+    private MapReplicationStateHolder mapReplicationStateHolder;
+    private WriteBehindStateHolder writeBehindStateHolder;
+    private MapNearCacheStateHolder mapNearCacheStateHolder;
 
     private transient NativeOutOfMemoryError oome;
 
     public MapReplicationOperation() {
     }
 
-    public MapReplicationOperation(PartitionContainer container, int partitionId, int replicaIndex) {
-        setPartitionId(partitionId).setReplicaIndex(replicaIndex);
-        Collection<ServiceNamespace> namespaces = container.getAllNamespaces(replicaIndex);
-        this.mapReplicationStateHolder.prepare(container, namespaces, replicaIndex);
-        this.writeBehindStateHolder.prepare(container, namespaces, replicaIndex);
-        this.mapNearCacheStateHolder.prepare(container, namespaces, replicaIndex);
-    }
+    public MapReplicationOperation(PartitionContainer container,
+                                   Collection<ServiceNamespace> namespaces, int partitionId, int replicaIndex) {
 
-    public MapReplicationOperation(PartitionContainer container, Collection<ServiceNamespace> namespaces,
-                                   int partitionId, int replicaIndex) {
         setPartitionId(partitionId).setReplicaIndex(replicaIndex);
+
+        this.mapReplicationStateHolder = new MapReplicationStateHolder();
+        this.mapReplicationStateHolder.setOperation(this);
         this.mapReplicationStateHolder.prepare(container, namespaces, replicaIndex);
+
+        this.writeBehindStateHolder = new WriteBehindStateHolder();
+        this.writeBehindStateHolder.setMapReplicationOperation(this);
         this.writeBehindStateHolder.prepare(container, namespaces, replicaIndex);
+
+        this.mapNearCacheStateHolder = new MapNearCacheStateHolder();
+        this.mapNearCacheStateHolder.setMapReplicationOperation(this);
         this.mapNearCacheStateHolder.prepare(container, namespaces, replicaIndex);
     }
 
@@ -101,8 +94,7 @@ public class MapReplicationOperation extends Operation
     }
 
     private void disposePartition() {
-        Map<String, Collection<RecordReplicationInfo>> data = mapReplicationStateHolder.data;
-        for (String mapName : data.keySet()) {
+        for (String mapName : mapReplicationStateHolder.data.keySet()) {
             dispose(mapName);
         }
     }
@@ -129,23 +121,20 @@ public class MapReplicationOperation extends Operation
     }
 
     @Override
-    protected void writeInternal(final ObjectDataOutput out) throws IOException {
-        mapReplicationStateHolder.writeData(out);
-        writeBehindStateHolder.writeData(out);
-        mapNearCacheStateHolder.writeData(out);
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        out.writeObject(mapReplicationStateHolder);
+        out.writeObject(writeBehindStateHolder);
+        out.writeObject(mapNearCacheStateHolder);
     }
 
     @Override
-    protected void readInternal(final ObjectDataInput in) throws IOException {
-        mapReplicationStateHolder.readData(in);
-        writeBehindStateHolder.readData(in);
-        mapNearCacheStateHolder.readData(in);
-    }
-
-    RecordReplicationInfo toReplicationInfo(Record record, SerializationService ss) {
-        RecordInfo info = buildRecordInfo(record);
-        Data dataValue = ss.toData(record.getValue());
-        return new RecordReplicationInfo(record.getKey(), dataValue, info);
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        mapReplicationStateHolder = in.readObject();
+        mapReplicationStateHolder.setOperation(this);
+        writeBehindStateHolder = in.readObject();
+        writeBehindStateHolder.setMapReplicationOperation(this);
+        mapNearCacheStateHolder = in.readObject();
+        mapNearCacheStateHolder.setMapReplicationOperation(this);
     }
 
     RecordStore getRecordStore(String mapName) {

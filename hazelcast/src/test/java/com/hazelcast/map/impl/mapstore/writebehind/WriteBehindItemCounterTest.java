@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.map.impl.mapstore.writebehind;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.ReachedMaxSizeException;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -78,7 +78,7 @@ public class WriteBehindItemCounterTest extends HazelcastTestSupport {
     }
 
     @Test(expected = ReachedMaxSizeException.class)
-    public void testCounter_whenMaxCapacityExceeded() throws Exception {
+    public void testCounter_whenMaxCapacityExceeded() {
         final int maxCapacityPerNode = 100;
         final int nodeCount = 1;
         final MapStoreWithCounter<Integer, Integer> mapStore = new MapStoreWithCounter<Integer, Integer>();

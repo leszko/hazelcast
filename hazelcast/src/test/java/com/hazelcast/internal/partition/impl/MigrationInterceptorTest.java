@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,13 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.ListenerConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.partition.MigrationInfo;
-import com.hazelcast.internal.partition.impl.MigrationInterceptor.MigrationParticipant;
 import com.hazelcast.internal.partition.impl.MigrationCommitTest.DelayMigrationStart;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.internal.partition.impl.MigrationInterceptor.MigrationParticipant;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -35,10 +36,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+import static com.hazelcast.test.Accessors.getAddress;
+import static com.hazelcast.test.Accessors.getNodeEngineImpl;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
-@Category(QuickTest.class)
+@Category({QuickTest.class, ParallelJVMTest.class})
 public class MigrationInterceptorTest extends HazelcastTestSupport {
 
     private static final int PARTITION_COUNT = 2;
@@ -46,7 +49,7 @@ public class MigrationInterceptorTest extends HazelcastTestSupport {
     @Test
     public void shouldInvokeInternalMigrationListenerOnSuccessfulMigration() {
         final Config config1 = new Config();
-        config1.setProperty(GroupProperty.PARTITION_COUNT.getName(), String.valueOf(PARTITION_COUNT));
+        config1.setProperty(ClusterProperty.PARTITION_COUNT.getName(), String.valueOf(PARTITION_COUNT));
 
         // hold the migrations until all nodes join so that there will be no retries / failed migrations etc.
         final CountDownLatch migrationStartLatch = new CountDownLatch(1);
@@ -58,7 +61,7 @@ public class MigrationInterceptorTest extends HazelcastTestSupport {
 
         final MigrationInterceptorImpl listener = new MigrationInterceptorImpl();
         final Config config2 = new Config();
-        config2.setProperty(GroupProperty.PARTITION_COUNT.getName(), String.valueOf(PARTITION_COUNT));
+        config2.setProperty(ClusterProperty.PARTITION_COUNT.getName(), String.valueOf(PARTITION_COUNT));
         config2.addListenerConfig(new ListenerConfig(listener));
         final HazelcastInstance hz2 = factory.newHazelcastInstance(config2);
 
@@ -66,7 +69,8 @@ public class MigrationInterceptorTest extends HazelcastTestSupport {
 
         waitAllForSafeState(hz1, hz2);
 
-        final List<Integer> hz2PartitionIds = getNodeEngineImpl(hz2).getPartitionService().getMemberPartitions(getAddress(hz2));
+        final List<Integer> hz2PartitionIds = getNodeEngineImpl(hz2).getPartitionService().getMemberPartitions(
+                getAddress(hz2));
         assertEquals(1, hz2PartitionIds.size());
 
         final List<MigrationProgressNotification> notifications = listener.getNotifications();

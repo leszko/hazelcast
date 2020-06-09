@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package com.hazelcast.collection;
 
-import com.hazelcast.monitor.LocalQueueStats;
 import com.hazelcast.transaction.TransactionalQueue;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -56,11 +56,12 @@ public interface IQueue<E> extends BlockingQueue<E>, BaseQueue<E>, ICollection<E
     /**
      * {@inheritDoc}
      */
-    E poll(long timeout, TimeUnit unit) throws InterruptedException;
+    E poll(long timeout, @Nonnull TimeUnit unit) throws InterruptedException;
 
     /**
      * {@inheritDoc}
      */
+    @Nonnull
     E take() throws InterruptedException;
 
     /**

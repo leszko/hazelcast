@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,6 +81,8 @@ public class InstallSnapshotHandlerTask extends RaftNodeStatusAwareTask implemen
             logger.info("Setting leader: " + req.leader());
             raftNode.leader(req.leader());
         }
+
+        raftNode.updateLastAppendEntriesTimestamp();
 
         if (raftNode.installSnapshot(snapshot)) {
             raftNode.send(new AppendSuccessResponse(localMember(), req.term(), snapshot.index(), req.queryRound()), req.leader());

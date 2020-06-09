@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package com.hazelcast.collection;
 
 import java.util.Set;
 
+import com.hazelcast.config.SplitBrainProtectionConfig;
+
 /**
  * Concurrent, distributed implementation of {@link Set}
  * <p>
@@ -28,11 +30,19 @@ import java.util.Set;
  * equals method this implementation compares the serialized byte version
  * of the objects.
  * <p>
- * Supports Quorum {@link com.hazelcast.config.QuorumConfig} since 3.10 in cluster
+ * Supports split brain protection {@link SplitBrainProtectionConfig} since 3.10 in cluster
  * versions 3.10 and higher.
  *
  * @param <E> the type of elements maintained by this set
  * @see Set
  */
 public interface ISet<E> extends Set<E>, ICollection<E> {
+
+    /**
+     * Returns {@link LocalSetStats} for this collection.
+     *
+     * @return this collection's local statistics.
+     */
+    LocalSetStats getLocalSetStats();
+
 }

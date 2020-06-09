@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 
 package com.hazelcast.map.impl.operation;
 
-import com.hazelcast.core.EntryView;
 import com.hazelcast.internal.nearcache.impl.invalidation.Invalidator;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.services.ObjectNamespace;
+import com.hazelcast.internal.services.ServiceNamespaceAware;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapDataSerializerHook;
@@ -26,26 +28,27 @@ import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.PartitionContainer;
 import com.hazelcast.map.impl.event.MapEventPublisher;
 import com.hazelcast.map.impl.mapstore.MapDataStore;
+import com.hazelcast.map.impl.mapstore.writebehind.TxnReservedCapacityCounter;
 import com.hazelcast.map.impl.nearcache.MapNearCacheManager;
 import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.map.impl.recordstore.RecordStore;
+import com.hazelcast.map.impl.wan.WanMapEntryView;
 import com.hazelcast.memory.NativeOutOfMemoryError;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.impl.operationservice.BackupOperation;
-import com.hazelcast.spi.ObjectNamespace;
-import com.hazelcast.spi.ServiceNamespaceAware;
 import com.hazelcast.spi.impl.operationservice.AbstractNamedOperation;
+import com.hazelcast.spi.impl.operationservice.BackupOperation;
 import com.hazelcast.wan.impl.CallerProvenance;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.logging.Level;
 
 import static com.hazelcast.config.InMemoryFormat.NATIVE;
+import static com.hazelcast.internal.util.CollectionUtil.isEmpty;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
 import static com.hazelcast.internal.util.ToHeapDataConverter.toHeapData;
-import static com.hazelcast.map.impl.EntryViews.createSimpleEntryView;
-import static com.hazelcast.util.CollectionUtil.isEmpty;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
+import static com.hazelcast.map.impl.EntryViews.createWanEntryView;
+import static com.hazelcast.map.impl.operation.ForcedEviction.runWithForcedEvictionStrategies;
 
 @SuppressWarnings("checkstyle:methodcount")
 public abstract class MapOperation extends AbstractNamedOperation
@@ -54,7 +57,7 @@ public abstract class MapOperation extends AbstractNamedOperation
     private static final boolean ASSERTION_ENABLED = MapOperation.class.desiredAssertionStatus();
 
     protected transient MapService mapService;
-    protected transient RecordStore recordStore;
+    protected transient RecordStore<Record> recordStore;
     protected transient MapContainer mapContainer;
     protected transient MapServiceContext mapServiceContext;
     protected transient MapEventPublisher mapEventPublisher;
@@ -62,11 +65,6 @@ public abstract class MapOperation extends AbstractNamedOperation
     protected transient boolean createRecordStoreOnDemand = true;
     protected transient boolean disposeDeferredBlocks = true;
 
-    /**
-     * Used by wan-replication-service to disable wan-replication event publishing
-     * otherwise in active-active scenarios infinite loop of event forwarding can be seen.
-     */
-    protected boolean disableWanReplicationEvent;
     private transient boolean canPublishWanEvent;
 
     public MapOperation() {
@@ -74,15 +72,6 @@ public abstract class MapOperation extends AbstractNamedOperation
 
     public MapOperation(String name) {
         this.name = name;
-    }
-
-    @Override
-    public final void run() {
-        try {
-            runInternal();
-        } catch (NativeOutOfMemoryError e) {
-            WithForcedEviction.rerun(this);
-        }
     }
 
     @Override
@@ -112,23 +101,33 @@ public abstract class MapOperation extends AbstractNamedOperation
         innerBeforeRun();
     }
 
-    private void assertNativeMapOnPartitionThread() {
-        if (!ASSERTION_ENABLED) {
-            return;
-        }
-
-        if (mapContainer.getMapConfig().getInMemoryFormat() == NATIVE) {
-            assert getPartitionId() != GENERIC_PARTITION_ID
-                    : "Native memory backed map operations are not allowed to run on GENERIC_PARTITION_ID";
-        }
-    }
-
     protected void innerBeforeRun() throws Exception {
-        // Intentionally empty method body. Concrete
-        // classes can override this method.
+        // Intentionally empty method body.
+        // Concrete classes can override this method.
     }
 
-    protected abstract void runInternal();
+    @Override
+    public final void run() {
+        try {
+            runInternal();
+        } catch (NativeOutOfMemoryError e) {
+            rerunWithForcedEviction();
+        }
+    }
+
+    protected void runInternal() {
+        // Intentionally empty method body.
+        // Concrete classes can override this method.
+    }
+
+    private void rerunWithForcedEviction() {
+        try {
+            runWithForcedEvictionStrategies(this);
+        } catch (NativeOutOfMemoryError e) {
+            disposeDeferredBlocks();
+            throw e;
+        }
+    }
 
     @Override
     public final void afterRun() throws Exception {
@@ -138,7 +137,18 @@ public abstract class MapOperation extends AbstractNamedOperation
     }
 
     protected void afterRunInternal() {
+        // Intentionally empty method body.
+        // Concrete classes can override this method.
+    }
 
+    private void assertNativeMapOnPartitionThread() {
+        if (!ASSERTION_ENABLED) {
+            return;
+        }
+
+        assert mapContainer.getMapConfig().getInMemoryFormat() != NATIVE
+                || getPartitionId() != GENERIC_PARTITION_ID
+                : "Native memory backed map operations are not allowed to run on GENERIC_PARTITION_ID";
     }
 
     ILogger logger() {
@@ -146,7 +156,7 @@ public abstract class MapOperation extends AbstractNamedOperation
     }
 
     protected final CallerProvenance getCallerProvenance() {
-        return disableWanReplicationEvent ? CallerProvenance.WAN : CallerProvenance.NOT_WAN;
+        return disableWanReplicationEvent() ? CallerProvenance.WAN : CallerProvenance.NOT_WAN;
     }
 
     private RecordStore getRecordStoreOrNull() {
@@ -201,10 +211,10 @@ public abstract class MapOperation extends AbstractNamedOperation
 
     private boolean canPublishWanEvent(MapContainer mapContainer) {
         boolean canPublishWanEvent = mapContainer.isWanReplicationEnabled()
-                && canThisOpGenerateWANEvent();
+                && !disableWanReplicationEvent();
 
         if (canPublishWanEvent) {
-            mapContainer.getWanReplicationPublisher().checkWanReplicationQueues();
+            mapContainer.getWanReplicationDelegate().doPrepublicationChecks();
         }
         return canPublishWanEvent;
     }
@@ -216,7 +226,8 @@ public abstract class MapOperation extends AbstractNamedOperation
 
     public boolean isPostProcessing(RecordStore recordStore) {
         MapDataStore mapDataStore = recordStore.getMapDataStore();
-        return mapDataStore.isPostProcessingMapStore() || mapServiceContext.hasInterceptor(name);
+        return mapDataStore.isPostProcessingMapStore()
+                || !mapContainer.getInterceptorRegistry().getInterceptors().isEmpty();
     }
 
     public void setThreadId(long threadId) {
@@ -250,7 +261,8 @@ public abstract class MapOperation extends AbstractNamedOperation
     }
 
     /**
-     * This method helps to add clearing Near Cache event only from one-partition which matches partitionId of the map name.
+     * This method helps to add clearing Near Cache event only from
+     * one-partition which matches partitionId of the map name.
      */
     protected final void invalidateAllKeysInNearCaches() {
         if (mapContainer.hasInvalidationListener()) {
@@ -272,8 +284,6 @@ public abstract class MapOperation extends AbstractNamedOperation
     }
 
     protected final void evict(Data justAddedKey) {
-        assert recordStore != null : "Record-store cannot be null";
-
         recordStore.evictEntries(justAddedKey);
         disposeDeferredBlocks();
     }
@@ -303,14 +313,6 @@ public abstract class MapOperation extends AbstractNamedOperation
         this.mapContainer = mapContainer;
     }
 
-    /**
-     * @return {@code true} if this operation can generate WAN event, otherwise return {@code false}
-     * to indicate WAN event generation is not allowed for this operation
-     */
-    protected final boolean canThisOpGenerateWANEvent() {
-        return !disableWanReplicationEvent;
-    }
-
     protected final void publishWanUpdate(Data dataKey, Object value) {
         publishWanUpdateInternal(dataKey, value, false);
     }
@@ -320,13 +322,14 @@ public abstract class MapOperation extends AbstractNamedOperation
             return;
         }
 
-        Record record = recordStore.getRecord(dataKey);
+        Record<Object> record = recordStore.getRecord(dataKey);
         if (record == null) {
             return;
         }
 
         Data dataValue = toHeapData(mapServiceContext.toData(value));
-        EntryView entryView = createSimpleEntryView(toHeapData(dataKey), dataValue, record);
+        WanMapEntryView<Object, Object> entryView = createWanEntryView(
+                toHeapData(dataKey), dataValue, record, getNodeEngine().getSerializationService());
 
         mapEventPublisher.publishWanUpdate(name, entryView, hasLoadProvenance);
     }
@@ -335,11 +338,26 @@ public abstract class MapOperation extends AbstractNamedOperation
         publishWanUpdateInternal(dataKey, value, true);
     }
 
-    protected final void publishWanRemove(Data dataKey) {
+    protected final void publishWanRemove(@Nonnull Data dataKey) {
         if (!canPublishWanEvent) {
             return;
         }
 
         mapEventPublisher.publishWanRemove(name, toHeapData(dataKey));
+    }
+
+    protected boolean disableWanReplicationEvent() {
+        return false;
+    }
+
+    protected final TxnReservedCapacityCounter wbqCapacityCounter() {
+        return recordStore.getMapDataStore().getTxnReservedCapacityCounter();
+    }
+
+    protected final Data getValueOrPostProcessedValue(Record record, Data dataValue) {
+        if (!isPostProcessing(recordStore)) {
+            return dataValue;
+        }
+        return mapServiceContext.toData(record.getValue());
     }
 }

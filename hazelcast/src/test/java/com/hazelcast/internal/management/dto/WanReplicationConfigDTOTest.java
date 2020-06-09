@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,10 @@
 package com.hazelcast.internal.management.dto;
 
 import com.hazelcast.config.ConfigCompatibilityChecker.WanReplicationConfigChecker;
-import com.hazelcast.config.WanConsumerConfig;
-import com.hazelcast.config.WanPublisherConfig;
+import com.hazelcast.config.WanBatchPublisherConfig;
+import com.hazelcast.config.WanCustomPublisherConfig;
 import com.hazelcast.config.WanReplicationConfig;
+import com.hazelcast.config.WanConsumerConfig;
 import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -40,11 +41,12 @@ public class WanReplicationConfigDTOTest {
     public void testSerialization() {
         WanReplicationConfig expected = new WanReplicationConfig()
                 .setName("myName")
-                .setWanConsumerConfig(new WanConsumerConfig())
-                .addWanPublisherConfig(new WanPublisherConfig()
-                        .setGroupName("group1"))
-                .addWanPublisherConfig(new WanPublisherConfig()
-                        .setGroupName("group2"));
+                .setConsumerConfig(new WanConsumerConfig())
+                .addBatchReplicationPublisherConfig(new WanBatchPublisherConfig()
+                        .setClusterName("group1"))
+                .addCustomPublisherConfig(new WanCustomPublisherConfig()
+                        .setPublisherId("group2")
+                        .setClassName("className"));
 
         WanReplicationConfig actual = cloneThroughJson(expected);
 

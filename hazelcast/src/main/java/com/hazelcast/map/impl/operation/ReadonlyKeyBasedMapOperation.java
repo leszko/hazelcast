@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
 import com.hazelcast.spi.impl.operationservice.ReadonlyOperation;
 
@@ -27,7 +28,8 @@ import java.io.IOException;
 /**
  * Abstract {@link MapOperation} that serves as based for readonly operations.
  */
-public abstract class ReadonlyKeyBasedMapOperation extends MapOperation implements ReadonlyOperation, PartitionAwareOperation {
+public abstract class ReadonlyKeyBasedMapOperation extends MapOperation
+        implements ReadonlyOperation, PartitionAwareOperation {
 
     protected Data dataKey;
     protected long threadId;
@@ -53,14 +55,14 @@ public abstract class ReadonlyKeyBasedMapOperation extends MapOperation implemen
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
-        out.writeData(dataKey);
+        IOUtil.writeData(out, dataKey);
         out.writeLong(threadId);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
-        dataKey = in.readData();
+        dataKey = IOUtil.readData(in);
         threadId = in.readLong();
     }
 }

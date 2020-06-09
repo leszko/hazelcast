@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.hazelcast.replicatedmap.impl.operation;
 
+import com.hazelcast.map.impl.MapEntries;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
-import com.hazelcast.replicatedmap.impl.client.ReplicatedMapEntries;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationFactory;
 
@@ -31,12 +31,12 @@ import java.io.IOException;
 public class PutAllOperationFactory implements OperationFactory {
 
     private String name;
-    private ReplicatedMapEntries entries;
+    private MapEntries entries;
 
     public PutAllOperationFactory() {
     }
 
-    public PutAllOperationFactory(String name, ReplicatedMapEntries entries) {
+    public PutAllOperationFactory(String name, MapEntries entries) {
         this.name = name;
         this.entries = entries;
     }

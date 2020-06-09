@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,32 +38,25 @@ public class MemberAttributeConfig {
         return attributes;
     }
 
-    public void setAttributes(Map<String, String> attributes) {
+    public MemberAttributeConfig setAttributes(Map<String, String> attributes) {
         this.attributes.clear();
         if (attributes != null) {
             this.attributes.putAll(attributes);
         }
+        return this;
     }
 
     public String getAttribute(String key) {
         return attributes.get(key);
     }
 
-    public void setAttribute(String key, String value) {
+    public MemberAttributeConfig setAttribute(String key, String value) {
         this.attributes.put(key, value);
+        return this;
     }
 
-    public void removeAttribute(String key) {
+    public MemberAttributeConfig removeAttribute(String key) {
         attributes.remove(key);
-    }
-
-    /**
-     * Gets immutable version of this configuration.
-     *
-     * @return immutable version of this configuration
-     * @deprecated this method will be removed in 4.0; it is meant for internal usage only
-     */
-    public MemberAttributeConfig asReadOnly() {
-        return new MemberAttributeConfigReadOnly(this);
+        return this;
     }
 }

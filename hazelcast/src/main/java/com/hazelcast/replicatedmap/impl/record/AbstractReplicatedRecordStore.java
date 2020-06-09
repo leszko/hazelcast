@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package com.hazelcast.replicatedmap.impl.record;
 
+import com.hazelcast.cluster.Address;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.memberselector.MemberSelectors;
-import com.hazelcast.core.Member;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.util.Clock;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapEventPublishingService;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.operation.ReplicateUpdateOperation;
 import com.hazelcast.replicatedmap.impl.operation.VersionResponsePair;
-import com.hazelcast.replicatedmap.merge.ReplicatedMapMergePolicy;
 import com.hazelcast.spi.impl.operationservice.OperationService;
 import com.hazelcast.spi.merge.SplitBrainMergePolicy;
 import com.hazelcast.spi.merge.SplitBrainMergeTypes.ReplicatedMapMergeTypes;
-import com.hazelcast.util.Clock;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,9 +40,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.core.EntryEventType.EVICTED;
+import static com.hazelcast.internal.util.Preconditions.isNotNull;
 import static com.hazelcast.replicatedmap.impl.ReplicatedMapService.SERVICE_NAME;
 import static com.hazelcast.spi.impl.merge.MergingValueFactory.createMergingEntry;
-import static com.hazelcast.util.Preconditions.isNotNull;
 
 /**
  * This is the base class for all {@link ReplicatedRecordStore} implementations
@@ -76,7 +75,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
     @SuppressWarnings("unchecked")
     private Object remove(InternalReplicatedMapStorage<K, V> storage, Object key) {
         isNotNull(key, "key");
-        long time = Clock.currentTimeMillis();
+        long time = System.nanoTime();
         V oldValue;
         K marshalledKey = (K) marshall(key);
         ReplicatedRecord current = storage.get(marshalledKey);
@@ -87,7 +86,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
             storage.remove(marshalledKey, current);
         }
         if (replicatedMapConfig.isStatisticsEnabled()) {
-            getStats().incrementRemoves(Clock.currentTimeMillis() - time);
+            getStats().incrementRemovesNanos(System.nanoTime() - time);
         }
         cancelTtlEntry(marshalledKey);
         return oldValue;
@@ -97,7 +96,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
     @SuppressWarnings("unchecked")
     public void evict(Object key) {
         isNotNull(key, "key");
-        long time = Clock.currentTimeMillis();
+        long time = System.nanoTime();
         V oldValue;
         K marshalledKey = (K) marshall(key);
         InternalReplicatedMapStorage<K, V> storage = getStorage();
@@ -113,14 +112,14 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
         ReplicatedMapEventPublishingService eventPublishingService = replicatedMapService.getEventPublishingService();
         eventPublishingService.fireEntryListenerEvent(dataKey, dataOldValue, null, EVICTED, name, nodeEngine.getThisAddress());
         if (replicatedMapConfig.isStatisticsEnabled()) {
-            getStats().incrementRemoves(Clock.currentTimeMillis() - time);
+            getStats().incrementRemovesNanos(System.nanoTime() - time);
         }
     }
 
     @Override
     public Object get(Object key) {
         isNotNull(key, "key");
-        long time = Clock.currentTimeMillis();
+        long time = System.nanoTime();
         ReplicatedRecord replicatedRecord = getStorage().get(marshall(key));
 
         // Force return null on ttl expiration (but before cleanup thread run)
@@ -131,7 +130,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
 
         Object value = replicatedRecord == null ? null : unmarshall(replicatedRecord.getValue());
         if (replicatedMapConfig.isStatisticsEnabled()) {
-            getStats().incrementGets(Clock.currentTimeMillis() - time);
+            getStats().incrementGetsNanos(System.nanoTime() - time);
         }
         return value;
     }
@@ -168,7 +167,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
         if (ttl < 0) {
             throw new IllegalArgumentException("ttl must be a positive integer");
         }
-        long time = Clock.currentTimeMillis();
+        long time = System.nanoTime();
         V oldValue = null;
         K marshalledKey = (K) marshall(key);
         V marshalledValue = (V) marshall(value);
@@ -193,7 +192,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
             cancelTtlEntry(marshalledKey);
         }
         if (replicatedMapConfig.isStatisticsEnabled()) {
-            getStats().incrementPuts(Clock.currentTimeMillis() - time);
+            getStats().incrementPutsNanos(System.nanoTime() - time);
         }
         return oldValue;
     }
@@ -231,7 +230,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
 
         if (lazy) {
             // Lazy evaluation to prevent to much copying
-            return new LazySet<K, V, K>(new KeySetIteratorFactory<K, V>(this), getStorage());
+            return new LazySet<>(new KeySetIteratorFactory<>(this), getStorage());
         }
         return getStorage().keySet();
     }
@@ -242,7 +241,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
 
         if (lazy) {
             // Lazy evaluation to prevent to much copying
-            return new LazyCollection<K, V>(new ValuesIteratorFactory<K, V>(this), getStorage());
+            return new LazyCollection<>(new ValuesIteratorFactory<>(this), getStorage());
         }
         return getStorage().values();
     }
@@ -250,7 +249,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
     @Override
     public Collection values(Comparator comparator) {
         InternalReplicatedMapStorage<K, V> storage = getStorage();
-        List<Object> values = new ArrayList<Object>(storage.size());
+        List<Object> values = new ArrayList<>(storage.size());
         for (ReplicatedRecord record : storage.values()) {
             values.add(unmarshall(record.getValue()));
         }
@@ -264,7 +263,7 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
 
         if (lazy) {
             // Lazy evaluation to prevent to much copying
-            return new LazySet<K, V, Map.Entry<K, V>>(new EntrySetIteratorFactory<K, V>(this), getStorage());
+            return new LazySet<>(new EntrySetIteratorFactory<>(this), getStorage());
         }
         return getStorage().entrySet();
     }
@@ -331,17 +330,17 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
     }
 
     private ReplicatedRecord<K, V> buildReplicatedRecord(K key, V value, long ttlMillis) {
-        return new ReplicatedRecord<K, V>(key, value, ttlMillis);
+        return new ReplicatedRecord<>(key, value, ttlMillis);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean merge(ReplicatedMapMergeTypes mergingEntry,
-                         SplitBrainMergePolicy<Object, ReplicatedMapMergeTypes> mergePolicy) {
+    public boolean merge(ReplicatedMapMergeTypes<Object, Object> mergingEntry,
+                         SplitBrainMergePolicy<Object, ReplicatedMapMergeTypes<Object, Object>, Object> mergePolicy) {
         serializationService.getManagedContext().initialize(mergingEntry);
         serializationService.getManagedContext().initialize(mergePolicy);
 
-        K marshalledKey = (K) marshall(mergingEntry.getKey());
+        K marshalledKey = (K) marshall(mergingEntry.getRawKey());
         InternalReplicatedMapStorage<K, V> storage = getStorage();
         ReplicatedRecord<K, V> record = storage.get(marshalledKey);
         if (record == null) {
@@ -354,16 +353,16 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
             storage.incrementVersion();
             Data dataKey = serializationService.toData(marshalledKey);
             Data dataValue = serializationService.toData(newValue);
-            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
+            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getRawValue(), getVersion());
             sendReplicationOperation(false, name, dataKey, dataValue, record.getTtlMillis(), responsePair);
         } else {
-            ReplicatedMapMergeTypes existingEntry = createMergingEntry(serializationService, record);
+            ReplicatedMapMergeTypes<Object, Object> existingEntry = createMergingEntry(serializationService, record);
             V newValue = (V) mergePolicy.merge(mergingEntry, existingEntry);
             if (newValue == null) {
                 storage.remove(marshalledKey, record);
                 storage.incrementVersion();
                 Data dataKey = serializationService.toData(marshalledKey);
-                VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
+                VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getRawValue(), getVersion());
                 sendReplicationOperation(true, name, dataKey, null, record.getTtlMillis(), responsePair);
                 return false;
             }
@@ -371,56 +370,8 @@ public abstract class AbstractReplicatedRecordStore<K, V> extends AbstractBaseRe
             storage.incrementVersion();
             Data dataKey = serializationService.toData(marshalledKey);
             Data dataValue = serializationService.toData(newValue);
-            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
+            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getRawValue(), getVersion());
             sendReplicationOperation(false, name, dataKey, dataValue, record.getTtlMillis(), responsePair);
-        }
-        return true;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public boolean merge(Object key, ReplicatedMapEntryView mergingEntry, ReplicatedMapMergePolicy mergePolicy) {
-        K marshalledKey = (K) marshall(key);
-        InternalReplicatedMapStorage<K, V> storage = getStorage();
-        ReplicatedRecord<K, V> existingRecord = storage.get(marshalledKey);
-        if (existingRecord == null) {
-            ReplicatedMapEntryView nullEntryView
-                    = new ReplicatedMapEntryView<Object, V>(serializationService).setKey(key);
-            V newValue = (V) mergePolicy.merge(name, mergingEntry, nullEntryView);
-            if (newValue == null) {
-                return false;
-            }
-            existingRecord = buildReplicatedRecord(marshalledKey, newValue, 0);
-            storage.put(marshalledKey, existingRecord);
-            storage.incrementVersion();
-            Data dataKey = serializationService.toData(marshalledKey);
-            Data dataValue = serializationService.toData(newValue);
-            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
-            sendReplicationOperation(false, name, dataKey, dataValue, existingRecord.getTtlMillis(), responsePair);
-        } else {
-            ReplicatedMapEntryView existingEntry = new ReplicatedMapEntryView<Object, Object>(serializationService)
-                    .setKey(key)
-                    .setValue(existingRecord.getValueInternal())
-                    .setCreationTime(existingRecord.getCreationTime())
-                    .setLastUpdateTime(existingRecord.getUpdateTime())
-                    .setLastAccessTime(existingRecord.getLastAccessTime())
-                    .setHits(existingRecord.getHits())
-                    .setTtl(existingRecord.getTtlMillis());
-            V newValue = (V) mergePolicy.merge(name, mergingEntry, existingEntry);
-            if (newValue == null) {
-                storage.remove(marshalledKey, existingRecord);
-                storage.incrementVersion();
-                Data dataKey = serializationService.toData(marshalledKey);
-                VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
-                sendReplicationOperation(true, name, dataKey, null, existingRecord.getTtlMillis(), responsePair);
-                return false;
-            }
-            existingRecord.setValueInternal(newValue, existingRecord.getTtlMillis());
-            storage.incrementVersion();
-            Data dataKey = serializationService.toData(marshalledKey);
-            Data dataValue = serializationService.toData(newValue);
-            VersionResponsePair responsePair = new VersionResponsePair(mergingEntry.getValue(), getVersion());
-            sendReplicationOperation(false, name, dataKey, dataValue, existingRecord.getTtlMillis(), responsePair);
         }
         return true;
     }

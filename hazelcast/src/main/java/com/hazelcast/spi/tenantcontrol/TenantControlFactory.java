@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import com.hazelcast.spi.impl.tenantcontrol.NoopTenantControlFactory;
  * Hazelcast service attaches the tenant control to a distributed object.
  *
  * An implementation of {@code TenantControlFactory} is instantiated
- * via {@link com.hazelcast.util.ServiceLoader}, so in order to be picked up:
+ * via {@link com.hazelcast.internal.util.ServiceLoader}, so in order to be picked up:
  * <ul>
  *     <li>Its class name must be stored in a service definition file in
  *     {@code META-INF/services/com.hazelcast.spi.tenantcontrol.TenantControlFactory}</li>
@@ -32,6 +32,7 @@ import com.hazelcast.spi.impl.tenantcontrol.NoopTenantControlFactory;
  * </ul>
  */
 @Beta
+@FunctionalInterface
 public interface TenantControlFactory {
 
     /**

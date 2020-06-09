@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.ConfigDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -45,9 +46,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
 
     private boolean statisticsEnabled = true;
 
-    private String quorumName;
-
-    private transient ExecutorConfigReadOnly readOnly;
+    private String splitBrainProtectionName;
 
     public ExecutorConfig() {
     }
@@ -66,20 +65,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
         this.poolSize = config.poolSize;
         this.queueCapacity = config.queueCapacity;
         this.statisticsEnabled = config.statisticsEnabled;
-        this.quorumName = config.quorumName;
-    }
-
-    /**
-     * Gets immutable version of this configuration.
-     *
-     * @return immutable version of this configuration
-     * @deprecated this method will be removed in 4.0; it is meant for internal usage only
-     */
-    public ExecutorConfigReadOnly getAsReadOnly() {
-        if (readOnly == null) {
-            readOnly = new ExecutorConfigReadOnly(this);
-        }
-        return readOnly;
+        this.splitBrainProtectionName = config.splitBrainProtectionName;
     }
 
     /**
@@ -166,22 +152,22 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
     }
 
     /**
-     * Returns the quorum name for operations.
+     * Returns the split brain protection name for operations.
      *
-     * @return the quorum name
+     * @return the split brain protection name
      */
-    public String getQuorumName() {
-        return quorumName;
+    public String getSplitBrainProtectionName() {
+        return splitBrainProtectionName;
     }
 
     /**
-     * Sets the quorum name for operations.
+     * Sets the split brain protection name for operations.
      *
-     * @param quorumName the quorum name
+     * @param splitBrainProtectionName the split brain protection name
      * @return the updated configuration
      */
-    public ExecutorConfig setQuorumName(String quorumName) {
-        this.quorumName = quorumName;
+    public ExecutorConfig setSplitBrainProtectionName(String splitBrainProtectionName) {
+        this.splitBrainProtectionName = splitBrainProtectionName;
         return this;
     }
 
@@ -192,7 +178,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
                 + "name='" + name + '\''
                 + ", poolSize=" + poolSize
                 + ", queueCapacity=" + queueCapacity
-                + ", quorumName=" + quorumName
+                + ", splitBrainProtectionName=" + splitBrainProtectionName
                 + '}';
     }
 
@@ -212,7 +198,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
         out.writeInt(poolSize);
         out.writeInt(queueCapacity);
         out.writeBoolean(statisticsEnabled);
-        out.writeUTF(quorumName);
+        out.writeUTF(splitBrainProtectionName);
     }
 
     @Override
@@ -221,7 +207,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
         poolSize = in.readInt();
         queueCapacity = in.readInt();
         statisticsEnabled = in.readBoolean();
-        quorumName = in.readUTF();
+        splitBrainProtectionName = in.readUTF();
     }
 
     @Override
@@ -245,7 +231,8 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
         if (statisticsEnabled != that.statisticsEnabled) {
             return false;
         }
-        if (quorumName != null ? !quorumName.equals(that.quorumName) : that.quorumName != null) {
+        if (splitBrainProtectionName != null ? !splitBrainProtectionName.equals(that.splitBrainProtectionName)
+                : that.splitBrainProtectionName != null) {
             return false;
         }
         return name.equals(that.name);
@@ -257,7 +244,7 @@ public class ExecutorConfig implements IdentifiedDataSerializable, NamedConfig {
         result = 31 * result + poolSize;
         result = 31 * result + queueCapacity;
         result = 31 * result + (statisticsEnabled ? 1 : 0);
-        result = 31 * result + (quorumName != null ? quorumName.hashCode() : 0);
+        result = 31 * result + (splitBrainProtectionName != null ? splitBrainProtectionName.hashCode() : 0);
         return result;
     }
 }

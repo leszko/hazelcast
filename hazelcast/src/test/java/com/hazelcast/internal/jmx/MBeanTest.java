@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,18 @@
 
 package com.hazelcast.internal.jmx;
 
-import com.hazelcast.core.IAtomicLong;
-import com.hazelcast.core.IAtomicReference;
-import com.hazelcast.core.ICountDownLatch;
-import com.hazelcast.core.IExecutorService;
 import com.hazelcast.collection.IList;
-import com.hazelcast.core.IMap;
 import com.hazelcast.collection.IQueue;
-import com.hazelcast.core.ISemaphore;
-import com.hazelcast.topic.ITopic;
 import com.hazelcast.collection.ISet;
-import com.hazelcast.core.MultiMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.core.IExecutorService;
+import com.hazelcast.map.IMap;
+import com.hazelcast.multimap.MultiMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
+import com.hazelcast.topic.ITopic;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -52,43 +48,6 @@ public class MBeanTest extends HazelcastTestSupport {
     @Before
     public void setUp() throws Exception {
         holder = new MBeanDataHolder(createHazelcastInstanceFactory(1));
-    }
-
-    @Test
-    public void testAtomicLong() throws Exception {
-        IAtomicLong atomicLong = holder.getHz().getAtomicLong("atomiclong");
-        atomicLong.incrementAndGet();
-
-        holder.assertMBeanExistEventually("IAtomicLong", atomicLong.getName());
-    }
-
-    @Test
-    public void testAtomicReference() throws Exception {
-        IAtomicReference<String> atomicReference = holder.getHz().getAtomicReference("atomicreference");
-        atomicReference.set(null);
-
-        holder.assertMBeanExistEventually("IAtomicReference", atomicReference.getName());
-    }
-
-    @Test
-    public void testSemaphore() throws Exception {
-        ISemaphore semaphore = holder.getHz().getSemaphore("semaphore");
-        semaphore.availablePermits();
-
-        holder.assertMBeanExistEventually("ISemaphore", semaphore.getName());
-    }
-
-    @Test
-    public void testConnection() throws Exception {
-        holder.assertMBeanExistEventually("HazelcastInstance.NetworkingService", holder.getHz().getName());
-    }
-
-    @Test
-    public void testCountDownLatch() throws Exception {
-        ICountDownLatch countDownLatch = holder.getHz().getCountDownLatch("semaphore");
-        countDownLatch.getCount();
-
-        holder.assertMBeanExistEventually("ICountDownLatch", countDownLatch.getName());
     }
 
     @Test

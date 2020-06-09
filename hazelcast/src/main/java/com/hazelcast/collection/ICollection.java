@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ package com.hazelcast.collection;
 
 import com.hazelcast.core.DistributedObject;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.UUID;
 
 /**
  * Concurrent, distributed, partitioned, listenable collection.
@@ -30,6 +32,7 @@ public interface ICollection<E> extends Collection<E>, DistributedObject {
     /**
      * Returns the name of this collection.
      */
+    @Nonnull
     String getName();
 
     /**
@@ -41,7 +44,8 @@ public interface ICollection<E> extends Collection<E>, DistributedObject {
      *                     to the item listener, {@code false} otherwise
      * @return returns the registration ID
      */
-    String addItemListener(ItemListener<E> listener, boolean includeValue);
+    @Nonnull
+    UUID addItemListener(@Nonnull ItemListener<E> listener, boolean includeValue);
 
     /**
      * Removes the specified item listener.
@@ -50,5 +54,5 @@ public interface ICollection<E> extends Collection<E>, DistributedObject {
      * @param registrationId ID of the listener registration
      * @return {@code true} if the item listener is removed, {@code false} otherwise
      */
-    boolean removeItemListener(String registrationId);
+    boolean removeItemListener(@Nonnull UUID registrationId);
 }

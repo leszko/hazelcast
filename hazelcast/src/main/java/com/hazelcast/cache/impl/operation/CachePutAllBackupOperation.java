@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,16 @@ package com.hazelcast.cache.impl.operation;
 
 import com.hazelcast.cache.impl.CacheDataSerializerHook;
 import com.hazelcast.cache.impl.record.CacheRecord;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupOperation;
 
 import java.io.IOException;
 import java.util.Map;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 /**
  * Cache PutAllBackup Operation is the backup operation used by load all operation. Provides backup of
@@ -70,7 +71,7 @@ public class CachePutAllBackupOperation extends CacheOperation implements Backup
             for (Map.Entry<Data, CacheRecord> entry : cacheRecords.entrySet()) {
                 Data key = entry.getKey();
                 CacheRecord record = entry.getValue();
-                out.writeData(key);
+                IOUtil.writeData(out, key);
                 out.writeObject(record);
             }
         }
@@ -84,7 +85,7 @@ public class CachePutAllBackupOperation extends CacheOperation implements Backup
             int size = in.readInt();
             cacheRecords = createHashMap(size);
             for (int i = 0; i < size; i++) {
-                Data key = in.readData();
+                Data key = IOUtil.readData(in);
                 CacheRecord record = in.readObject();
                 cacheRecords.put(key, record);
             }

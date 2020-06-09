@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.hazelcast.map.impl.nearcache;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
@@ -149,7 +149,7 @@ public abstract class AbstractMapNearCacheLocalInvalidationTest extends Hazelcas
             String oldValue = map.put(key, value);
             // this brings the value into the Near Cache
             String value1 = map.get(key);
-            Future<String> future = map.removeAsync(key);
+            Future<String> future = map.removeAsync(key).toCompletableFuture();
             String removedValue = null;
             try {
                 removedValue = future.get();
@@ -249,7 +249,7 @@ public abstract class AbstractMapNearCacheLocalInvalidationTest extends Hazelcas
 
             // this brings the CACHED_AS_NULL into the Near Cache
             String value1 = map.get(key);
-            Future<String> future = map.putAsync(key, value);
+            Future<String> future = map.putAsync(key, value).toCompletableFuture();
             String oldValue = null;
             try {
                 oldValue = future.get();
@@ -274,7 +274,7 @@ public abstract class AbstractMapNearCacheLocalInvalidationTest extends Hazelcas
 
             // this brings the CACHED_AS_NULL into the Near Cache
             String value1 = map.get(key);
-            Future<Void> future = map.setAsync(key, value);
+            Future<Void> future = map.setAsync(key, value).toCompletableFuture();
             try {
                 future.get();
             } catch (Exception e) {

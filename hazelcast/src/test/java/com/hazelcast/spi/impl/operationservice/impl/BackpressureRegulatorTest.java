@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.hazelcast.spi.impl.operationservice.impl;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.internal.util.ConcurrencyDetection;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.Operation;
@@ -35,8 +36,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.spi.properties.GroupProperty.BACKPRESSURE_ENABLED;
-import static com.hazelcast.spi.properties.GroupProperty.BACKPRESSURE_SYNCWINDOW;
+import static com.hazelcast.spi.properties.ClusterProperty.BACKPRESSURE_ENABLED;
+import static com.hazelcast.spi.properties.ClusterProperty.BACKPRESSURE_SYNCWINDOW;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -53,6 +54,15 @@ public class BackpressureRegulatorTest extends HazelcastTestSupport {
     @Before
     public void setup() {
         logger = mock(ILogger.class);
+    }
+
+    @Test
+    public void testWriteThroughDoesntEnableBackPressure() {
+        Config config = new Config();
+        HazelcastProperties hazelcastProperties = new HazelcastProperties(config);
+        BackpressureRegulator regulator = new BackpressureRegulator(hazelcastProperties, logger);
+        CallIdSequence callIdSequence = regulator.newCallIdSequence(ConcurrencyDetection.createEnabled(1000));
+        assertEquals(Integer.MAX_VALUE, callIdSequence.getMaxConcurrentInvocations());
     }
 
     @Test
@@ -74,7 +84,7 @@ public class BackpressureRegulatorTest extends HazelcastTestSupport {
     }
 
     @Test
-    public void testConstruction_OneSyncWindow_syncOnEveryCall() {
+    public void testConstruction_OneSyncWindowB_syncOnEveryCall() {
         Config config = new Config();
         config.setProperty(BACKPRESSURE_ENABLED.getName(), "true");
         config.setProperty(BACKPRESSURE_SYNCWINDOW.getName(), "1");
@@ -95,7 +105,7 @@ public class BackpressureRegulatorTest extends HazelcastTestSupport {
         HazelcastProperties hazelcastProperties = new HazelcastProperties(config);
         BackpressureRegulator backpressureRegulator = new BackpressureRegulator(hazelcastProperties, logger);
 
-        CallIdSequence callIdSequence = backpressureRegulator.newCallIdSequence();
+        CallIdSequence callIdSequence = backpressureRegulator.newCallIdSequence(ConcurrencyDetection.createEnabled(100));
 
         assertInstanceOf(CallIdSequenceWithBackpressure.class, callIdSequence);
         assertEquals(backpressureRegulator.getMaxConcurrentInvocations(), callIdSequence.getMaxConcurrentInvocations());
@@ -108,7 +118,7 @@ public class BackpressureRegulatorTest extends HazelcastTestSupport {
         HazelcastProperties hazelcastProperties = new HazelcastProperties(config);
         BackpressureRegulator backpressureRegulator = new BackpressureRegulator(hazelcastProperties, logger);
 
-        CallIdSequence callIdSequence = backpressureRegulator.newCallIdSequence();
+        CallIdSequence callIdSequence = backpressureRegulator.newCallIdSequence(ConcurrencyDetection.createDisabled());
 
         assertInstanceOf(CallIdSequenceWithoutBackpressure.class, callIdSequence);
     }

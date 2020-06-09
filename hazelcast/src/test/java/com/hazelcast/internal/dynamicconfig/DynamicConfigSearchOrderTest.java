@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import org.junit.runner.RunWith;
 
 import java.util.UUID;
 
-import static com.hazelcast.spi.properties.GroupProperty.SEARCH_DYNAMIC_CONFIG_FIRST;
+import static com.hazelcast.spi.properties.ClusterProperty.SEARCH_DYNAMIC_CONFIG_FIRST;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -52,7 +52,7 @@ public class DynamicConfigSearchOrderTest extends HazelcastTestSupport {
         staticHazelcastConfig.setProperty(SEARCH_DYNAMIC_CONFIG_FIRST.getName(), "true");
         String uuid = UUID.randomUUID().toString();
         staticHazelcastConfig.setInstanceName(uuid);
-        staticHazelcastConfig.setGroupConfig(staticHazelcastConfig.getGroupConfig().setName(uuid));
+        staticHazelcastConfig.setClusterName(uuid);
     }
 
     @Test

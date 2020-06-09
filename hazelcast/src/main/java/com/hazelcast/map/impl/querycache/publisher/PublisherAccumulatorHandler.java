@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import com.hazelcast.map.impl.querycache.accumulator.AccumulatorProcessor;
 import com.hazelcast.map.impl.querycache.event.BatchEventData;
 import com.hazelcast.map.impl.querycache.event.QueryCacheEventData;
 import com.hazelcast.map.impl.querycache.event.sequence.Sequenced;
-import com.hazelcast.nio.Address;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.spi.properties.ClusterProperty;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 /**
  * Handler for processing of event data in an {@link Accumulator Accumulator}.
@@ -100,7 +100,7 @@ public class PublisherAccumulatorHandler implements AccumulatorHandler<Sequenced
             return Collections.emptyMap();
         }
 
-        final int defaultPartitionCount = Integer.parseInt(GroupProperty.PARTITION_COUNT.getDefaultValue());
+        final int defaultPartitionCount = Integer.parseInt(ClusterProperty.PARTITION_COUNT.getDefaultValue());
         final int roughSize = Math.min(events.size(), defaultPartitionCount);
 
         final Map<Integer, List<QueryCacheEventData>> map = createHashMap(roughSize);

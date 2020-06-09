@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,13 @@
 package com.hazelcast.cp.internal.datastructures.countdownlatch.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.CPCountDownLatchTrySetCountCodec;
-import com.hazelcast.client.impl.protocol.task.AbstractMessageTask;
-import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.client.impl.protocol.codec.CountDownLatchTrySetCountCodec;
 import com.hazelcast.cp.internal.RaftService;
-import com.hazelcast.cp.internal.datastructures.countdownlatch.RaftCountDownLatchService;
+import com.hazelcast.cp.internal.client.AbstractCPMessageTask;
+import com.hazelcast.cp.internal.datastructures.countdownlatch.CountDownLatchService;
 import com.hazelcast.cp.internal.datastructures.countdownlatch.operation.TrySetCountOp;
-import com.hazelcast.instance.Node;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.security.permission.CountDownLatchPermission;
 
@@ -33,8 +32,7 @@ import java.security.Permission;
 /**
  * Client message task for {@link TrySetCountOp}
  */
-public class TrySetCountMessageTask extends AbstractMessageTask<CPCountDownLatchTrySetCountCodec.RequestParameters>
-        implements ExecutionCallback<Boolean> {
+public class TrySetCountMessageTask extends AbstractCPMessageTask<CountDownLatchTrySetCountCodec.RequestParameters> {
 
     public TrySetCountMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection);
@@ -45,22 +43,22 @@ public class TrySetCountMessageTask extends AbstractMessageTask<CPCountDownLatch
         RaftService service = nodeEngine.getService(RaftService.SERVICE_NAME);
         service.getInvocationManager()
                 .<Boolean>invoke(parameters.groupId, new TrySetCountOp(parameters.name, parameters.count))
-                .andThen(this);
+                .whenCompleteAsync(this);
     }
 
     @Override
-    protected CPCountDownLatchTrySetCountCodec.RequestParameters decodeClientMessage(ClientMessage clientMessage) {
-        return CPCountDownLatchTrySetCountCodec.decodeRequest(clientMessage);
+    protected CountDownLatchTrySetCountCodec.RequestParameters decodeClientMessage(ClientMessage clientMessage) {
+        return CountDownLatchTrySetCountCodec.decodeRequest(clientMessage);
     }
 
     @Override
     protected ClientMessage encodeResponse(Object response) {
-        return CPCountDownLatchTrySetCountCodec.encodeResponse((Boolean) response);
+        return CountDownLatchTrySetCountCodec.encodeResponse((Boolean) response);
     }
 
     @Override
     public String getServiceName() {
-        return RaftCountDownLatchService.SERVICE_NAME;
+        return CountDownLatchService.SERVICE_NAME;
     }
 
     @Override
@@ -81,15 +79,5 @@ public class TrySetCountMessageTask extends AbstractMessageTask<CPCountDownLatch
     @Override
     public Object[] getParameters() {
         return new Object[]{parameters.count};
-    }
-
-    @Override
-    public void onResponse(Boolean response) {
-        sendResponse(response);
-    }
-
-    @Override
-    public void onFailure(Throwable t) {
-        handleProcessingFailure(t);
     }
 }

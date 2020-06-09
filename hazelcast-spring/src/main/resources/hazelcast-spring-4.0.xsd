@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+  ~ Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@
                     <xs:choice minOccurs="0" maxOccurs="unbounded">
                         <xs:element name="spring-aware" type="xs:string" minOccurs="0" maxOccurs="1"/>
                         <xs:element name="instance-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="group" type="group" minOccurs="0" maxOccurs="1"/>
+                        <xs:element name="cluster-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
                         <xs:element name="license-key" type="xs:string" minOccurs="0" maxOccurs="1"/>
                         <xs:element name="management-center" type="management-center" minOccurs="0" maxOccurs="1"/>
                         <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
@@ -42,15 +42,11 @@
                         <xs:element name="executor-service" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -83,15 +79,11 @@
                         <xs:element name="durable-executor-service" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -123,15 +115,11 @@
                         <xs:element name="scheduled-executor-service" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:all>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -156,7 +144,25 @@
                                     <xs:annotation>
                                         <xs:documentation>
                                             The maximum number of tasks that a scheduler can have at any given point
-                                            in time per partition.
+                                            in time as per capacity-policy.
+                                            Once the capacity is reached, new tasks will be rejected.
+                                            Capacity is ignored upon migrations to prevent any undesirable data-loss.
+                                        </xs:documentation>
+                                    </xs:annotation>
+                                </xs:attribute>
+                                <xs:attribute name="capacity-policy" use="optional" type="scheduled-executor-capacity-policy" default="PER_NODE">
+                                    <xs:annotation>
+                                        <xs:documentation>
+                                            The active policy for the capacity setting
+                                            capacity-policy has these valid values:
+                                            PER_NODE: Maximum number of tasks in each Hazelcast instance.
+                                            This is the default policy.
+                                            PER_PARTITION: Maximum number of tasks within each partition. Storage size
+                                            depends on the partition count in a Hazelcast instance.
+                                            This attribute should not be used often.
+                                            Avoid using this attribute with a small cluster: if the cluster is small it will
+                                            be hosting more partitions, and therefore tasks, than that of a larger
+                                            cluster.
                                         </xs:documentation>
                                     </xs:annotation>
                                 </xs:attribute>
@@ -186,15 +192,11 @@
                                         </xs:annotation>
                                     </xs:element>
 
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -232,15 +234,11 @@
                                             <xs:attribute name="factory-implementation" use="optional" type="xs:string"/>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -288,25 +286,6 @@
                                 </xs:attribute>
                             </xs:complexType>
                         </xs:element>
-                        <xs:element name="lock" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                </xs:sequence>
-                                <xs:attribute name="name" use="required" type="xs:string"/>
-                            </xs:complexType>
-                        </xs:element>
                         <xs:element name="ringbuffer" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
@@ -335,15 +314,11 @@
                                                           type="xs:string"/>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -415,113 +390,6 @@
                                 </xs:attribute>
                             </xs:complexType>
                         </xs:element>
-                        <xs:element name="atomic-long" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                    <xs:element name="merge-policy" type="merge-policy" minOccurs="0" maxOccurs="1"/>
-                                </xs:sequence>
-                                <xs:attribute name="name" use="required" type="xs:string"/>
-                            </xs:complexType>
-                        </xs:element>
-                        <xs:element name="atomic-reference" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                    <xs:element name="merge-policy" type="merge-policy" minOccurs="0" maxOccurs="1"/>
-                                </xs:sequence>
-                                <xs:attribute name="name" use="required" type="xs:string"/>
-                            </xs:complexType>
-                        </xs:element>
-                        <xs:element name="count-down-latch" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                </xs:sequence>
-                                <xs:attribute name="name" use="required" type="xs:string"/>
-                            </xs:complexType>
-                        </xs:element>
-                        <xs:element name="semaphore" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:sequence>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                </xs:sequence>
-                                <xs:attribute name="name" use="required" type="xs:string"/>
-                                <xs:attribute name="initial-permits" use="optional" type="parameterized-unsigned-int">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            The thread count to which the concurrent access is limited. For example, if you set
-                                            it to "3", concurrent access to the object is limited to 3 threads.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="backup-count" use="optional" type="parameterized-backup-count" default="1">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Number of synchronous backups. For example, if 1 is set as the backup-count,
-                                            then the items in the ringbuffer are copied to one other JVM for fail-safety.
-                                            `backup-count` + `async-backup-count` cannot be bigger than maximum
-                                            backup count which is `6`. Valid numbers are 0 (no backup), 1, 2 ... 6.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="async-backup-count" use="optional" type="parameterized-backup-count"
-                                              default="0">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Number of asynchronous backups. For example, if 1 is set as the backup-count,
-                                            then the items in the ringbuffer are copied to one other JVM for fail-safety.
-                                            `backup-count` + `async-backup-count` cannot be bigger than maximum
-                                            backup count which is `6`. Valid numbers are 0 (no backup), 1, 2 ... 6.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                            </xs:complexType>
-                        </xs:element>
                         <xs:element name="reliable-topic" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
@@ -564,6 +432,58 @@
                         <xs:element name="map" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
+                                    <xs:element name="eviction" type="eviction-map" minOccurs="0" maxOccurs="1">
+                                        <xs:annotation>
+                                            <xs:documentation>
+                                                When maximum size is reached, map is evicted based on the eviction policy.
+                                                IMap has no eviction by default.
+
+                                                size:
+                                                maximum size can be any integer between 0 and Integer.MAX_VALUE.
+                                                For max-size to work, set the eviction-policy property to a value other than NONE.
+
+                                                Default value is 0.
+
+                                                max-size-policy:
+                                                max-size-policy has these valid values:
+                                                PER_NODE: Maximum number of map entries in each Hazelcast instance.
+                                                This is the default policy.
+                                                PER_PARTITION: Maximum number of map entries within each partition. Storage size
+                                                depends on the partition count in a Hazelcast instance.
+                                                This attribute should not be used often.
+                                                Avoid using this attribute with a small cluster: if the cluster is small it will
+                                                be hosting more partitions, and therefore map entries, than that of a larger
+                                                cluster. Thus, for a small cluster, eviction of the entries will decrease
+                                                performance (the number of entries is large).
+                                                USED_HEAP_SIZE: Maximum used heap size in megabytes per map for each Hazelcast instance.
+                                                USED_HEAP_PERCENTAGE: Maximum used heap size percentage per map for each Hazelcast
+                                                instance.
+                                                If, for example, JVM is configured to have 1000 MB and this value is 10, then the map
+                                                entries will be evicted when used heap size exceeds 100 MB.
+                                                FREE_HEAP_SIZE: Minimum free heap size in megabytes for each JVM.
+                                                FREE_HEAP_PERCENTAGE: Minimum free heap size percentage for each JVM.
+                                                For example, if JVM is configured to have 1000 MB and this value is 10,
+                                                then the map entries will be evicted when free heap size is below 100 MB.
+                                                USED_NATIVE_MEMORY_SIZE: Maximum used native memory size in megabytes per map
+                                                for each Hazelcast instance.
+                                                USED_NATIVE_MEMORY_PERCENTAGE: Maximum used native memory size percentage per map
+                                                for each Hazelcast instance.
+                                                FREE_NATIVE_MEMORY_SIZE: Minimum free native memory size in megabytes
+                                                for each Hazelcast instance.
+                                                FREE_NATIVE_MEMORY_PERCENTAGE: Minimum free native memory size percentage
+                                                for each Hazelcast instance.
+
+                                                eviction-policy:
+                                                Eviction policy has these valid values:
+                                                LRU (Least Recently Used),
+                                                LFU (Least Frequently Used),
+                                                RANDOM,
+                                                NONE.
+
+                                                Default value is "NONE".
+                                            </xs:documentation>
+                                        </xs:annotation>
+                                    </xs:element>
                                     <xs:element name="map-store" minOccurs="0" maxOccurs="1">
                                         <xs:complexType>
                                             <xs:sequence>
@@ -642,18 +562,12 @@
                                     <xs:element name="indexes" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                This configuration lets you index the attributes and also order them.
+                                                This configuration lets you define map indexes.
                                             </xs:documentation>
                                         </xs:annotation>
                                         <xs:complexType>
                                             <xs:sequence>
-                                                <xs:element name="index" minOccurs="0" maxOccurs="unbounded">
-                                                    <xs:complexType>
-                                                        <xs:attribute name="attribute" type="xs:string" use="required"/>
-                                                        <xs:attribute name="ordered" type="xs:string" use="optional"
-                                                                      default="false"/>
-                                                    </xs:complexType>
-                                                </xs:element>
+                                                <xs:element name="index" type="index" minOccurs="0" maxOccurs="unbounded"/>
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
@@ -668,7 +582,7 @@
                                                 <xs:element name="attribute" minOccurs="0" maxOccurs="unbounded">
                                                     <xs:complexType>
                                                         <xs:attribute name="name" type="xs:string" use="required"/>
-                                                        <xs:attribute name="extractor" type="xs:string" use="required"/>
+                                                        <xs:attribute name="extractor-class-name" type="xs:string" use="required"/>
                                                     </xs:complexType>
                                                 </xs:element>
                                             </xs:sequence>
@@ -688,15 +602,11 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -713,15 +623,9 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
+                                    <xs:element name="merkle-tree" type="merkle-tree" minOccurs="0" maxOccurs="1"/>
                                     <xs:element name="hot-restart" type="hot-restart" minOccurs="0" maxOccurs="1"/>
-                                    <xs:element name="map-eviction-policy" type="map-eviction-policy" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                Internal eviction algorithm finds most appropriate entry
-                                                to evict from this map by using this policy.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
+                                    <xs:element name="event-journal" type="event-journal" minOccurs="0" maxOccurs="1"/>
                                     <xs:element name="partition-strategy" type="xs:string" minOccurs="0" maxOccurs="1"/>
                                 </xs:sequence>
                                 <xs:attribute name="name" use="required" type="xs:string"/>
@@ -756,22 +660,6 @@
                                             You can retrieve some statistics like owned entry count, backup entry count,
                                             last update time, locked entry count by setting this parameter's value
                                             as "true". The method for retrieving the statistics is `getLocalMapStats()`.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="optimize-queries" use="optional" type="parameterized-boolean">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            This parameter is deprecated as of Hazelcast 3.6
-                                            Use cache-deserialized-values attribute instead.
-
-                                            When both optimize-query and cache-deserialized-values are used at the same time
-                                            Hazelcast will do its best to detect possible conflicts. Conflict detection
-                                            is done on best-effort basis and you should not rely on it.
-
-                                            This parameter is used to increase the speed of query processes in the map.
-                                            It only works when `in-memory-format` is set as `BINARY` and performs
-                                            a pre-caching on the entries queried.
                                         </xs:documentation>
                                     </xs:annotation>
                                 </xs:attribute>
@@ -818,49 +706,6 @@
                                         </xs:documentation>
                                     </xs:annotation>
                                 </xs:attribute>
-                                <xs:attribute name="max-size" use="optional" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Maximum size. Any integer between 0 and Integer.MAX_VALUE. 0 means
-                                            Integer.MAX_VALUE. Default is 0.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <!--max-size-policy attribute wasn't converted to enumeration to support case-insensitivity-->
-                                <xs:attribute name="max-size-policy" use="optional" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Valid values are:
-                                            PER_NODE: Maximum number of map entries in each Hazelcast instance.
-                                            This is the default policy.
-                                            PER_PARTITION: Maximum number of map entries within each partition. Storage size
-                                            depends on the partition count in a Hazelcast instance.
-                                            This attribute should not be used often.
-                                            Avoid using this attribute with a small cluster: if the cluster is small it will
-                                            be hosting more partitions, and therefore map entries, than that of a larger
-                                            cluster. Thus, for a small cluster, eviction of the entries will decrease
-                                            performance (the number of entries is large).
-                                            USED_HEAP_SIZE: Maximum used heap size in megabytes per map for each Hazelcast
-                                            instance.
-                                            USED_HEAP_PERCENTAGE: Maximum used heap size percentage per map for each Hazelcast
-                                            instance.
-                                            If, for example, JVM is configured to have 1000 MB and this value is 10, then the map
-                                            entries will be evicted when used heap size exceeds 100 MB.
-                                            FREE_HEAP_SIZE: Minimum free heap size in megabytes for each JVM.
-                                            FREE_HEAP_PERCENTAGE: Minimum free heap size percentage for each JVM.
-                                            For example, if JVM is configured to have 1000 MB and this value is 10,
-                                            then the map entries will be evicted when free heap size is below 100 MB.
-                                            USED_NATIVE_MEMORY_SIZE: Maximum used native memory size in megabytes per map
-                                            for each Hazelcast instance.
-                                            USED_NATIVE_MEMORY_PERCENTAGE: Maximum used native memory size percentage per map
-                                            for each Hazelcast instance.
-                                            FREE_NATIVE_MEMORY_SIZE: Minimum free native memory size in megabytes
-                                            for each Hazelcast instance.
-                                            FREE_NATIVE_MEMORY_PERCENTAGE: Minimum free native memory size percentage
-                                            for each Hazelcast instance.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
                                 <xs:attribute name="max-idle-seconds" use="optional" type="xs:string">
                                     <xs:annotation>
                                         <xs:documentation>
@@ -869,39 +714,6 @@
                                             automatically evicted from the map. Entry is touched if get, put or
                                             containsKey is called. Any integer between 0 and Integer.MAX_VALUE. 0 means
                                             infinite. Default is 0.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="eviction-percentage" use="optional" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            This parameter is deprecated as of version 3.7 due to the eviction mechanism change.
-                                            (New eviction mechanism uses a probabilistic algorithm based on sampling. Please see
-                                            documentation for further details.)
-
-                                            When max. size is reached, specified percentage of the map will be evicted.
-                                            Any integer between 0 and 100. If 25 is set for example, 25% of the
-                                            entries will get evicted.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="min-eviction-check-millis" use="optional" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            This parameter is deprecated as of version 3.7 due to the eviction mechanism change.
-                                            (New eviction mechanism uses a probabilistic algorithm based on sampling. Please see
-                                            documentation for further details.)
-
-                                            Minimum time in milliseconds which should pass before checking if a
-                                            partition of this map is evictable or not. Default value is 100 millis.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="eviction-policy" use="optional" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Valid values are: NONE (no eviction), LRU (Least Recently Used), LFU
-                                            (Least Frequently Used). NONE is the default.
                                         </xs:documentation>
                                     </xs:annotation>
                                 </xs:attribute>
@@ -1003,49 +815,17 @@
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
-                                            </xs:documentation>
-                                        </xs:annotation>
-                                    </xs:element>
-                                    <xs:element name="merge-policy" minOccurs="0" maxOccurs="1">
-                                        <xs:annotation>
-                                            <xs:documentation>
-                                                While recovering from split-brain (network partitioning), cache entries in the
-                                                small cluster
-                                                merge into the bigger cluster based on the policy set here.
-                                                When an entry merges into the cluster, an entry with the same key might already
-                                                exist in the cluster.
-                                                The values of these entries might be different for that same key. Which value
-                                                should be set for the
-                                                key? The conflict is resolved by the policy set here.
-                                                <p>
-                                                    <br/>There are built-in merge policies, such as:
-                                                    <br/>`com.hazelcast.cache.merge.PassThroughCacheMergePolicy` or
-                                                    `PASS_THROUGH`:
-                                                    The entry will be added directly even though there is an existing entry for
-                                                    the key.
-                                                    <br/>`com.hazelcast.cache.merge.PutIfAbsentCacheMergePolicy` or
-                                                    `PUT_IF_ABSENT`:
-                                                    The entry will be added if there is no existing entry for the key.
-                                                    <br/>`com.hazelcast.cache.merge.HigherHitsCacheMergePolicy` or `HIGHER_HITS`:
-                                                    The entry with the higher number of hits wins.
-                                                    <br/>`com.hazelcast.cache.merge.LatestAccessCacheMergePolicy` or
-                                                    `LATEST_ACCESS`:
-                                                    The entry which has been accessed more recently wins.
-                                                    <br/>Default policy is 'com.hazelcast.cache.merge.PutIfAbsentCacheMergePolicy'
-                                                </p>
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
                                     <xs:element name="hot-restart" type="hot-restart" minOccurs="0" maxOccurs="1"/>
+                                    <xs:element name="event-journal" type="event-journal" minOccurs="0" maxOccurs="1"/>
+                                    <xs:element name="merge-policy" type="merge-policy" minOccurs="0" maxOccurs="1"/>
                                 </xs:sequence>
                                 <xs:attribute name="name" type="xs:string" use="required">
                                     <xs:annotation>
@@ -1182,116 +962,6 @@
                                 </xs:attribute>
                             </xs:complexType>
                         </xs:element>
-                        <xs:element name="event-journal" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:annotation>
-                                    <xs:documentation>
-                                        Configuration for an event journal. The event journal keeps events related
-                                        to a specific partition and data structure. For instance, it could keep
-                                        map add, update, remove, merge events along with the key, old value, new value and so on.
-                                        This configuration is not tied to a specific data structure and can be reused.
-                                    </xs:documentation>
-                                </xs:annotation>
-                                <xs:attribute name="map-name" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            The name of the map to which this config applies.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="cache-name" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            The name of the cache to which this config applies.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="enabled" type="parameterized-boolean" default="true">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            True if the event journal is enabled, false otherwise.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="capacity" use="optional" type="parameterized-unsigned-int">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Number of items in the event journal. If no time-to-live-seconds
-                                            is set, the size will always be equal to capacity after the event
-                                            journal has been filled. This is because no items are getting retired.
-                                            The default value is 10000.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="time-to-live-seconds" use="optional" type="parameterized-unsigned-int">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Maximum number of seconds for each entry to stay in the event journal.
-                                            Entries that are older than &lt;time-to-live-seconds&gt; are evicted from the journal.
-                                            Any integer between 0 and Integer.MAX_VALUE. 0 means infinite. Default is 0.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                            </xs:complexType>
-                        </xs:element>
-                        <xs:element name="merkle-tree" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:annotation>
-                                    <xs:documentation>
-                                        Configuration for a merkle tree.
-                                        The merkle tree is a data structure used for efficient comparison of the
-                                        difference in the contents of large data structures. The precision of
-                                        such a comparison mechanism is defined by the depth of the merkle tree.
-                                        A larger depth means that a data synchronization mechanism will be able
-                                        to pinpoint a smaller subset of the data structure contents in which a
-                                        change occurred. This causes the synchronization mechanism to be more
-                                        efficient. On the other hand, a larger tree depth means the merkle tree
-                                        will consume more memory.
-                                        A smaller depth means the data synchronization mechanism will have to
-                                        transfer larger chunks of the data structure in which a possible change
-                                        happened. On the other hand, a shallower tree consumes less memory.
-                                        The depth must be between 2 and 27 (exclusive).
-                                        As the comparison mechanism is iterative, a larger depth will also prolong
-                                        the duration of the comparison mechanism. Care must be taken to not have
-                                        large tree depths if the latency of the comparison operation is high.
-                                        The default depth is 10.
-                                        This configuration is not tied to a specific data structure and can be
-                                        reused.
-                                        See https://en.wikipedia.org/wiki/Merkle_tree.
-                                    </xs:documentation>
-                                </xs:annotation>
-                                <xs:attribute name="map-name" type="xs:string">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            The name of the map to which this config applies.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="enabled" type="parameterized-boolean" default="true">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            True if the merkle tree is enabled, false otherwise.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="depth" type="parameterized-unsigned-int">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            The depth of the merkle tree.
-                                            A larger depth means that a data synchronization mechanism will be able
-                                            to pinpoint a smaller subset of the data structure contents in which a
-                                            change occurred. This causes the synchronization mechanism to be more
-                                            efficient. On the other hand, a larger tree depth means the merkle tree
-                                            will consume more memory.
-                                            A smaller depth means the data synchronization mechanism will have to
-                                            transfer larger chunks of the data structure in which a possible change
-                                            happened. On the other hand, a shallower tree consumes less memory.
-                                            The depth must be between 2 and 27 (exclusive). The default depth is 10.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                            </xs:complexType>
-                        </xs:element>
                         <xs:element name="multimap" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
@@ -1303,15 +973,11 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -1378,15 +1044,11 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split brain protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -1439,15 +1101,11 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split-brain-protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -1557,15 +1215,11 @@
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split-brain-protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -1574,33 +1228,6 @@
                                 <xs:attribute name="name" type="xs:string" use="optional" default="default"/>
                                 <xs:attribute name="in-memory-format" type="in-memory-format" use="optional"
                                               default="OBJECT"/>
-                                <xs:attribute name="concurrency-level" type="concurrency-level" use="optional"
-                                              default="32">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Number of parallel mutexes to minimize contention on keys. The default value
-                                            is 32 which
-                                            is a good number for lots of applications. If higher contention is seen on
-                                            writes to values
-                                            inside of the replicated map this value can be adjusted to the needs.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
-                                <xs:attribute name="replication-delay-millis" type="parameterized-unsigned-int" use="optional"
-                                              default="100">
-                                    <xs:annotation>
-                                        <xs:documentation>
-                                            Defines a number of milliseconds after a put is executed before the value is
-                                            replicated
-                                            to other nodes. In this time multiple puts can be operated and are cached up
-                                            to be send
-                                            at once.
-                                            Default value is 100ms before a replication is operated, if set to 0 no
-                                            delay is used and
-                                            all values are replicated one by one.
-                                        </xs:documentation>
-                                    </xs:annotation>
-                                </xs:attribute>
                                 <xs:attribute name="async-fillup" type="parameterized-boolean" use="optional" default="true">
                                     <xs:annotation>
                                         <xs:documentation>
@@ -1638,8 +1265,7 @@
                                 <xs:field xpath="@name"/>
                             </xs:unique>
                         </xs:element>
-                        <xs:element name="services" type="services" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="quorum" type="quorum" minOccurs="0" maxOccurs="unbounded"/>
+                        <xs:element name="split-brain-protection" type="split-brain-protection" minOccurs="0" maxOccurs="unbounded"/>
                         <xs:element name="lite-member" minOccurs="0" maxOccurs="1">
                             <xs:complexType>
                                 <xs:attribute name="enabled" type="parameterized-boolean">
@@ -1667,15 +1293,11 @@
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
-                                    <xs:element name="quorum-ref" minOccurs="0" maxOccurs="1">
+                                    <xs:element name="split-brain-protection-ref" minOccurs="0" maxOccurs="1">
                                         <xs:annotation>
                                             <xs:documentation>
-                                                Adds the Split Brain Protection for this data-structure which you configure using the quorum element.
-                                                You should set the quorum-ref's value as the quorum's name.
-                                                IMPORTANT: The term "quorum" simply refers to the count of members in the cluster required for an operation to succeed.
-                                                It does NOT refer to an implementation of Paxos or Raft protocols as used in many NoSQL and distributed systems.
-                                                The mechanism it provides in Hazelcast protects the user in case the number of nodes in a cluster drops below the
-                                                specified one.
+                                                Adds the Split Brain Protection for this data-structure which you configure using the split-brain-protection element.
+                                                You should set the split-brain-protection-ref's value as the split-brain-protection's name.
                                             </xs:documentation>
                                         </xs:annotation>
                                     </xs:element>
@@ -1698,6 +1320,7 @@
                             </xs:complexType>
                         </xs:element>
                         <xs:element name="cp-subsystem" type="cp-subsystem" minOccurs="0" maxOccurs="1"/>
+                        <xs:element name="metrics" type="metrics" minOccurs="0" maxOccurs="1"/>
                     </xs:choice>
                 </xs:extension>
             </xs:complexContent>
@@ -1893,10 +1516,11 @@
             <xs:extension base="hazelcast-bean">
                 <xs:choice minOccurs="0" maxOccurs="unbounded">
                     <xs:element name="spring-aware" type="xs:string" minOccurs="0" maxOccurs="1"/>
-                    <xs:element name="group" type="group" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="instance-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="cluster-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="labels" type="labels" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="backup-ack-to-client-enabled" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true"/>
                     <xs:element name="network" type="network-client" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="security" type="client-security" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="listeners" type="listeners" minOccurs="0" maxOccurs="1"/>
@@ -1909,9 +1533,8 @@
                     <xs:element name="user-code-deployment" type="user-code-deployment-client" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="flake-id-generator" type="client-flake-id-generator" minOccurs="0" maxOccurs="unbounded"/>
                     <xs:element name="reliable-topic" type="client-reliable-topic" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="metrics" type="client-metrics" minOccurs="0" maxOccurs="unbounded"/>
                 </xs:choice>
-                <xs:attribute name="executor-pool-size" type="xs:int" use="optional"/>
-                <xs:attribute name="credentials-ref" type="xs:string" use="optional"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -1923,7 +1546,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.IMap"/>
+                    <tool:exports type="com.hazelcast.map.IMap"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -1972,7 +1595,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.MultiMap"/>
+                    <tool:exports type="com.hazelcast.multimap.MultiMap"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -1984,7 +1607,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.ReplicatedMap"/>
+                    <tool:exports type="com.hazelcast.replicatedmap.ReplicatedMap"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2097,18 +1720,6 @@
             </xs:appinfo>
         </xs:annotation>
     </xs:element>
-    <xs:element name="idGenerator" type="hazelcast-type">
-        <xs:annotation>
-            <xs:documentation>
-                Retrieve a Hazelcast IdGenerator instance
-            </xs:documentation>
-            <xs:appinfo>
-                <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.IdGenerator"/>
-                </tool:annotation>
-            </xs:appinfo>
-        </xs:annotation>
-    </xs:element>
     <xs:element name="flakeIdGenerator" type="hazelcast-type">
         <xs:annotation>
             <xs:documentation>
@@ -2140,7 +1751,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.IAtomicLong"/>
+                    <tool:exports type="com.hazelcast.cp.IAtomicLong"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2152,7 +1763,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.IAtomicReference"/>
+                    <tool:exports type="com.hazelcast.cp.IAtomicReference"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2164,7 +1775,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.ICountDownLatch"/>
+                    <tool:exports type="com.hazelcast.cp.ICountDownLatch"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2176,7 +1787,7 @@
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.ISemaphore"/>
+                    <tool:exports type="com.hazelcast.cp.ISemaphore"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2184,11 +1795,11 @@
     <xs:element name="lock" type="hazelcast-type">
         <xs:annotation>
             <xs:documentation>
-                Retrieve a Hazelcast ILock instance
+                Retrieve a Hazelcast FencedLock instance
             </xs:documentation>
             <xs:appinfo>
                 <tool:annotation>
-                    <tool:exports type="com.hazelcast.core.ILock"/>
+                    <tool:exports type="com.hazelcast.cp.lock.FencedLock"/>
                 </tool:annotation>
             </xs:appinfo>
         </xs:annotation>
@@ -2438,10 +2049,6 @@
         <xs:attributeGroup ref="class-or-bean-name"/>
     </xs:complexType>
 
-    <xs:complexType name="map-eviction-policy">
-        <xs:attributeGroup ref="class-or-bean-name"/>
-    </xs:complexType>
-
     <xs:complexType name="outbound-ports">
         <xs:sequence>
             <xs:element name="ports" minOccurs="0" maxOccurs="unbounded">
@@ -2496,11 +2103,6 @@
         <xs:restriction base="xs:string"/>
     </xs:simpleType>
 
-    <xs:complexType name="group">
-        <xs:attribute name="name" type="xs:string"/>
-        <xs:attribute name="password" type="xs:string"/>
-    </xs:complexType>
-
     <xs:simpleType name="propertyNameEnum">
         <xs:restriction base="non-space-string">
             <xs:enumeration value="hazelcast.merge.first.run.delay.seconds"/>
@@ -2525,9 +2127,6 @@
             <xs:enumeration value="hazelcast.log.state"/>
             <xs:enumeration value="hazelcast.jmx"/>
             <xs:enumeration value="hazelcast.jmx.detailed"/>
-            <xs:enumeration value="hazelcast.mancenter.enabled"/>
-            <xs:enumeration value="hazelcast.memcache.enabled"/>
-            <xs:enumeration value="hazelcast.rest.enabled"/>
             <xs:enumeration value="hazelcast.map.load.chunk.size"/>
             <xs:enumeration value="hazelcast.in.thread.priority"/>
             <xs:enumeration value="hazelcast.out.thread.priority"/>
@@ -2549,7 +2148,6 @@
             <xs:enumeration value="hazelcast.map.max.backup.count"/>
             <xs:enumeration value="hazelcast.max.wait.seconds.before.join"/>
             <xs:enumeration value="hazelcast.logging.type"/>
-            <xs:enumeration value="hazelcast.compatibility.3.6.client"/>
         </xs:restriction>
     </xs:simpleType>
     <xs:simpleType name="propertyNameString">
@@ -2729,127 +2327,34 @@
 
     <xs:complexType name="wan-replication">
         <xs:sequence>
-            <xs:element name="wan-publisher" minOccurs="0" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="queue-full-behavior" type="wan-queue-full-behavior" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="queue-capacity" type="parameterized-positive-integer" default="10000" minOccurs="0"
-                                    maxOccurs="1"/>
-                        <xs:element name="initial-publisher-state" type="initial-publisher-state" minOccurs="0" maxOccurs="1"
-                                    default="REPLICATING">
-                            <xs:annotation>
-                                <xs:documentation>
-                                    Defines the initial state in which a WAN publisher is started.
-                                    - REPLICATING (default):
-                                    State where both enqueuing new events is allowed, enqueued events are replicated to the target cluster
-                                    and WAN sync is enabled.
-                                    - PAUSED:
-                                    State where new events are enqueued but they are not dequeued. Some events which have been dequeued before
-                                    the state was switched may still be replicated to the target cluster but further events will not be
-                                    replicated. WAN sync is enabled.
-                                    - STOPPED:
-                                    State where neither new events are enqueued nor dequeued. As with the PAUSED state, some events might
-                                    still be replicated after the publisher has switched to this state. WAN sync is enabled.
-                                </xs:documentation>
-                            </xs:annotation>
-                        </xs:element>
-                        <xs:element name="aws" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="gcp" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="azure" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="kubernetes" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="eureka" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="discovery-strategies" type="discovery-strategies" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="wan-sync" type="wan-sync" minOccurs="0">
-                            <xs:annotation>
-                                <xs:documentation>
-                                    Configuration for the WAN sync mechanism.
-                                </xs:documentation>
-                            </xs:annotation>
-                        </xs:element>
-                        <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
-                        <xs:element name="endpoint" type="xs:string" minOccurs="0">
-                            <xs:annotation>
-                                <xs:documentation>
-                                    Reference to the name of a WAN endpoint config or WAN server socket endpoint config.
-                                    The network settings from the referenced endpoint configuration will setup the network
-                                    configuration of connections to the target WAN cluster members.
-                                </xs:documentation>
-                            </xs:annotation>
-                        </xs:element>
-                    </xs:sequence>
-                    <xs:attributeGroup ref="class-or-bean-name"/>
-                    <xs:attribute name="group-name" use="required">
-                        <xs:annotation>
-                            <xs:documentation>
-                                Sets the group name used as an endpoint group name for authentication
-                                on the target endpoint.
-                                If there is no separate publisher ID property defined, this group name
-                                will also be used as a WAN publisher ID. This ID is then used for
-                                identifying the publisher in a WanReplicationConfig.
-                            </xs:documentation>
-                        </xs:annotation>
-                        <xs:simpleType>
-                            <xs:restriction base="xs:string"/>
-                        </xs:simpleType>
-                    </xs:attribute>
-                    <xs:attribute name="publisher-id">
-                        <xs:annotation>
-                            <xs:documentation>
-                                Sets the publisher ID used for identifying the publisher in a
-                                WanReplicationConfig.
-                                If there is no publisher ID defined (it is empty), the group name will
-                                be used as a publisher ID.
-                            </xs:documentation>
-                        </xs:annotation>
-                        <xs:simpleType>
-                            <xs:restriction base="xs:string"/>
-                        </xs:simpleType>
-                    </xs:attribute>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="wan-consumer" minOccurs="0">
+            <xs:element name="batch-publisher"
+                        type="wan-batch-publisher"
+                        minOccurs="0"
+                        maxOccurs="unbounded">
                 <xs:annotation>
                     <xs:documentation>
-                        Config for processing WAN events received from a target cluster.
-                        You can configure certain behaviour when processing incoming WAN events
-                        or even configure your own implementation for a WAN consumer. A custom
-                        WAN consumer allows you to define custom processing logic and is usually
-                        used in combination with a custom WAN publisher.
-                        A custom consumer is optional and you may simply omit defining it which
-                        will cause the default processing logic to be used.
+                        Configuration object for the built-in WAN publisher (available in
+                        Hazelcast Enterprise). The publisher sends events to another Hazelcast
+                        cluster in batches, sending when either when enough events are enqueued
+                        or enqueued events have waited for enough time.
+                        The endpoint can be a different cluster defined by static IP's or
+                        discovered using a cloud discovery mechanism.
                     </xs:documentation>
                 </xs:annotation>
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="properties" type="properties" minOccurs="0">
-                            <xs:annotation>
-                                <xs:documentation>
-                                    Properties for the custom WAN consumer. These properties are
-                                    accessible when initalizing the WAN consumer.
-                                </xs:documentation>
-                            </xs:annotation>
-                        </xs:element>
-                    </xs:sequence>
-                    <xs:attributeGroup ref="class-or-bean-name">
-                        <xs:annotation>
-                            <xs:documentation>
-                                Defines a custom WAN consumer (WanReplicationConsumer).
-                                If you don't define a class name or implementation, the default processing
-                                logic for incoming WAN events will be used.
-                            </xs:documentation>
-                        </xs:annotation>
-                    </xs:attributeGroup>
-                    <xs:attribute name="persist-wan-replicated-data" type="parameterized-boolean" default="false">
-                        <xs:annotation>
-                            <xs:documentation>
-                                When true, an incoming event over WAN replication can be persisted to a
-                                database for example, otherwise it will not be persisted. Default value
-                                is false.
-                            </xs:documentation>
-                        </xs:annotation>
-                    </xs:attribute>
-                </xs:complexType>
             </xs:element>
+            <xs:element name="custom-publisher"
+                        type="wan-custom-publisher"
+                        minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation>
+                    <xs:documentation>
+                        Configuration object for a custom WAN publisher. A single publisher defines how
+                        WAN events are sent to a specific endpoint.
+                        The endpoint can be some other external system which is
+                        not a Hazelcast cluster (e.g. JMS queue).
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="consumer" type="wan-consumer" minOccurs="0"/>
         </xs:sequence>
         <xs:attribute name="name" use="required">
             <xs:simpleType>
@@ -2857,6 +2362,294 @@
             </xs:simpleType>
         </xs:attribute>
     </xs:complexType>
+
+    <xs:complexType name="wan-batch-publisher" mixed="true">
+        <xs:all>
+            <xs:element name="cluster-name" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the cluster name used as an endpoint cluster name for authentication
+                        on the target endpoint.
+                        If there is no separate publisher ID property defined, this cluster name
+                        will also be used as a WAN publisher ID. This ID is then used for
+                        identifying the publisher in a WanReplicationConfig.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="snapshot-enabled" type="parameterized-boolean" default="false" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets if key-based coalescing is configured for this WAN publisher.
+                        When enabled, only the latest WanReplicationEvent
+                        of a key is sent to target.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="initial-publisher-state"
+                        type="initial-publisher-state"
+                        default="REPLICATING" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Defines the initial state in which a WAN publisher is started.
+                        - REPLICATING (default):
+                        State where both enqueuing new events is allowed, enqueued events are replicated to the target cluster
+                        and WAN sync is enabled.
+                        - PAUSED:
+                        State where new events are enqueued but they are not dequeued. Some events which have been dequeued before
+                        the state was switched may still be replicated to the target cluster but further events will not be
+                        replicated. WAN sync is enabled.
+                        - STOPPED:
+                        State where neither new events are enqueued nor dequeued. As with the PAUSED state, some events might
+                        still be replicated after the publisher has switched to this state. WAN sync is enabled.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="queue-capacity" type="parameterized-positive-integer" default="10000" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the capacity of the primary and backup queue for WAN replication events.
+                        One hazelcast instance can have up to 2*queueCapacity events since
+                        we keep up to queueCapacity primary events (events with keys for
+                        which the instance is the owner) and queueCapacity backup events
+                        (events with keys for which the instance is the backup).
+                        Events for IMap and ICache count against this limit collectively.
+                        When the queue capacity is reached, backup events are dropped while normal
+                        replication events behave as determined by the queue-full-behavior.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="batch-size" type="parameterized-positive-integer" default="500" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the maximum batch size that can be sent to target cluster.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="batch-max-delay-millis" type="parameterized-positive-integer" default="1000" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the maximum amount of time in milliseconds to wait before sending a
+                        batch of events to target cluster, if batch-size of events
+                        have not arrived within this duration.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="response-timeout-millis" type="parameterized-positive-integer" default="60000" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the duration in milliseconds for the waiting time before retrying to
+                        send the events to target cluster again in case of acknowledgement
+                        is not arrived.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="queue-full-behavior"
+                        type="wan-queue-full-behavior"
+                        default="DISCARD_AFTER_MUTATION"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the configured behaviour of this WAN publisher when the WAN queue is
+                        full.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="acknowledge-type"
+                        type="wan-acknowledge-type"
+                        default="ACK_ON_OPERATION_COMPLETE"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the strategy for when the target cluster should acknowledge that
+                        a WAN event batch has been processed.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="discovery-period-seconds"
+                        type="parameterized-positive-integer"
+                        default="10"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the period in seconds in which WAN tries to discover new target
+                        endpoints and reestablish connections to failed endpoints.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="max-target-endpoints"
+                        type="parameterized-positive-integer"
+                        default="2147483647"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Returns the maximum number of endpoints that WAN will connect to when
+                        using a discovery mechanism to define endpoints.
+                        This property has no effect when static endpoint addresses are defined
+                        using target-endpoints.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="max-concurrent-invocations"
+                        type="xs:int"
+                        default="-1"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the maximum number of WAN event batches being sent to the target
+                        cluster concurrently.
+                        Setting this property to anything less than 2 will only allow a
+                        single batch of events to be sent to each target endpoint and will
+                        maintain causality of events for a single partition.
+                        Setting this property to 2 or higher will allow multiple batches
+                        of WAN events to be sent to each target endpoint. Since this allows
+                        reordering or batches due to network conditions, causality and ordering
+                        of events for a single partition is lost and batches for a single
+                        partition are now sent randomly to any available target endpoint.
+                        This, however, does present faster WAN replication for certain scenarios
+                        such as replicating immutable, independent map entries which are only
+                        added once and where ordering of when these entries are added is not
+                        necessary.
+                        Keep in mind that if you set this property to a value which is less than
+                        the target endpoint count, you will lose performance as not all target
+                        endpoints will be used at any point in time to process WAN event batches.
+                        So, for instance, if you have a target cluster with 3 members (target
+                        endpoints) and you want to use this property, it makes sense to set it
+                        to a value higher than 3. Otherwise, you can simply disable it
+                        by setting it to less than 2 in which case WAN will use the
+                        default replication strategy and adapt to the target endpoint count
+                        while maintaining causality.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="use-endpoint-private-address"
+                        type="parameterized-boolean"
+                        default="false" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets whether the WAN connection manager should connect to the
+                        endpoint on the private address returned by the discovery SPI.
+                        By default this property is false which means the WAN connection
+                        manager will always use the public address.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="idle-min-park-ns"
+                        type="parameterized-unsigned-long"
+                        default="10000000"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the minimum duration in nanoseconds that the WAN replication thread
+                        will be parked if there are no events to replicate.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="idle-max-park-ns"
+                        type="parameterized-unsigned-long"
+                        default="250000000"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the maximum duration in nanoseconds that the WAN replication thread
+                        will be parked if there are no events to replicate.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="publisher-id" type="xs:string"
+                        minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the publisher ID used for identifying the publisher in a
+                        WanReplicationConfig.
+                        If there is no publisher ID defined (it is empty), the cluster name will
+                        be used as a publisher ID.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="target-endpoints" type="xs:string" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Comma separated list of target cluster members,
+                        e.g. 127.0.0.1:5701, 127.0.0.1:5702.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="aws" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="gcp" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="azure" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="kubernetes" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="eureka" type="aliased-discovery-strategy" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="discovery-strategies" type="discovery-strategies" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="sync" type="wan-sync" minOccurs="0"/>
+            <xs:element name="endpoint" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Reference to the name of a WAN endpoint config or WAN server socket endpoint config.
+                        The network settings from the referenced endpoint configuration will setup the network
+                        configuration of connections to the target WAN cluster members.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
+        </xs:all>
+    </xs:complexType>
+    <xs:complexType name="wan-custom-publisher" mixed="true">
+        <xs:all>
+            <xs:element name="publisher-id" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the publisher ID used for identifying the publisher in a
+                        WanReplicationConfig.
+                        If there is no publisher ID defined (it is empty), the cluster name will
+                        be used as a publisher ID.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
+        </xs:all>
+        <xs:attributeGroup ref="class-or-bean-name">
+            <xs:annotation>
+                <xs:documentation>
+                    Fully qualified class name of WAN Replication implementation WanPublisher.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attributeGroup>
+    </xs:complexType>
+
+
+    <xs:complexType name="wan-consumer">
+        <xs:all>
+            <xs:element name="properties" type="properties" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Properties for the custom WAN consumer. These properties are
+                        accessible when initalizing the WAN consumer.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attributeGroup ref="class-or-bean-name">
+            <xs:annotation>
+                <xs:documentation>
+                    Defines a custom WAN consumer (WanConsumer).
+                    If you don't define a class name or implementation, the default processing
+                    logic for incoming WAN events will be used.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attributeGroup>
+        <xs:attribute name="persist-wan-replicated-data" type="parameterized-boolean" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    When true, an incoming event over WAN replication can be persisted to a
+                    database for example, otherwise it will not be persisted. Default value
+                    is false.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+
+
 
     <xs:complexType name="memcache-protocol">
         <xs:attribute name="enabled" type="xs:boolean" use="required"/>
@@ -2880,6 +2673,7 @@
             <xs:enumeration value="WAN"/>
             <xs:enumeration value="DATA"/>
             <xs:enumeration value="MEMCACHE"/>
+            <xs:enumeration value="CP"/>
         </xs:restriction>
     </xs:simpleType>
 
@@ -2898,14 +2692,7 @@
     </xs:complexType>
 
     <xs:complexType name="management-center" mixed="true">
-        <xs:sequence minOccurs="0">
-            <xs:element name="url" type="xs:string" minOccurs="1" maxOccurs="1"/>
-            <xs:element name="mutual-auth" type="mutual-auth" minOccurs="0" maxOccurs="1"/>
-        </xs:sequence>
-        <xs:attribute name="enabled" type="xs:string" default="false" use="optional"/>
         <xs:attribute name="scripting-enabled" type="xs:boolean" use="optional"/>
-        <xs:attribute name="url" type="xs:string" use="optional"/>
-        <xs:attribute name="update-interval" type="xs:string" default="3" use="optional"/>
     </xs:complexType>
     <xs:complexType name="cache-entry-listener">
         <xs:attribute name="cache-entry-listener-factory" type="non-space-string" use="optional"/>
@@ -2933,16 +2720,9 @@
 
     <xs:complexType name="security">
         <xs:sequence>
-            <xs:element name="member-credentials-factory" minOccurs="0" maxOccurs="1">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
-                    </xs:sequence>
-                    <xs:attributeGroup ref="class-or-bean-name"/>
-                </xs:complexType>
-            </xs:element>
-            <xs:element name="member-login-modules" type="login-modules" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="client-login-modules" type="login-modules" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="realms" type="realms" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="member-authentication" type="realm-reference" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="client-authentication" type="realm-reference" minOccurs="0" maxOccurs="1"/>
             <xs:element name="client-permission-policy" minOccurs="0" maxOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
@@ -2977,8 +2757,6 @@
                                     maxOccurs="unbounded"/>
                         <xs:element name="semaphore-permission" type="instance-permission" minOccurs="0"
                                     maxOccurs="unbounded"/>
-                        <xs:element name="id-generator-permission" type="instance-permission" minOccurs="0"
-                                    maxOccurs="unbounded"/>
                         <xs:element name="flake-id-generator-permission" type="instance-permission" minOccurs="0"
                                     maxOccurs="unbounded"/>
                         <xs:element name="executor-service-permission" type="instance-permission" minOccurs="0"
@@ -2997,6 +2775,10 @@
                         <xs:element name="user-code-deployment-permission" type="instance-permission" minOccurs="0"
                                     maxOccurs="unbounded"/>
                         <xs:element name="config-permission" type="base-permission" minOccurs="0" maxOccurs="1"/>
+                        <xs:element name="ring-buffer-permission" type="instance-permission" minOccurs="0"
+                                    maxOccurs="unbounded"/>
+                        <xs:element name="reliable-topic-permission" type="instance-permission" minOccurs="0"
+                                    maxOccurs="unbounded"/>
                     </xs:choice>
                     <xs:attribute name="on-join-operation" type="permission-on-join-operation" use="optional" default="RECEIVE"/>
                 </xs:complexType>
@@ -3188,8 +2970,6 @@
         <xs:attribute name="smart-routing" use="optional" type="parameterized-boolean" default="true"/>
         <xs:attribute name="redo-operation" use="optional" type="parameterized-boolean" default="false"/>
         <xs:attribute name="connection-timeout" use="optional" type="parameterized-positive-integer" default="5000"/>
-        <xs:attribute name="connection-attempt-period" use="optional" type="parameterized-positive-integer" default="3000"/>
-        <xs:attribute name="connection-attempt-limit" use="optional" type="parameterized-non-negative-integer" default="2"/>
     </xs:complexType>
 
     <xs:complexType name="socket-options">
@@ -3221,36 +3001,6 @@
             <xs:element name="discovery-token" type="xs:string" minOccurs="1" maxOccurs="1"/>
         </xs:all>
         <xs:attribute name="enabled" type="xs:boolean" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="services">
-        <xs:sequence>
-            <xs:element name="service" type="service" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:sequence>
-        <xs:attribute name="enable-defaults" type="parameterized-boolean" default="true"/>
-    </xs:complexType>
-    <xs:complexType name="service">
-        <xs:sequence>
-            <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1"/>
-            <xs:element name="class-name" type="xs:string" minOccurs="0" maxOccurs="1">
-                <xs:annotation>
-                    <xs:documentation>
-                        Deprecated element, subject to remove. Please use class-name/implementation attributes instead
-                    </xs:documentation>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="configuration" minOccurs="0" maxOccurs="1">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:any minOccurs="0" maxOccurs="unbounded"/>
-                    </xs:sequence>
-                    <xs:attribute name="parser" type="xs:string" use="required"/>
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-        <xs:attributeGroup ref="class-or-bean-name"/>
-        <xs:attribute name="enabled" type="parameterized-boolean" default="true"/>
     </xs:complexType>
 
     <xs:simpleType name="parameterizedValueType">
@@ -3311,26 +3061,12 @@
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="client-security">
-        <xs:sequence>
-            <xs:element name="credentials" type="credentials" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="credentials-factory" minOccurs="0" maxOccurs="1">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
-                    </xs:sequence>
-                    <xs:attributeGroup ref="class-or-bean-name"/>
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:complexType name="credentials">
-        <xs:annotation>
-            <xs:documentation>Credentials className
-            </xs:documentation>
-        </xs:annotation>
-        <xs:simpleContent>
-            <xs:extension base="non-space-string"/>
-        </xs:simpleContent>
+        <xs:choice>
+            <xs:element name="username-password" type="username-password"/>
+            <xs:element name="credentials-factory" type="credentials-factory"/>
+            <xs:element name="token" type="token"/>
+            <xs:element name="credentials-ref" type="xs:string"/>
+        </xs:choice>
     </xs:complexType>
     <xs:complexType name="proxy-factories">
         <xs:sequence>
@@ -3383,8 +3119,6 @@
         <xs:attribute name="invalidate-on-change" use="optional" type="parameterized-boolean" default="true"/>
         <xs:attribute name="time-to-live-seconds" use="optional" type="xs:string" default="0"/>
         <xs:attribute name="max-idle-seconds" use="optional" type="xs:string" default="0"/>
-        <xs:attribute name="eviction-policy" use="optional" type="eviction-policy" default="LRU"/>
-        <xs:attribute name="max-size" use="optional" type="xs:string" default="0"/>
         <xs:attribute name="cache-local-entries" use="optional" type="xs:string" default="false"/>
     </xs:complexType>
 
@@ -3426,13 +3160,7 @@
                 </xs:annotation>
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="index" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:attribute name="attribute" type="xs:string" use="required"/>
-                                <xs:attribute name="ordered" type="xs:string" use="optional"
-                                              default="false"/>
-                            </xs:complexType>
-                        </xs:element>
+                        <xs:element name="index" type="index" minOccurs="0" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -3468,13 +3196,7 @@
                 </xs:annotation>
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="index" minOccurs="0" maxOccurs="unbounded">
-                            <xs:complexType>
-                                <xs:attribute name="attribute" type="xs:string" use="required"/>
-                                <xs:attribute name="ordered" type="xs:string" use="optional"
-                                              default="false"/>
-                            </xs:complexType>
-                        </xs:element>
+                        <xs:element name="index" type="index" minOccurs="0" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -3555,21 +3277,11 @@
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="idOffset" type="xs:long" default="0" use="optional">
+        <xs:attribute name="epochStart" type="xs:long" default="1514764800000" use="optional">
             <xs:annotation>
                 <xs:documentation>
-                    Sets the offset that will be added to the returned IDs. Default value is 0. Setting might be
-                    useful when migrating from IdGenerator, default value works for all green-field projects.
-
-                    For example: Largest ID returned from IdGenerator is 150. FlakeIdGenerator now returns
-                    100. If you configure idOffset of 50 and stop using the IdGenerator, the next ID from
-                    FlakeIdGenerator will be 151 or larger and no duplicate IDs will be generated. In real-life,
-                    the IDs are much larger. You also need to add a reserve to the offset because the IDs
-                    from FlakeIdGenerator are only roughly ordered. Recommended reserve is 2^38, that is
-                    274877906944.
-
-                    Negative values are allowed to increase the lifespan of the generator, however keep in
-                    mind that the generated IDs might also be negative.
+                    Sets the offset of timestamp component. Time unit is milliseconds, default is 1514764800000 
+                    (1.1.2018 0:00 UTC).
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
@@ -3582,6 +3294,44 @@
                     In this case, configure node ID offset for generators on cluster B.
                 </xs:documentation>
             </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="bitsSequence" default="6" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Sets the bit-length of the sequence component, default is 6 bits.
+                </xs:documentation>
+            </xs:annotation>
+            <xs:simpleType>
+                <xs:restriction base="xs:int">
+                    <xs:minInclusive value="0" />
+                    <xs:maxInclusive value="63" />
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="bitsNodeId" default="16" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Sets the bit-length of node id component. Default value is 16 bits.
+                </xs:documentation>
+            </xs:annotation>
+            <xs:simpleType>
+                <xs:restriction base="xs:int">
+                    <xs:minInclusive value="0" />
+                    <xs:maxInclusive value="63" />
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="allowedFutureMillis" default="15000" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Sets how far to the future is the generator allowed to go to generate IDs without blocking, default is 15 seconds.
+                </xs:documentation>
+            </xs:annotation>
+            <xs:simpleType>
+                <xs:restriction base="xs:long">
+                    <xs:minInclusive value="0"/>
+                </xs:restriction>
+            </xs:simpleType>
         </xs:attribute>
         <xs:attribute name="statistics-enabled" type="parameterized-boolean" use="optional" default="true">
             <xs:annotation>
@@ -3723,6 +3473,32 @@
         </xs:attribute>
     </xs:complexType>
 
+    <xs:complexType name="client-metrics">
+        <xs:all>
+            <xs:element name="jmx" type="metrics-jmx" minOccurs="0"/>
+            <xs:element name="collection-frequency-seconds" type="xs:unsignedInt" default="5" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the metrics collection frequency in seconds.
+                        By default, metrics are collected every 5 seconds.
+                        May be overridden by 'hazelcast.metrics.collection.frequency'
+                        system property.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="enabled" type="xs:boolean" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Master-switch for the metrics system. Controls whether
+                    the metrics are collected and publishers are enabled.
+                    May be overridden by 'hazelcast.metrics.enabled'
+                    system property.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
     <xs:complexType name="predicate">
         <xs:simpleContent>
             <xs:extension base="xs:string">
@@ -3738,12 +3514,39 @@
         </xs:simpleContent>
     </xs:complexType>
     <xs:complexType name="index">
-        <xs:simpleContent>
-            <xs:extension base="xs:string">
-                <xs:attribute name="ordered" type="parameterized-boolean" use="optional" default="false"/>
-            </xs:extension>
-        </xs:simpleContent>
+        <xs:all>
+            <xs:element name="attributes" type="index-attributes"/>
+            <xs:element name="bitmap-index-options" type="bitmap-index-options" minOccurs="0"/>
+        </xs:all>
+        <xs:attribute name="name"/>
+        <xs:attribute name="type" type="index-type" default="SORTED"/>
     </xs:complexType>
+    <xs:complexType name="index-attributes">
+        <xs:sequence>
+            <xs:element name="attribute" type="xs:string" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="index-type">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="SORTED"/>
+            <xs:enumeration value="HASH"/>
+            <xs:enumeration value="BITMAP"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="bitmap-index-options">
+        <xs:all>
+            <xs:element name="unique-key" type="xs:string" default="__key" minOccurs="0"/>
+            <xs:element name="unique-key-transformation" type="bitmap-index-unique-key-transformation"
+                        default="OBJECT" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+    <xs:simpleType name="bitmap-index-unique-key-transformation">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="OBJECT"/>
+            <xs:enumeration value="LONG"/>
+            <xs:enumeration value="RAW"/>
+        </xs:restriction>
+    </xs:simpleType>
     <xs:complexType name="entry-listeners">
         <xs:sequence>
             <xs:element name="entry-listener" type="entry-listener" minOccurs="0" maxOccurs="unbounded"/>
@@ -3763,6 +3566,7 @@
             <xs:enumeration value="NONE"/>
             <xs:enumeration value="LRU"/>
             <xs:enumeration value="LFU"/>
+            <xs:enumeration value="RANDOM"/>
         </xs:restriction>
     </xs:simpleType>
 
@@ -3830,12 +3634,6 @@
         <xs:attribute name="time-unit" type="time-unit" use="optional"/>
     </xs:complexType>
 
-    <xs:simpleType name="concurrency-level">
-        <xs:restriction base="xs:int">
-            <xs:minInclusive value="0"/>
-        </xs:restriction>
-    </xs:simpleType>
-
     <xs:simpleType name="topology-changed-strategy">
         <xs:restriction base="non-space-string">
             <xs:enumeration value="CANCEL_RUNNING_OPERATION"/>
@@ -3853,9 +3651,39 @@
         </xs:restriction>
     </xs:simpleType>
 
+    <xs:simpleType name="max-size-policy-map">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="PER_NODE"/>
+            <xs:enumeration value="PER_PARTITION"/>
+            <xs:enumeration value="USED_HEAP_SIZE"/>
+            <xs:enumeration value="USED_HEAP_PERCENTAGE"/>
+            <xs:enumeration value="FREE_HEAP_SIZE"/>
+            <xs:enumeration value="FREE_HEAP_PERCENTAGE"/>
+            <xs:enumeration value="USED_NATIVE_MEMORY_SIZE"/>
+            <xs:enumeration value="USED_NATIVE_MEMORY_PERCENTAGE"/>
+            <xs:enumeration value="FREE_NATIVE_MEMORY_SIZE"/>
+            <xs:enumeration value="FREE_NATIVE_MEMORY_PERCENTAGE"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="scheduled-executor-capacity-policy">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="PER_NODE"/>
+            <xs:enumeration value="PER_PARTITION"/>
+        </xs:restriction>
+    </xs:simpleType>
+
     <xs:complexType name="eviction">
         <xs:attribute name="size" type="xs:nonNegativeInteger" default="10000" use="optional"/>
         <xs:attribute name="max-size-policy" type="max-size-policy" default="ENTRY_COUNT" use="optional"/>
+        <xs:attribute name="eviction-policy" type="eviction-policy" default="LRU" use="optional"/>
+        <xs:attribute name="comparator-class-name" type="xs:string" use="optional"/>
+        <xs:attribute name="comparator-bean" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="eviction-map">
+        <xs:attribute name="size" type="xs:nonNegativeInteger" default="0" use="optional"/>
+        <xs:attribute name="max-size-policy" type="max-size-policy-map" default="PER_NODE" use="optional"/>
         <xs:attribute name="eviction-policy" type="eviction-policy" default="LRU" use="optional"/>
         <xs:attribute name="comparator-class-name" type="xs:string" use="optional"/>
         <xs:attribute name="comparator-bean" type="xs:string" use="optional"/>
@@ -3886,33 +3714,13 @@
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="merge-policy" type="xs:string">
+        <xs:attribute name="merge-policy-class-name" type="xs:string"
+                      default="com.hazelcast.spi.merge.PassThroughMergePolicy">
             <xs:annotation>
                 <xs:documentation>
-                    Resolve conflicts that occurred when target cluster already has the replicated
-                    entry key.
-
-                    4 merge policy implementations for IMap and 2 merge policy implementations for
-                    ICache are provided out-of-the-box.
-
-                    IMap has the following merge policies:
-                    com.hazelcast.map.merge.PutIfAbsentMapMergePolicy: Incoming entry merges from the
-                    source map to the target map if it does not exist in the target map.
-                    com.hazelcast.map.merge.HigherHitsMapMergePolicy: Incoming entry merges from the
-                    source map to the target map if the source entry has more hits than the target one.
-                    com.hazelcast.map.merge.PassThroughMergePolicy: Incoming entry merges from the
-                    source map to the target map unless the incoming entry is not null.
-                    com.hazelcast.map.merge.LatestUpdateMapMergePolicy: Incoming entry merges from the
-                    source map to the target map if the source entry has been updated more recently
-                    than the target entry. Please note that this merge policy can only be used when the
-                    clusters' clocks are in sync.
-
-                    ICache has the following merge policies:
-                    com.hazelcast.cache.merge.HigherHitsCacheMergePolicy: Incoming entry merges from
-                    the source cache to the target cache if the source entry has more hits than the
-                    target one.
-                    com.hazelcast.cache.merge.PassThroughCacheMergePolicy: Incoming entry merges from
-                    the source cache to the target cache unless the incoming entry is not null.
+                    Sets the merge policy sent to the WAN replication target to merge
+                    replicated entries with existing target entries.
+                    The default merge policy is com.hazelcast.spi.merge.PassThroughMergePolicy.
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
@@ -3942,6 +3750,7 @@
         </xs:attribute>
         <xs:attribute name="allocator-type" default="POOLED" type="memory-allocator-type"/>
         <xs:attribute name="enabled" default="true" type="parameterized-boolean"/>
+        <xs:attribute name="persistent-memory-directory" type="xs:string" use="optional"/>
     </xs:complexType>
     <xs:complexType name="memory-size">
         <xs:attribute name="value" type="parameterized-non-negative-integer" default="128"/>
@@ -3962,19 +3771,19 @@
         </xs:restriction>
     </xs:simpleType>
 
-    <xs:complexType name="quorum">
+    <xs:complexType name="split-brain-protection">
         <xs:all>
-            <xs:element name="quorum-size" type="quorum-size" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="quorum-type" type="quorum-type" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="quorum-function-class-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="quorum-listeners" minOccurs="0" maxOccurs="1">
+            <xs:element name="minimum-cluster-size" type="minimum-cluster-size" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="protect-on" type="protect-on" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="function-class-name" type="xs:string" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="listeners" minOccurs="0" maxOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="quorum-listener" type="quorum-listener" maxOccurs="unbounded"/>
+                        <xs:element name="listener" type="split-brain-protection-listener" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element ref="choice-of-quorum-function" minOccurs="0" maxOccurs="1" />
+            <xs:element ref="choice-of-split-brain-protection-function" minOccurs="0" maxOccurs="1" />
         </xs:all>
         <xs:attribute name="enabled" type="parameterized-boolean" use="required"/>
         <xs:attribute name="name" use="required">
@@ -3984,13 +3793,13 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:element name="choice-of-quorum-function" abstract="true"/>
+    <xs:element name="choice-of-split-brain-protection-function" abstract="true"/>
 
-    <xs:element name="probabilistic-quorum" substitutionGroup="choice-of-quorum-function">
+    <xs:element name="probabilistic-split-brain-protection" substitutionGroup="choice-of-split-brain-protection-function">
         <xs:complexType>
             <xs:annotation>
                 <xs:documentation>
-                    A probabilistic quorum function based on Phi Accrual failure detector. See
+                    A probabilistic split brain protection function based on Phi Accrual failure detector. See
                     com.hazelcast.internal.cluster.fd.PhiAccrualClusterFailureDetector for implementation
                     details. Configuration:<br/>
                     - <code>acceptable-heartbeat-pause</code>: duration in milliseconds corresponding to number
@@ -4019,20 +3828,21 @@
         </xs:complexType>
     </xs:element>
 
-    <xs:element name="recently-active-quorum" substitutionGroup="choice-of-quorum-function">
+    <xs:element name="recently-active-split-brain-protection" substitutionGroup="choice-of-split-brain-protection-function">
         <xs:complexType>
             <xs:annotation>
                 <xs:documentation>
-                    A quorum function that keeps track of the last heartbeat timestamp per each member. For a member
-                    to be considered live (for the purpose of determining presence of quorum), a heartbeat must have
-                    been received at most <code>heartbeat-tolerance</code> milliseconds before current time.
+                    A split brain protection function that keeps track of the last heartbeat timestamp per each member.
+                    For a member to be considered live (for the purpose to conclude whether the minimum cluster size
+                    property is satisfied), a heartbeat must have been received at most <code>heartbeat-tolerance</code>
+                    milliseconds before current time.
                 </xs:documentation>
             </xs:annotation>
             <xs:attribute name="heartbeat-tolerance-millis" type="parameterized-unsigned-int" default="5000"/>
         </xs:complexType>
     </xs:element>
 
-    <xs:simpleType name="quorum-type">
+    <xs:simpleType name="protect-on">
         <xs:restriction base="non-space-string">
             <xs:enumeration value="READ"/>
             <xs:enumeration value="WRITE"/>
@@ -4040,13 +3850,13 @@
         </xs:restriction>
     </xs:simpleType>
 
-    <xs:simpleType name="quorum-size">
+    <xs:simpleType name="minimum-cluster-size">
         <xs:restriction base="xs:int">
             <xs:minInclusive value="2"/>
         </xs:restriction>
     </xs:simpleType>
 
-    <xs:complexType name="quorum-listener">
+    <xs:complexType name="split-brain-protection-listener">
         <xs:complexContent>
             <xs:extension base="listener">
             </xs:extension>
@@ -4085,6 +3895,13 @@
         <xs:union memberTypes="wan-queue-full-behavior-format-enum non-space-string"/>
     </xs:simpleType>
 
+    <xs:simpleType name="wan-acknowledge-type">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="ACK_ON_OPERATION_COMPLETE"/>
+            <xs:enumeration value="ACK_ON_RECEIPT"/>
+        </xs:restriction>
+    </xs:simpleType>
+
     <xs:simpleType name="initial-publisher-state">
         <xs:union memberTypes="initial-publisher-state-format-enum non-space-string"/>
     </xs:simpleType>
@@ -4120,6 +3937,159 @@
         </xs:attribute>
     </xs:complexType>
 
+    <xs:element name="secure-store-substitution-group" abstract="true"/>
+
+    <xs:complexType name="keystore">
+        <xs:all>
+            <xs:element name="path" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The path of the KeyStore file.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="type" type="xs:string" minOccurs="0" maxOccurs="1" default="PKCS12">
+                <xs:annotation>
+                    <xs:documentation>
+                        The type of the KeyStore (PKCS12, JCEKS, etc.).
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="password" type="xs:string" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The password to access the KeyStore (JCEKS, PKCS12, etc.).
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="current-key-alias" type="xs:string" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The alias for the current encryption key entry (optional).
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="polling-interval" type="xs:int" minOccurs="0" maxOccurs="1" default="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The polling interval for checking for changes in the KeyStore.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:element name="keystore" type="keystore" substitutionGroup="secure-store-substitution-group">
+        <xs:annotation>
+            <xs:documentation>
+                Java KeyStore Secure Store configuration.
+            </xs:documentation>
+        </xs:annotation>
+    </xs:element>
+
+    <xs:complexType name="vault">
+        <xs:all>
+            <xs:element name="address" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The address of the Vault REST API server.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="secret-path" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The Vault secret path.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="token" type="xs:string" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        The Vault access token.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="polling-interval" type="xs:int" minOccurs="0" maxOccurs="1" default="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The polling interval for checking for changes in Vault.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="ssl" type="ssl" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        SSL/TLS configuration for HTTPS connections.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+    </xs:complexType>
+
+    <xs:element name="vault" type="vault" substitutionGroup="secure-store-substitution-group">
+        <xs:annotation>
+            <xs:documentation>
+                HashiCorp Vault Secure Store configuration.
+            </xs:documentation>
+        </xs:annotation>
+    </xs:element>
+
+    <xs:complexType name="secure-store">
+        <xs:sequence>
+            <xs:element ref="secure-store-substitution-group" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="encryption-at-rest">
+        <xs:annotation>
+            <xs:documentation>
+                Configuration for hot restart (symmetric) encryption at rest. Encryption is based
+                on Java Cryptography Architecture.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="algorithm" type="xs:string">
+                <xs:annotation>
+                    <xs:documentation>
+                        Encryption algorithm such as AES/CBC/PKCS5Padding, DES/ECB/PKCS5Padding, Blowfish,
+                        or DESede.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="salt" type="xs:string" minOccurs="0" default="thesalt">
+                <xs:annotation>
+                    <xs:documentation>
+                        Salt value to use when generating the secret key.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="key-size" type="xs:int" minOccurs="0" default="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The key size in bits used when generating encryption keys (optional).
+                        The default value of 0 implies falling back to the cipher-specific
+                        default key size.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="secure-store" type="secure-store" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        The Secure Store configuration. Not required when encryption at rest is disabled.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="enabled" type="xs:boolean" use="optional" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    True to enable symmetric encryption, false to disable.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
     <xs:complexType name="hot-restart-persistence">
         <xs:sequence>
             <xs:element name="base-dir" type="xs:string" minOccurs="0" maxOccurs="1" default="hot-restart">
@@ -4135,6 +4105,15 @@
                     <xs:documentation>
                         Base directory for hot backups. Each new backup will be created in a separate directory inside this one.
                         Can be an absolute or relative path to the node startup directory.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="encryption-at-rest" type="encryption-at-rest" minOccurs="0" maxOccurs="1">
+                <xs:annotation>
+                    <xs:documentation>
+                        Specifies parameters for encryption of Hot Restart data. This includes the encryption algorithm
+                        to be used (such as AES, DESede etc.) and the Secure Store configuration for retrieving the
+                        encryption keys.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4200,6 +4179,42 @@
         </xs:attribute>
     </xs:complexType>
 
+    <xs:complexType name="event-journal">
+        <xs:annotation>
+            <xs:documentation>
+                Configuration for an event journal. The event journal keeps events related
+                to a specific partition and data structure. For instance, it could keep
+                map add, update, remove, merge events along with the key, old value, new value and so on.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="enabled" type="parameterized-boolean" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    True if the event journal is enabled, false otherwise.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="capacity" use="optional" type="parameterized-unsigned-int">
+            <xs:annotation>
+                <xs:documentation>
+                    Number of items in the event journal. If no time-to-live-seconds
+                    is set, the size will always be equal to capacity after the event
+                    journal has been filled. This is because no items are getting retired.
+                    The default value is 10000.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="time-to-live-seconds" use="optional" type="parameterized-unsigned-int">
+            <xs:annotation>
+                <xs:documentation>
+                    Maximum number of seconds for each entry to stay in the event journal.
+                    Entries that are older than &lt;time-to-live-seconds&gt; are evicted from the journal.
+                    Any integer between 0 and Integer.MAX_VALUE. 0 means infinite. Default is 0.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
     <xs:complexType name="hot-restart">
         <xs:attribute name="fsync" type="parameterized-boolean" default="false">
             <xs:annotation>
@@ -4219,6 +4234,54 @@
         </xs:attribute>
     </xs:complexType>
 
+    <xs:complexType name="merkle-tree">
+        <xs:annotation>
+            <xs:documentation>
+                Configuration for a merkle tree.
+                The merkle tree is a data structure used for efficient comparison of the
+                difference in the contents of large data structures. The precision of
+                such a comparison mechanism is defined by the depth of the merkle tree.
+                A larger depth means that a data synchronization mechanism will be able
+                to pinpoint a smaller subset of the data structure contents in which a
+                change occurred. This causes the synchronization mechanism to be more
+                efficient. On the other hand, a larger tree depth means the merkle tree
+                will consume more memory.
+                A smaller depth means the data synchronization mechanism will have to
+                transfer larger chunks of the data structure in which a possible change
+                happened. On the other hand, a shallower tree consumes less memory.
+                The depth must be between 2 and 27 (exclusive).
+                As the comparison mechanism is iterative, a larger depth will also prolong
+                the duration of the comparison mechanism. Care must be taken to not have
+                large tree depths if the latency of the comparison operation is high.
+                The default depth is 10.
+                See https://en.wikipedia.org/wiki/Merkle_tree.
+            </xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="enabled" type="parameterized-boolean" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    True if the merkle tree is enabled, false otherwise.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="depth" type="parameterized-unsigned-int">
+            <xs:annotation>
+                <xs:documentation>
+                    The depth of the merkle tree.
+                    A larger depth means that a data synchronization mechanism will be able
+                    to pinpoint a smaller subset of the data structure contents in which a
+                    change occurred. This causes the synchronization mechanism to be more
+                    efficient. On the other hand, a larger tree depth means the merkle tree
+                    will consume more memory.
+                    A smaller depth means the data synchronization mechanism will have to
+                    transfer larger chunks of the data structure in which a possible change
+                    happened. On the other hand, a shallower tree consumes less memory.
+                    The depth must be between 2 and 27 (exclusive). The default depth is 10.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
     <xs:complexType name="connection-strategy">
         <xs:choice>
             <xs:element name="connection-retry" type="connection-retry" minOccurs="0"
@@ -4233,10 +4296,9 @@
             <xs:element name="initial-backoff-millis" type="xs:int" minOccurs="0" maxOccurs="1" default="1000"/>
             <xs:element name="max-backoff-millis" type="xs:int" minOccurs="0" maxOccurs="1" default="30000"/>
             <xs:element name="multiplier" type="xs:double" minOccurs="0" maxOccurs="1" default="2"/>
-            <xs:element name="fail-on-max-backoff" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false"/>
+            <xs:element name="cluster-connect-timeout-millis" type="xs:long" minOccurs="0" maxOccurs="1" default="20000"/>
             <xs:element name="jitter" type="xs:double" minOccurs="0" maxOccurs="1" default="0.2"/>
         </xs:all>
-        <xs:attribute name="enabled" type="xs:boolean" default="false" use="optional"/>
     </xs:complexType>
 
     <xs:simpleType name="reconnect-mode">
@@ -4397,23 +4459,23 @@
             <xs:element name="cp-member-count" type="xs:unsignedInt" default="0">
                 <xs:annotation>
                     <xs:documentation>
-                        Number of CP Members to initialize the CP Subsystem.
-                        It is 0 by default, meaning that the CP subsystem is disabled.
-                        The CP subsystem is enabled when a positive value is set.
-                        After the CP subsystem is initialized successfully, more CP members can
-                        be added at run-time and number of active CP members can go beyond
-                        the configured CP member count. Number of CP members can be smaller than
-                        total size of the Hazelcast cluster. For instance, you can run
-                        5 CP members in a 20-member Hazelcast cluster.
-                        If set, must be greater than or equal to group-size.
+                        Number of CP members to initialize CP Subsystem. It is 0 by default,
+                        meaning that CP Subsystem is disabled. CP Subsystem is enabled when
+                        a positive value is set. After CP Subsystem is initialized successfully,
+                        more CP members can be added at run-time and the number of active CP
+                        members can go beyond the configured CP member count. The number of CP
+                        members can be smaller than total member count of the Hazelcast cluster.
+                        For instance, you can run 5 CP members in a Hazelcast cluster of
+                        20 members. If set, must be greater than or equal to group-size.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
             <xs:element name="group-size" type="cp-group-size" minOccurs="0" maxOccurs="1" default="0">
                 <xs:annotation>
                     <xs:documentation>
-                        Number of CP members to run CP groups. If set, it must be an odd
-                        number between 3 and 7. Otherwise, cp-member-count is respected.
+                        Number of CP members to form CP groups. If set, it must be an odd
+                        number between 3 and 7.
+                        Otherwise, cp-member-count is respected while forming CP groups.
                         If set, must be smaller than or equal to cp-member-count.
                     </xs:documentation>
                 </xs:annotation>
@@ -4422,19 +4484,22 @@
                 <xs:annotation>
                     <xs:documentation>
                         Duration for a CP session to be kept alive after the last received
-                        heartbeat. The session will be closed if there is no new heartbeat
-                        this duration. Session TTL must be decided wisely. If a very low value is set,
-                        CP session of a Hazelcast instance can be closed prematurely if the instance
-                        temporarily loses connectivity to the CP subsystem because of a network
-                        partition or a GC pause. In such an occasion, all CP resources of this Hazelcast
-                        instance, such as FencedLock or ISemaphore, are released. On the other hand,
-                        if a very large value is set, CP resources can remain assigned to an actually
-                        crashed Hazelcast instance for too long and liveliness problems can occur.
-                        The CP subsystem offers an API, CPSessionManagementService, to deal with
-                        liveliness issues related to CP sessions. In order to prevent premature
-                        session expires, session TTL configuration can be set a relatively large value
-                        and CPSessionManagementService#forceCloseSession() can be manually called to
-                        close CP session of a crashed Hazelcast instance.
+                        session heartbeat. A CP session is closed if no session heartbeat is
+                        received during this duration. Session TTL must be decided wisely. If
+                        a very small value is set, a CP session can be closed prematurely if
+                        its owner Hazelcast instance temporarily loses connectivity to CP
+                        Subsystem because of a network partition or a GC pause. In such an
+                        occasion, all CP resources of this Hazelcast instance, such as
+                        FencedLock or ISemaphore, are released. On the other
+                        hand, if a very large value is set, CP resources can remain assigned to
+                        an actually crashed Hazelcast instance for too long and liveliness
+                        problems can occur. CP Subsystem offers an API in
+                        CPSessionManagementService to deal with liveliness issues
+                        related to CP sessions. In order to prevent premature session expires,
+                        session TTL configuration can be set a relatively large value and
+                        CPSessionManagementService#forceCloseSession(String, long)
+                        can be manually called to close CP session of a crashed Hazelcast
+                        instance.
                         Must be greater than session-heartbeat-interval-seconds, and
                         smaller than or equal to missing-cp-member-auto-removal-seconds.
                     </xs:documentation>
@@ -4454,25 +4519,24 @@
             <xs:element name="missing-cp-member-auto-removal-seconds" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="0">
                 <xs:annotation>
                     <xs:documentation>
-                        Duration to wait before automatically removing a missing CP member
-                        from the CP subsystem. When a CP member leaves the cluster, it is not
-                        automatically removed from the CP subsystem, since it could be still
-                        alive and left the cluster because of a network partition.
-                        On the other hand, if a missing CP member is actually crashed,
-                        it creates a danger for its CP groups, because it will be still part of
-                        majority calculations. This situation could lead to losing majority of
-                        CP groups if multiple CP members leave the cluster over time.
-                        With the default configuration, missing CP members will be automatically
-                        removed from the CP subsystem after 4 hours. This feature is very useful
+                        Duration to wait before automatically removing a missing CP member from
+                        CP Subsystem. When a CP member leaves the Hazelcast cluster, it is not
+                        automatically removed from CP Subsystem, since it could be still alive
+                        and left the cluster because of a network problem. On the other hand,
+                        if a missing CP member actually crashed, it creates a danger for CP
+                        groups, because it is still part of majority calculations. This
+                        situation could lead to losing majority of CP groups if multiple CP
+                        members leave the cluster over time.
+                        With the default configuration, missing CP members are automatically
+                        removed from CP Subsystem after 4 hours. This feature is very useful
                         in terms of fault tolerance when CP member count is also configured
-                        to be larger than group size. In this case, a missing CP member will be
+                        to be larger than group size. In this case, a missing CP member is
                         safely replaced in its CP groups with other available CP members
-                        in the CP subsystem. This configuration also implies that no network
+                        in CP Subsystem. This configuration also implies that no network
                         partition is expected to be longer than the configured duration.
+                        If a missing CP member comes back alive after it is removed from CP
+                        Subsystem with this feature, that CP member must be terminated manually.
                         Must be greater than or equal to session-time-to-live-seconds.
-                        If a missing CP member comes back alive after it is automatically
-                        removed from the CP subsystem with this feature, that CP member
-                        must be terminated manually.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4480,19 +4544,47 @@
                 <xs:annotation>
                     <xs:documentation>
                         Offers a choice between at-least-once and at-most-once execution
-                        of the operations on top of the Raft consensus algorithm.
-                        It is disabled by default and offers at-least-once execution guarantee.
-                        If enabled, it switches to at-most-once execution guarantee.
-                        When you invoke an API method on a CP data structure proxy, it
-                        replicates an internal operation to the corresponding CP group. After
-                        this operation is committed to majority of this CP group by the Raft
-                        leader node, it sends a response for the public API call. If a failure
-                        causes loss of the response, then the calling side cannot determine if
-                        the operation is committed on the CP group or not. In this case, if this
-                        configuration is disabled, the operation is replicated again to the CP
-                        group, and hence could be committed multiple times. If it is enabled,
-                        the public API call fails with
-                        com.hazelcast.core.IndeterminateOperationStateException
+                        of operations on top of the Raft consensus algorithm. It is disabled by
+                        default and offers at-least-once execution guarantee. If enabled, it
+                        switches to at-most-once execution guarantee. When you invoke an API
+                        method on a CP data structure proxy, it sends an internal operation
+                        to the corresponding CP group. After this operation is committed on
+                        the majority of this CP group by the Raft leader node, it sends
+                        a response for the public API call. If a failure causes loss of
+                        the response, then the calling side cannot determine if the operation is
+                        committed on the CP group or not. In this case, if this configuration is
+                        disabled, the operation is replicated again to the CP group, and hence
+                        could be committed multiple times. If it is enabled, the public API call
+                        fails with com.hazelcast.core.IndeterminateOperationStateException.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="persistence-enabled" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false">
+                <xs:annotation>
+                    <xs:documentation>
+                        Flag to denote whether or not CP Subsystem Persistence is enabled.
+                        If enabled, CP members persist their local CP data to stable storage and
+                        can recover from crashes.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="base-dir" type="xs:string" minOccurs="0" maxOccurs="1" default="cp-data">
+                <xs:annotation>
+                    <xs:documentation>
+                        Base directory to store all CP data when persistence-enabled
+                        is true. This directory can be shared between multiple CP members.
+                        Each CP member creates a unique directory for itself under the base
+                        directory. This is especially useful for cloud environments where CP
+                        members generally use a shared filesystem.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="data-load-timeout-seconds" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="120">
+                <xs:annotation>
+                    <xs:documentation>
+                        Timeout duration for CP members to restore their data from disk.
+                        A CP member fails its startup if it cannot complete its CP data restore
+                        process in the configured duration.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4511,7 +4603,7 @@
                 </xs:annotation>
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="cp-semaphore" type="cp-semaphore" minOccurs="0" maxOccurs="unbounded"/>
+                        <xs:element name="semaphore" type="semaphore" minOccurs="0" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -4536,29 +4628,46 @@
                 <xs:annotation>
                     <xs:documentation>
                         Leader election timeout in milliseconds. If a candidate cannot win
-                        majority of the votes in time, a new election round is initiated.
+                        majority of the votes in time, a new leader election round is initiated.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
             <xs:element name="leader-heartbeat-period-in-millis" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="5000">
                 <xs:annotation>
                     <xs:documentation>
-                        Period in milliseconds for a leader to send heartbeat messages
-                        to its followers
+                        Duration in milliseconds for a Raft leader node to send periodic
+                        heartbeat messages to its followers in order to denote its liveliness.
+                        Periodic heartbeat messages are actually append entries requests and
+                        can contain log entries for the lagging followers. If a too small value
+                        is set, heartbeat messages are sent from Raft leaders to followers too
+                        frequently and it can cause an unnecessary usage of CPU and network.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
             <xs:element name="max-missed-leader-heartbeat-count" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="5">
                 <xs:annotation>
                     <xs:documentation>
-                        Maximum number of missed leader heartbeats to trigger a new leader election
+                        Maximum number of missed Raft leader heartbeats for a follower to
+                        trigger a new leader election round. For instance, if
+                        leader-heartbeat-period-in-millis is 1 second and this value is set
+                        to 5, then a follower triggers a new leader election round if 5 seconds
+                        pass after the last heartbeat message of the current Raft leader node.
+                        If this duration is too small, new leader election rounds can be
+                        triggered unnecessarily if the current Raft leader temporarily slows
+                        down or a network congestion occurs. If it is too large, it takes longer
+                        to detect failures of Raft leaders.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
             <xs:element name="append-request-max-entry-count" type="xs:unsignedInt" minOccurs="0" maxOccurs="1" default="100">
                 <xs:annotation>
                     <xs:documentation>
-                        Max entry count that can be sent in a single batch of append entries request
+                        Maximum number of Raft log entries that can be sent as a batch
+                        in a single append entries request. In Hazelcast's Raft consensus
+                        algorithm implementation, a Raft leader maintains a separate replication
+                        pipeline for each follower. It sends a new batch of Raft log entries to
+                        a follower after the follower acknowledges the last append entries
+                        request sent by the leader.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4567,6 +4676,16 @@
                 <xs:annotation>
                     <xs:documentation>
                         Number of new commits to initiate a new snapshot after the last snapshot
+                        taken by the local Raft node. This value must be configured wisely as it
+                        effects performance of the system in multiple ways. If a small value is
+                        set, it means that snapshots are taken too frequently and Raft nodes keep
+                        a very short Raft log. If snapshots are large and CP Subsystem
+                        Persistence is enabled, this can create an unnecessary overhead on IO
+                        performance. Moreover, a Raft leader can send too many snapshots to
+                        followers and this can create an unnecessary overhead on network.
+                        On the other hand, if a very large value is set, it can create a memory
+                        overhead since Raft log entries are going to be kept in memory until
+                        the next snapshot.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4574,8 +4693,14 @@
                         default="100">
                 <xs:annotation>
                     <xs:documentation>
-                        Maximum number of uncommitted entries in the leader's Raft log before
-                        temporarily rejecting new requests of callers.
+                        Maximum number of uncommitted log entries in the leader's Raft log
+                        before temporarily rejecting new requests of callers. Since Raft leaders
+                        send log entries to followers in batches, they accumulate incoming
+                        requests in order to improve the throughput. You can configure this
+                        field by considering your degree of concurrency in your callers.
+                        For instance, if you have at most 1000 threads sending requests to
+                        a Raft leader, you can set this field to 1000 so that callers do not
+                        get retry responses unnecessarily.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4583,10 +4708,11 @@
                         default="100">
                 <xs:annotation>
                     <xs:documentation>
-                        Timeout in milliseconds for append request backoff. After the leader
-                        sends an append request to a follower, it will not send a subsequent
-                        append request until the follower responds to the former request
-                        or this timeout occurs.
+                        Timeout duration in milliseconds to apply backoff on append entries
+                        requests. After a Raft leader sends an append entries request to
+                        a follower, it will not send a subsequent append entries request either
+                        until the follower responds or this timeout occurs. Backoff durations
+                        are increased exponentially if followers remain unresponsive.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4594,7 +4720,7 @@
         </xs:all>
     </xs:complexType>
 
-    <xs:complexType name="cp-semaphore">
+    <xs:complexType name="semaphore">
         <xs:all>
             <xs:element name="name" type="xs:string">
                 <xs:annotation>
@@ -4606,22 +4732,31 @@
             <xs:element name="jdk-compatible" type="xs:boolean" default="false">
                 <xs:annotation>
                     <xs:documentation>
-                        Enables / disables JDK compatibility of the CP ISemaphore.
+                        Enables / disables JDK compatibility of CP ISemaphore.
                         When it is JDK compatible, just as in the Semaphore#release()
                         method, a permit can be released without acquiring it first, because
                         acquired permits are not bound to threads. However, there is no
-                        auto-cleanup of acquired permits upon Hazelcast server/client failures.
-                        If a permit holder fails, its permits must be released manually.
-                        When JDK compatibility is disabled, a HazelcastInstance must
-                        acquire permits before releasing them and it cannot release a permit
-                        that it has mot acquired. It means, you can acquire a permit
-                        from one thread and release it from another thread using the same
-                        HazelcastInstance, but not different instances of
-                        HazelcastInstance. In this mode, acquired permits are
+                        auto-cleanup mechanism for acquired permits upon Hazelcast
+                        server / client failures. If a permit holder fails, its permits must be
+                        released manually. When JDK compatibility is disabled,
+                        a HazelcastInstance must acquire permits before releasing them
+                        and it cannot release a permit that it has not acquired. It means, you
+                        can acquire a permit from one thread and release it from another thread
+                        using the same HazelcastInstance, but not different
+                        HazelcastInstances. In this mode, acquired permits are
                         automatically released upon failure of the holder
                         HazelcastInstance. So there is a minor behavioral difference
                         to the Semaphore#release() method.
                         JDK compatibility is disabled by default.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="initial-permits" type="xs:unsignedInt" minOccurs="0" maxOccurs="1"
+                        default="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Number of permits to initialize the Semaphore. If a positive value is
+                        set, the Semaphore is initialized with the given number of permits.
                     </xs:documentation>
                 </xs:annotation>
             </xs:element>
@@ -4655,4 +4790,181 @@
             </xs:element>
         </xs:all>
     </xs:complexType>
+
+    <xs:complexType name="metrics">
+        <xs:all>
+            <xs:element name="management-center" type="metrics-management-center" minOccurs="0"/>
+            <xs:element name="jmx" type="metrics-jmx" minOccurs="0"/>
+            <xs:element name="collection-frequency-seconds" type="xs:unsignedInt" default="5" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the metrics collection frequency in seconds.
+                        By default, metrics are collected every 5 seconds.
+                        May be overridden by 'hazelcast.metrics.collection.frequency'
+                        system property.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="enabled" type="xs:boolean" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Master-switch for the metrics system. Controls whether
+                    the metrics are collected and publishers are enabled.
+                    May be overridden by 'hazelcast.metrics.enabled'
+                    system property.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="metrics-management-center">
+        <xs:all>
+            <xs:element name="retention-seconds" type="xs:unsignedInt" default="5" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Sets the number of seconds the metrics will be retained on the
+                        instance. By default, metrics are retained for 5 seconds (that is for
+                        one collection of metrics values, if default "collection-frequency-seconds"
+                        collection frequency is used). More retention means more heap memory, but
+                        allows for longer client hiccups without losing a value (for example to
+                        restart the Management Center).
+                        May be overridden by 'hazelcast.metrics.mc.retention'
+                        system property.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="enabled" type="xs:boolean" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Controls whether the metrics collected are exposed to
+                    Hazelcast Management Center. It is enabled by default.
+                    Please note that the metrics are polled by the
+                    Hazelcast Management Center, hence the members need to
+                    buffer the collected metrics between two polls. The aim
+                    for this switch is to reduce memory consumption of the
+                    metrics system if the Hazelcast Management Center is not
+                    used.
+                    In order to expose the metrics, the metrics system need
+                    to be enabled via the enabled master-switch attribute.
+                    May be overridden by 'hazelcast.metrics.mc.enabled'
+                    system property.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="metrics-jmx">
+        <xs:attribute name="enabled" type="xs:boolean" default="true">
+            <xs:annotation>
+                <xs:documentation>
+                    Controls whether the metrics collected are exposed to
+                    through JMX. It is enabled by default.
+                    In order to expose the metrics, the metrics system need
+                    to be enabled via the enabled master-switch attribute.
+                    May be overridden by 'hazelcast.metrics.jmx.enabled'
+                    system property.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="realms">
+        <xs:sequence>
+            <xs:element name="realm" type="realm" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="realm">
+        <xs:all>
+            <xs:element name="authentication" type="authentication" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="identity" type="identity" minOccurs="0" maxOccurs="1"/>
+        </xs:all>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="authentication">
+        <xs:choice>
+            <xs:element name="jaas" type="login-modules"/>
+            <xs:element name="tls" type="tls-authentication"/>
+            <xs:element name="ldap" type="ldap-authentication"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="tls-authentication">
+        <xs:attribute name="roleAttribute" type="xs:string" use="optional" default="cn" />
+    </xs:complexType>
+    <xs:complexType name="ldap-authentication">
+        <xs:all>
+            <xs:element name="url" type="xs:string"/>
+            <xs:element name="socket-factory-class-name" type="xs:string" minOccurs="0"/>
+
+            <xs:element name="parse-dn" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="role-context" type="xs:string" minOccurs="0"/>
+            <xs:element name="role-filter" type="xs:string" minOccurs="0"/>
+            <xs:element name="role-mapping-attribute" type="xs:string" minOccurs="0"/>
+            <xs:element name="role-mapping-mode" type="ldap-role-mapping-mode" minOccurs="0"/>
+            <xs:element name="role-name-attribute" type="xs:string" minOccurs="0"/>
+            <xs:element name="role-recursion-max-depth" type="xs:int" minOccurs="0"/>
+            <xs:element name="role-search-scope" type="ldap-search-scope" minOccurs="0"/>
+            <xs:element name="user-name-attribute" type="xs:string" minOccurs="0"/>
+
+            <xs:element name="system-user-dn" type="xs:string" minOccurs="0"/>
+            <xs:element name="system-user-password" type="xs:string" minOccurs="0"/>
+            <xs:element name="password-attribute" type="xs:string" minOccurs="0"/>
+            <xs:element name="user-context" type="xs:string" minOccurs="0"/>
+            <xs:element name="user-filter" type="xs:string" minOccurs="0"/>
+            <xs:element name="user-search-scope" type="ldap-search-scope" minOccurs="0"/>
+        </xs:all>
+    </xs:complexType>
+    <xs:simpleType name="ldap-role-mapping-mode">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="attribute"/>
+            <xs:enumeration value="direct"/>
+            <xs:enumeration value="reverse"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="ldap-search-scope">
+        <xs:restriction base="non-space-string">
+            <xs:enumeration value="object"/>
+            <xs:enumeration value="one-level"/>
+            <xs:enumeration value="subtree"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="identity">
+        <xs:choice>
+            <xs:element name="username-password" type="username-password"/>
+            <xs:element name="credentials-factory" type="credentials-factory"/>
+            <xs:element name="token" type="token"/>
+            <xs:element name="credentials-ref" type="xs:string"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="username-password">
+        <xs:attribute name="username" type="xs:string" use="required" />
+        <xs:attribute name="password" type="xs:string" use="required" />
+    </xs:complexType>
+    <xs:complexType name="token">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="encoding">
+                    <xs:simpleType>
+                        <xs:restriction base="non-space-string">
+                            <xs:enumeration value="none"/>
+                            <xs:enumeration value="base64"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:attribute>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <xs:complexType name="realm-reference">
+        <xs:attribute name="realm" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="credentials-factory">
+        <xs:sequence>
+            <xs:element name="properties" type="properties" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="class-or-bean-name"/>
+    </xs:complexType>
+
 </xs:schema>

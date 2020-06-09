@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@ import com.hazelcast.cache.impl.ICacheRecordStore;
 import com.hazelcast.cache.impl.ICacheService;
 import com.hazelcast.cache.impl.record.CacheRecord;
 import com.hazelcast.config.CacheConfig;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.ObjectNamespace;
+import com.hazelcast.internal.services.ObjectNamespace;
 import com.hazelcast.spi.impl.operationservice.Operation;
-import com.hazelcast.spi.ServiceNamespace;
+import com.hazelcast.internal.services.ServiceNamespace;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -41,8 +42,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.hazelcast.config.CacheConfigAccessor.getTenantControl;
-import static com.hazelcast.nio.IOUtil.closeResource;
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.nio.IOUtil.closeResource;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 /**
  * Replication operation is the data migration operation of {@link com.hazelcast.cache.impl.CacheRecordStore}.
@@ -62,9 +63,11 @@ public class CacheReplicationOperation extends Operation implements IdentifiedDa
 
     private final List<CacheConfig> configs = new ArrayList<CacheConfig>();
     private final Map<String, Map<Data, CacheRecord>> data = new HashMap<String, Map<Data, CacheRecord>>();
-    private final CacheNearCacheStateHolder nearCacheStateHolder = new CacheNearCacheStateHolder(this);
+    private CacheNearCacheStateHolder nearCacheStateHolder;
 
     public CacheReplicationOperation() {
+        nearCacheStateHolder = new CacheNearCacheStateHolder();
+        nearCacheStateHolder.setCacheReplicationOperation(this);
     }
 
     public final void prepare(CachePartitionSegment segment, Collection<ServiceNamespace> namespaces,
@@ -167,17 +170,17 @@ public class CacheReplicationOperation extends Operation implements IdentifiedDa
                 final Data key = e.getKey();
                 final CacheRecord record = e.getValue();
 
-                out.writeData(key);
+                IOUtil.writeData(out, key);
                 out.writeObject(record);
             }
             // Empty data will terminate the iteration for read in case
             // expired entries were found while serializing, since the
             // real subCount will then be different from the one written
             // before
-            out.writeData(null);
+            IOUtil.writeData(out, null);
         }
 
-        nearCacheStateHolder.writeData(out);
+        out.writeObject(nearCacheStateHolder);
     }
 
     @Override
@@ -198,7 +201,7 @@ public class CacheReplicationOperation extends Operation implements IdentifiedDa
             // subCount + 1 because of the DefaultData written as the last entry
             // which adds another Data entry at the end of the stream!
             for (int j = 0; j < subCount + 1; j++) {
-                Data key = in.readData();
+                Data key = IOUtil.readData(in);
                 // Empty data received so reading can be stopped here since
                 // since the real object subCount might be different from
                 // the number on the stream due to found expired entries
@@ -210,7 +213,8 @@ public class CacheReplicationOperation extends Operation implements IdentifiedDa
             }
         }
 
-        nearCacheStateHolder.readData(in);
+        nearCacheStateHolder = in.readObject();
+        nearCacheStateHolder.setCacheReplicationOperation(this);
     }
 
     public boolean isEmpty() {

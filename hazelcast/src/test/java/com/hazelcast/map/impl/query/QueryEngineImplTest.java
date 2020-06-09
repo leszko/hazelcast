@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.hazelcast.map.impl.query;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
@@ -32,10 +32,12 @@ import org.junit.runner.RunWith;
 
 import java.util.Map;
 
+import static com.hazelcast.internal.util.IterationType.ENTRY;
+import static com.hazelcast.internal.util.IterationType.KEY;
+import static com.hazelcast.internal.util.IterationType.VALUE;
 import static com.hazelcast.map.impl.query.Target.createPartitionTarget;
-import static com.hazelcast.util.IterationType.ENTRY;
-import static com.hazelcast.util.IterationType.KEY;
-import static com.hazelcast.util.IterationType.VALUE;
+import static com.hazelcast.test.Accessors.getNodeEngineImpl;
+import static com.hazelcast.test.Accessors.getSerializationService;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)

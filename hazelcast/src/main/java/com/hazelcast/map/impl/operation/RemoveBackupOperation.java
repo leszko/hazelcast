@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,39 +19,32 @@ package com.hazelcast.map.impl.operation;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupOperation;
 
 import java.io.IOException;
 
 public class RemoveBackupOperation extends KeyBasedMapOperation implements BackupOperation {
 
-    protected boolean unlockKey;
+    private boolean disableWanReplicationEvent;
 
     public RemoveBackupOperation() {
     }
 
-    public RemoveBackupOperation(String name, Data dataKey) {
+    public RemoveBackupOperation(String name, Data dataKey,
+                                 boolean disableWanReplicationEvent) {
         super(name, dataKey);
-    }
-
-    public RemoveBackupOperation(String name, Data dataKey, boolean unlockKey) {
-        super(name, dataKey);
-        this.unlockKey = unlockKey;
-    }
-
-    public RemoveBackupOperation(String name, Data dataKey, boolean unlockKey, boolean disableWanReplicationEvent) {
-        super(name, dataKey);
-        this.unlockKey = unlockKey;
         this.disableWanReplicationEvent = disableWanReplicationEvent;
     }
 
     @Override
     protected void runInternal() {
         recordStore.removeBackup(dataKey, getCallerProvenance());
-        if (unlockKey) {
-            recordStore.forceUnlock(dataKey);
-        }
+    }
+
+    @Override
+    protected boolean disableWanReplicationEvent() {
+        return disableWanReplicationEvent;
     }
 
     @Override
@@ -75,15 +68,12 @@ public class RemoveBackupOperation extends KeyBasedMapOperation implements Backu
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
-        out.writeBoolean(unlockKey);
         out.writeBoolean(disableWanReplicationEvent);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
-        unlockKey = in.readBoolean();
         disableWanReplicationEvent = in.readBoolean();
     }
-
 }

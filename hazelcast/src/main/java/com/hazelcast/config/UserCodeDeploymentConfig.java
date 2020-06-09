@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package com.hazelcast.config;
+
+import com.hazelcast.cluster.Member;
 
 /**
  * Configuration of User Code Deployment. When enabled, it allows Hazelcast members to load classes from other cluster
@@ -123,7 +125,7 @@ public class UserCodeDeploymentConfig {
      * Default: {@code null}
      *
      * @return this instance of UserCodeDeploymentConfig for easy method-chaining
-     * @see com.hazelcast.core.Member#setAttribute(String, String)
+     * @see Member#getAttribute(String)
      */
     public UserCodeDeploymentConfig setProviderFilter(String providerFilter) {
         this.providerFilter = providerFilter;

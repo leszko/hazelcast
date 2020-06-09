@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,8 @@ import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.TcpIpConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.Member;
-import com.hazelcast.instance.HazelcastInstanceFactory;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.HazelcastInstanceFactory;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.OverridePropertyRule;
@@ -42,7 +41,7 @@ import java.util.Set;
 import static com.hazelcast.test.HazelcastTestSupport.assertClusterSize;
 import static com.hazelcast.test.HazelcastTestSupport.assertClusterSizeEventually;
 import static com.hazelcast.test.HazelcastTestSupport.closeConnectionBetween;
-import static com.hazelcast.test.HazelcastTestSupport.getNode;
+import static com.hazelcast.test.Accessors.getNode;
 import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static com.hazelcast.test.OverridePropertyRule.clear;
 import static org.junit.Assert.assertTrue;
@@ -209,8 +208,7 @@ public class LiteMemberJoinTest {
             @Override
             public Config create(String name, String pw, boolean liteMember) {
                 Config config = new Config();
-                config.getGroupConfig().setName(name);
-                config.getGroupConfig().setPassword(pw);
+                config.setClusterName(name);
 
                 config.setLiteMember(liteMember);
 
@@ -229,8 +227,7 @@ public class LiteMemberJoinTest {
             @Override
             public Config create(String name, String pw, boolean liteMember) {
                 Config config = new Config();
-                config.getGroupConfig().setName(name);
-                config.getGroupConfig().setPassword(pw);
+                config.setClusterName(name);
 
                 config.setLiteMember(liteMember);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ import com.hazelcast.spi.impl.operationservice.MutatingOperation;
 
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
 
-public class ClearOperation extends MapOperation implements BackupAwareOperation, PartitionAwareOperation, MutatingOperation {
+public class ClearOperation extends MapOperation
+        implements BackupAwareOperation, PartitionAwareOperation, MutatingOperation {
 
     private boolean shouldBackup;
     private int numberOfClearedEntries;

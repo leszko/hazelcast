@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.hazelcast.spi.impl;
 
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -27,6 +26,7 @@ import org.junit.runner.RunWith;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -72,7 +72,7 @@ public class AbstractInvocationFuture_IsDoneTest extends AbstractInvocationFutur
         assertTrueEventually(new AssertTask() {
             @Override
             public void run() throws Exception {
-                assertNotSame(AbstractInvocationFuture.VOID, future.getState());
+                assertNotSame(AbstractInvocationFuture.UNRESOLVED, future.getState());
             }
         });
 
@@ -81,22 +81,22 @@ public class AbstractInvocationFuture_IsDoneTest extends AbstractInvocationFutur
 
     @Test
     public void whenCallbackWithoutCustomExecutor() {
-        future.andThen(mock(ExecutionCallback.class));
+        future.thenAccept(mock(Consumer.class));
 
         assertFalse(future.isDone());
     }
 
     @Test
     public void whenCallbackWithCustomExecutor() {
-        future.andThen(mock(ExecutionCallback.class), mock(Executor.class));
+        future.thenAcceptAsync(mock(Consumer.class), mock(Executor.class));
 
         assertFalse(future.isDone());
     }
 
     @Test
     public void whenMultipleWaiters() {
-        future.andThen(mock(ExecutionCallback.class), mock(Executor.class));
-        future.andThen(mock(ExecutionCallback.class), mock(Executor.class));
+        future.thenAcceptAsync(mock(Consumer.class), mock(Executor.class));
+        future.thenAcceptAsync(mock(Consumer.class), mock(Executor.class));
 
         assertFalse(future.isDone());
     }

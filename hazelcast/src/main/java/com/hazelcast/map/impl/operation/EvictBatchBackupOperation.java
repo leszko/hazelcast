@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,21 @@
 package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.internal.eviction.ExpiredKey;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.spi.exception.WrongTargetException;
 import com.hazelcast.spi.impl.operationservice.BackupOperation;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;
-import com.hazelcast.spi.exception.WrongTargetException;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 
-import static com.hazelcast.util.TimeUtil.zeroOutMs;
+import static com.hazelcast.internal.util.TimeUtil.zeroOutMs;
 
 /**
  * Used to transfer expired keys from owner replica to backup replicas.
@@ -61,9 +63,10 @@ public class EvictBatchBackupOperation extends MapOperation implements BackupOpe
         }
 
         for (ExpiredKey expiredKey : expiredKeys) {
-            Record existingRecord = recordStore.getRecord(expiredKey.getKey());
+            Data key = expiredKey.getKey();
+            Record existingRecord = recordStore.getRecord(key);
             if (canEvictRecord(existingRecord, expiredKey)) {
-                recordStore.evict(existingRecord.getKey(), true);
+                recordStore.evict(key, true);
             }
         }
 
@@ -132,7 +135,7 @@ public class EvictBatchBackupOperation extends MapOperation implements BackupOpe
         out.writeUTF(name);
         out.writeInt(expiredKeys.size());
         for (ExpiredKey expiredKey : expiredKeys) {
-            out.writeData(expiredKey.getKey());
+            IOUtil.writeData(out, expiredKey.getKey());
             out.writeLong(expiredKey.getCreationTime());
         }
         out.writeInt(primaryEntryCount);
@@ -146,7 +149,7 @@ public class EvictBatchBackupOperation extends MapOperation implements BackupOpe
         int size = in.readInt();
         expiredKeys = new LinkedList<>();
         for (int i = 0; i < size; i++) {
-            expiredKeys.add(new ExpiredKey(in.readData(), in.readLong()));
+            expiredKeys.add(new ExpiredKey(IOUtil.readData(in), in.readLong()));
         }
         primaryEntryCount = in.readInt();
     }

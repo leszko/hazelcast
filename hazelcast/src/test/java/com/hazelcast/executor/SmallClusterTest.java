@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package com.hazelcast.executor;
 
+import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.memberselector.MemberSelectors;
-import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IAtomicLong;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IExecutorService;
-import com.hazelcast.core.Member;
 import com.hazelcast.core.MultiExecutionCallback;
+import com.hazelcast.cp.IAtomicLong;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -47,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.hazelcast.util.FutureUtil.waitForever;
+import static com.hazelcast.internal.util.FutureUtil.waitForever;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -63,7 +62,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
 
     @Before
     public void setUp() {
-        instances = createHazelcastInstanceFactory(NODE_COUNT).newInstances(new Config());
+        instances = createHazelcastInstanceFactory(NODE_COUNT).newInstances(smallInstanceConfig());
         warmUpPartitions(instances);
     }
 
@@ -72,9 +71,9 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         IExecutorService executorService = instances[1].getExecutorService(randomString());
         BasicTestCallable task = new BasicTestCallable();
         String key = generateKeyOwnedBy(instances[0]);
-        ICompletableFuture<String> future = (ICompletableFuture<String>) executorService.submitToKeyOwner(task, key);
-        CountingDownExecutionCallback<String> callback = new CountingDownExecutionCallback<String>(1);
-        future.andThen(callback);
+        InternalCompletableFuture<String> future = (InternalCompletableFuture<String>) executorService.submitToKeyOwner(task, key);
+        CountingDownExecutionCallback<String> callback = new CountingDownExecutionCallback<>(1);
+        future.whenCompleteAsync(callback);
         future.get();
         assertOpenEventually(callback.getLatch(), 10);
     }
@@ -88,13 +87,13 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
             assertEquals(Integer.valueOf(rand), future.get());
         }
 
-        IAtomicLong count = instances[0].getAtomicLong("count");
+        IAtomicLong count = instances[0].getCPSubsystem().getAtomicLong("count");
         assertEquals(instances.length, count.get());
     }
 
     @Test
     public void submitToKeyOwner_runnable() {
-        NullResponseCountingCallback callback = new NullResponseCountingCallback(instances.length);
+        NullResponseCountingCallback<Object> callback = new NullResponseCountingCallback<>(instances.length);
 
         for (HazelcastInstance instance : instances) {
             IExecutorService service = instance.getExecutorService("testSubmitToKeyOwnerRunnable");
@@ -106,13 +105,13 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
 
         assertOpenEventually(callback.getResponseLatch());
-        assertEquals(0, instances[0].getAtomicLong("testSubmitToKeyOwnerRunnable").get());
+        assertEquals(0, instances[0].getCPSubsystem().getAtomicLong("testSubmitToKeyOwnerRunnable").get());
         assertEquals(instances.length, callback.getNullResponseCount());
     }
 
     @Test
     public void submitToMember_runnable() {
-        NullResponseCountingCallback callback = new NullResponseCountingCallback(instances.length);
+        NullResponseCountingCallback<Object> callback = new NullResponseCountingCallback<>(instances.length);
 
         for (HazelcastInstance instance : instances) {
             IExecutorService service = instance.getExecutorService("testSubmitToMemberRunnable");
@@ -123,7 +122,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
 
         assertOpenEventually(callback.getResponseLatch());
-        assertEquals(0, instances[0].getAtomicLong("testSubmitToMemberRunnable").get());
+        assertEquals(0, instances[0].getCPSubsystem().getAtomicLong("testSubmitToMemberRunnable").get());
         assertEquals(instances.length, callback.getNullResponseCount());
     }
 
@@ -145,7 +144,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
         assertOpenEventually(callback.getLatch());
 
-        IAtomicLong result = instances[0].getAtomicLong("testSubmitToMembersRunnable");
+        IAtomicLong result = instances[0].getCPSubsystem().getAtomicLong("testSubmitToMembersRunnable");
         assertEquals(sum, result.get());
         assertEquals(sum, callback.getCount());
     }
@@ -160,7 +159,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
         assertOpenEventually(callback.getLatch());
 
-        IAtomicLong result = instances[0].getAtomicLong("testSubmitToAllMembersRunnable");
+        IAtomicLong result = instances[0].getCPSubsystem().getAtomicLong("testSubmitToAllMembersRunnable");
         assertEquals(instances.length * instances.length, result.get());
         assertEquals(instances.length * instances.length, callback.getCount());
     }
@@ -169,8 +168,8 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
     public void submitToSeveralNodes_callable() throws Exception {
         for (int i = 0; i < instances.length; i++) {
             IExecutorService service = instances[i].getExecutorService("testSubmitMultipleNode");
-            Future future = service.submit(new IncrementAtomicLongCallable("testSubmitMultipleNode"));
-            assertEquals((long) (i + 1), future.get());
+            Future<Long> future = service.submit(new IncrementAtomicLongCallable("testSubmitMultipleNode"));
+            assertEquals((i + 1), (long) future.get());
         }
     }
 
@@ -263,19 +262,19 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
 
     @Test(timeout = TEST_TIMEOUT)
     public void submitToKeyOwner_callable() throws Exception {
-        List<Future> futures = new ArrayList<Future>();
+        List<Future<Boolean>> futures = new ArrayList<>();
 
         for (HazelcastInstance instance : instances) {
             IExecutorService service = instance.getExecutorService("testSubmitToKeyOwnerCallable");
             Member localMember = instance.getCluster().getLocalMember();
             int key = findNextKeyForMember(instance, localMember);
 
-            Future future = service.submitToKeyOwner(new MemberUUIDCheckCallable(localMember.getUuid()), key);
+            Future<Boolean> future = service.submitToKeyOwner(new MemberUUIDCheckCallable(localMember.getUuid()), key);
             futures.add(future);
         }
 
-        for (Future future : futures) {
-            assertTrue((Boolean) future.get(60, TimeUnit.SECONDS));
+        for (Future<Boolean> future : futures) {
+            assertTrue(future.get(60, TimeUnit.SECONDS));
         }
     }
 
@@ -296,18 +295,19 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
 
     @Test(timeout = TEST_TIMEOUT)
     public void submitToMember_callable() throws Exception {
-        List<Future> futures = new ArrayList<Future>();
+        List<Future<Boolean>> futures = new ArrayList<>();
 
         for (HazelcastInstance instance : instances) {
             IExecutorService service = instance.getExecutorService("testSubmitToMemberCallable");
             Member localMember = instance.getCluster().getLocalMember();
 
-            Future future = service.submitToMember(new MemberUUIDCheckCallable(localMember.getUuid()), localMember);
+            Future<Boolean> future = service.submitToMember(
+                    new MemberUUIDCheckCallable(localMember.getUuid()), localMember);
             futures.add(future);
         }
 
-        for (Future future : futures) {
-            assertTrue((Boolean) future.get());
+        for (Future<Boolean> future : futures) {
+            assertTrue(future.get());
         }
     }
 
@@ -344,7 +344,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
         assertOpenEventually(callback.getLatch());
 
-        IAtomicLong result = instances[0].getAtomicLong(name);
+        IAtomicLong result = instances[0].getCPSubsystem().getAtomicLong(name);
         assertEquals(sum, result.get());
         assertEquals(sum, callback.getCount());
     }
@@ -359,7 +359,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         }
         assertOpenEventually(callback.getLatch());
 
-        IAtomicLong result = instances[0].getAtomicLong("testSubmitToAllMembersCallable");
+        IAtomicLong result = instances[0].getCPSubsystem().getAtomicLong("testSubmitToAllMembersCallable");
         assertEquals(instances.length * instances.length, result.get());
         assertEquals(instances.length * instances.length, callback.getCount());
     }
@@ -432,7 +432,7 @@ public class SmallClusterTest extends ExecutorServiceTestSupport {
         assertEquals(1, responseCount.get());
     }
 
-    private static class NonSerializableResponseCallable implements Callable, Serializable {
+    private static class NonSerializableResponseCallable implements Callable<Object>, Serializable {
 
         @Override
         public Object call() throws Exception {

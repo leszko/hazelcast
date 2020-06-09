@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.ReliableTopicConfigReadOnly;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -177,7 +178,7 @@ public class ReliableTopicConfigTest {
                 .setTopicOverloadPolicy(TopicOverloadPolicy.ERROR)
                 .addMessageListenerConfig(new ListenerConfig("Foobar"));
 
-        ReliableTopicConfig readOnly = config.getAsReadOnly();
+        ReliableTopicConfig readOnly = new ReliableTopicConfigReadOnly(config);
 
         assertEquals(config.getName(), readOnly.getName());
         assertSame(config.getExecutor(), readOnly.getExecutor());
@@ -231,8 +232,8 @@ public class ReliableTopicConfigTest {
     public void testEqualsAndHashCode() {
         assumeDifferentHashCodes();
         EqualsVerifier.forClass(ReliableTopicConfig.class)
-                .allFieldsShouldBeUsed()
-                .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
-                .verify();
+                      .allFieldsShouldBeUsed()
+                      .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+                      .verify();
     }
 }

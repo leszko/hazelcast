@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.hazelcast.config;
 
 import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.instance.ProtocolType;
+import com.hazelcast.spi.annotation.PrivateApi;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -264,7 +265,8 @@ public class EndpointConfig implements NamedConfig {
         return this;
     }
 
-    EndpointConfig setProtocolType(ProtocolType protocolType) {
+    @PrivateApi
+    public EndpointConfig setProtocolType(ProtocolType protocolType) {
         this.protocolType = protocolType;
         return this;
     }

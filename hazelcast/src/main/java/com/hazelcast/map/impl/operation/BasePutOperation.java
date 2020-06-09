@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,18 @@ package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.map.impl.record.Record;
-import com.hazelcast.map.impl.record.RecordInfo;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
-import static com.hazelcast.map.impl.record.Records.buildRecordInfo;
-import static com.hazelcast.map.impl.recordstore.RecordStore.DEFAULT_MAX_IDLE;
-import static com.hazelcast.map.impl.recordstore.RecordStore.DEFAULT_TTL;
-
-public abstract class BasePutOperation extends LockAwareOperation implements BackupAwareOperation {
+public abstract class BasePutOperation
+        extends LockAwareOperation implements BackupAwareOperation {
 
     protected transient Object oldValue;
-    protected transient Data dataMergingValue;
     protected transient EntryEventType eventType;
-    protected transient boolean putTransient;
 
     public BasePutOperation(String name, Data dataKey, Data value) {
-        super(name, dataKey, value, DEFAULT_TTL, DEFAULT_MAX_IDLE);
-    }
-
-    public BasePutOperation(String name, Data dataKey, Data value, long ttl, long maxIdle) {
-        super(name, dataKey, value, ttl, maxIdle);
+        super(name, dataKey, value);
     }
 
     public BasePutOperation() {
@@ -47,10 +37,11 @@ public abstract class BasePutOperation extends LockAwareOperation implements Bac
 
     @Override
     protected void afterRunInternal() {
-        mapServiceContext.interceptAfterPut(name, dataValue);
-        Object value = isPostProcessing(recordStore) ? recordStore.getRecord(dataKey).getValue() : dataValue;
+        Object value = isPostProcessing(recordStore)
+                ? recordStore.getRecord(dataKey).getValue() : dataValue;
+        mapServiceContext.interceptAfterPut(mapContainer.getInterceptorRegistry(), dataValue);
         mapEventPublisher.publishEvent(getCallerAddress(), name, getEventType(),
-                dataKey, oldValue, value, dataMergingValue);
+                dataKey, oldValue, value);
         invalidateNearCache(dataKey);
         publishWanUpdate(dataKey, value);
         evict(dataKey);
@@ -58,7 +49,8 @@ public abstract class BasePutOperation extends LockAwareOperation implements Bac
 
     private EntryEventType getEventType() {
         if (eventType == null) {
-            eventType = oldValue == null ? EntryEventType.ADDED : EntryEventType.UPDATED;
+            eventType = oldValue == null
+                    ? EntryEventType.ADDED : EntryEventType.UPDATED;
         }
         return eventType;
     }
@@ -72,16 +64,12 @@ public abstract class BasePutOperation extends LockAwareOperation implements Bac
     @Override
     public Operation getBackupOperation() {
         Record record = recordStore.getRecord(dataKey);
-        RecordInfo replicationInfo = buildRecordInfo(record);
-        if (isPostProcessing(recordStore)) {
-            dataValue = mapServiceContext.toData(record.getValue());
-        }
-        return new PutBackupOperation(name, dataKey, dataValue, replicationInfo, shouldUnlockKeyOnBackup(),
-                putTransient, !canThisOpGenerateWANEvent());
+        dataValue = getValueOrPostProcessedValue(record, dataValue);
+        return newBackupOperation(dataKey, record, dataValue);
     }
 
-    protected boolean shouldUnlockKeyOnBackup() {
-        return false;
+    protected PutBackupOperation newBackupOperation(Data dataKey, Record record, Data dataValue) {
+        return new PutBackupOperation(name, dataKey, record, dataValue);
     }
 
     @Override

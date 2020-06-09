@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,29 @@
 package com.hazelcast.cache.impl;
 
 import com.hazelcast.cache.CacheStatistics;
+import com.hazelcast.cache.EventJournalCacheEvent;
 import com.hazelcast.cache.impl.event.CachePartitionLostEventFilter;
 import com.hazelcast.cache.impl.event.CachePartitionLostListener;
 import com.hazelcast.cache.impl.event.InternalCachePartitionLostListenerAdapter;
 import com.hazelcast.cache.impl.journal.CacheEventJournalReadOperation;
 import com.hazelcast.cache.impl.journal.CacheEventJournalSubscribeOperation;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.config.CacheConfig;
-import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.internal.config.CacheConfigReadOnly;
 import com.hazelcast.internal.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.internal.journal.EventJournalReader;
+import com.hazelcast.internal.util.Clock;
+import com.hazelcast.internal.util.collection.PartitionIdSet;
 import com.hazelcast.map.impl.MapEntries;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.ringbuffer.ReadResultSet;
-import com.hazelcast.spi.EventFilter;
-import com.hazelcast.spi.EventRegistration;
-import com.hazelcast.spi.InternalCompletableFuture;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.impl.eventservice.EventFilter;
+import com.hazelcast.spi.impl.eventservice.EventRegistration;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationFactory;
 import com.hazelcast.spi.impl.operationservice.OperationService;
-import com.hazelcast.util.collection.PartitionIdSet;
+import com.hazelcast.spi.impl.operationservice.impl.InvocationFuture;
 
 import javax.cache.CacheException;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -54,16 +56,19 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.hazelcast.cache.impl.CacheProxyUtil.validateNotNull;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
-import static com.hazelcast.util.ExceptionUtil.rethrowAllowedTypeFirst;
-import static com.hazelcast.util.MapUtil.createHashMap;
-import static com.hazelcast.util.Preconditions.checkNotNull;
-import static com.hazelcast.util.SetUtil.createHashSet;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrowAllowedTypeFirst;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.toIntSize;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.SetUtil.createHashSet;
 import static java.util.Collections.emptyMap;
 
 /**
@@ -84,9 +89,11 @@ import static java.util.Collections.emptyMap;
  * @param <K> the type of key.
  * @param <V> the type of value.
  */
-@SuppressWarnings({"checkstyle:methodcount"})
+@SuppressWarnings({"checkstyle:methodcount", "checkstyle:classfanoutcomplexity"})
 public class CacheProxy<K, V> extends CacheProxySupport<K, V>
         implements EventJournalReader<EventJournalCacheEvent<K, V>> {
+
+    private static final CacheStatistics EMPTY_CACHE_STATS = new CacheStatisticsImpl(Clock.currentTimeMillis());
 
     CacheProxy(CacheConfig<K, V> cacheConfig, NodeEngine nodeEngine, ICacheService cacheService) {
         super(cacheConfig, nodeEngine, cacheService);
@@ -110,8 +117,8 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
         Operation operation = operationProvider.createContainsKeyOperation(dataKey);
         OperationService operationService = getNodeEngine().getOperationService();
         int partitionId = getPartitionId(dataKey);
-        InternalCompletableFuture<Boolean> future = operationService.invokeOnPartition(getServiceName(), operation, partitionId);
-        return future.join();
+        InvocationFuture<Boolean> future = operationService.invokeOnPartition(getServiceName(), operation, partitionId);
+        return future.joinInternal();
     }
 
     @Override
@@ -219,7 +226,7 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     @Override
     public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
         if (clazz.isInstance(cacheConfig)) {
-            return clazz.cast(cacheConfig.getAsReadOnly());
+            return clazz.cast(new CacheConfigReadOnly<>(cacheConfig));
         }
         throw new IllegalArgumentException("The configuration class " + clazz + " is not supported by this implementation");
     }
@@ -279,7 +286,7 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
         CacheEventListenerAdaptor<K, V> entryListener = new CacheEventListenerAdaptor<K, V>(this,
                 cacheEntryListenerConfiguration,
                 getNodeEngine().getSerializationService());
-        String regId = getService().registerListener(getDistributedObjectName(), entryListener, entryListener, false);
+        UUID regId = getService().registerListener(getDistributedObjectName(), entryListener, entryListener);
         if (regId != null) {
             if (addToConfig) {
                 cacheConfig.addCacheEntryListenerConfiguration(cacheEntryListenerConfiguration);
@@ -295,7 +302,7 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     public void deregisterCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
         checkNotNull(cacheEntryListenerConfiguration, "CacheEntryListenerConfiguration can't be null");
 
-        String regId = getListenerIdLocal(cacheEntryListenerConfiguration);
+        UUID regId = getListenerIdLocal(cacheEntryListenerConfiguration);
         if (regId != null) {
             if (getService().deregisterListener(getDistributedObjectName(), regId)) {
                 removeListenerLocally(cacheEntryListenerConfiguration);
@@ -308,13 +315,13 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     @Override
     public Iterator<Entry<K, V>> iterator() {
         ensureOpen();
-        return new ClusterWideIterator<>(this, false);
+        return new CachePartitionsIterator<>(this, false);
     }
 
     @Override
     public Iterator<Entry<K, V>> iterator(int fetchSize) {
         ensureOpen();
-        return new ClusterWideIterator<>(this, fetchSize, false);
+        return new CachePartitionsIterator<>(this, fetchSize, false);
     }
 
     @Override
@@ -324,7 +331,7 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     }
 
     @Override
-    public String addPartitionLostListener(CachePartitionLostListener listener) {
+    public UUID addPartitionLostListener(CachePartitionLostListener listener) {
         checkNotNull(listener, "CachePartitionLostListener can't be null");
 
         EventFilter filter = new CachePartitionLostEventFilter();
@@ -337,21 +344,21 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     }
 
     @Override
-    public boolean removePartitionLostListener(String id) {
+    public boolean removePartitionLostListener(UUID id) {
         checkNotNull(id, "Listener ID should not be null!");
         return getService().getNodeEngine().getEventService()
                 .deregisterListener(AbstractCacheService.SERVICE_NAME, name, id);
     }
 
     @Override
-    public ICompletableFuture<EventJournalInitialSubscriberState> subscribeToEventJournal(int partitionId) {
+    public CompletionStage<EventJournalInitialSubscriberState> subscribeToEventJournal(int partitionId) {
         final CacheEventJournalSubscribeOperation op = new CacheEventJournalSubscribeOperation(nameWithPrefix);
         op.setPartitionId(partitionId);
         return getNodeEngine().getOperationService().invokeOnPartition(op);
     }
 
     @Override
-    public <T> ICompletableFuture<ReadResultSet<T>> readFromEventJournal(
+    public <T> CompletionStage<ReadResultSet<T>> readFromEventJournal(
             long startSequence,
             int minSize,
             int maxSize,
@@ -371,7 +378,9 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
 
     @Override
     public CacheStatistics getLocalCacheStatistics() {
-        // TODO: throw UnsupportedOperationException if cache statistics are not enabled (but it breaks backward compatibility)
+        if (!cacheConfig.isStatisticsEnabled()) {
+            return EMPTY_CACHE_STATS;
+        }
         return getService().createCacheStatIfAbsent(cacheConfig.getNameWithPrefix());
     }
 
@@ -410,12 +419,12 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     }
 
     @Override
-    public ICompletableFuture<V> getAndPutAsync(K key, V value) {
+    public InternalCompletableFuture<V> getAndPutAsync(K key, V value) {
         return getAndPutAsync(key, value, null);
     }
 
     @Override
-    public ICompletableFuture<V> getAndPutAsync(K key, V value, ExpiryPolicy expiryPolicy) {
+    public InternalCompletableFuture<V> getAndPutAsync(K key, V value, ExpiryPolicy expiryPolicy) {
         return putAsyncInternal(key, value, expiryPolicy, true, false);
     }
 
@@ -430,37 +439,37 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
     }
 
     @Override
-    public ICompletableFuture<V> getAndRemoveAsync(K key) {
+    public InternalCompletableFuture<V> getAndRemoveAsync(K key) {
         return removeAsyncInternal(key, null, false, true, false);
     }
 
     @Override
-    public ICompletableFuture<Boolean> replaceAsync(K key, V value) {
+    public InternalCompletableFuture<Boolean> replaceAsync(K key, V value) {
         return replaceAsyncInternal(key, null, value, null, false, false, false);
     }
 
     @Override
-    public ICompletableFuture<Boolean> replaceAsync(K key, V value, ExpiryPolicy expiryPolicy) {
+    public InternalCompletableFuture<Boolean> replaceAsync(K key, V value, ExpiryPolicy expiryPolicy) {
         return replaceAsyncInternal(key, null, value, expiryPolicy, false, false, false);
     }
 
     @Override
-    public ICompletableFuture<Boolean> replaceAsync(K key, V oldValue, V newValue) {
+    public InternalCompletableFuture<Boolean> replaceAsync(K key, V oldValue, V newValue) {
         return replaceAsyncInternal(key, oldValue, newValue, null, true, false, false);
     }
 
     @Override
-    public ICompletableFuture<Boolean> replaceAsync(K key, V oldValue, V newValue, ExpiryPolicy expiryPolicy) {
+    public InternalCompletableFuture<Boolean> replaceAsync(K key, V oldValue, V newValue, ExpiryPolicy expiryPolicy) {
         return replaceAsyncInternal(key, oldValue, newValue, expiryPolicy, true, false, false);
     }
 
     @Override
-    public ICompletableFuture<V> getAndReplaceAsync(K key, V value) {
+    public InternalCompletableFuture<V> getAndReplaceAsync(K key, V value) {
         return replaceAsyncInternal(key, null, value, null, false, true, false);
     }
 
     @Override
-    public ICompletableFuture<V> getAndReplaceAsync(K key, V value, ExpiryPolicy expiryPolicy) {
+    public InternalCompletableFuture<V> getAndReplaceAsync(K key, V value, ExpiryPolicy expiryPolicy) {
         return replaceAsyncInternal(key, null, value, expiryPolicy, false, true, false);
     }
 
@@ -646,12 +655,11 @@ public class CacheProxy<K, V> extends CacheProxySupport<K, V>
             OperationFactory operationFactory = operationProvider.createSizeOperationFactory();
             Map<Integer, Object> results = getNodeEngine().getOperationService()
                                                           .invokeOnAllPartitions(getServiceName(), operationFactory);
-            int total = 0;
+            long total = 0;
             for (Object result : results.values()) {
-                //noinspection RedundantCast
                 total += (Integer) getNodeEngine().toObject(result);
             }
-            return total;
+            return toIntSize(total);
         } catch (Throwable t) {
             throw rethrowAllowedTypeFirst(t, CacheException.class);
         }

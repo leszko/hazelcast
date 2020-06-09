@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,25 +19,26 @@ package com.hazelcast.client.impl.protocol.task.map;
 import com.hazelcast.aggregation.Aggregator;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.task.AbstractCallableMessageTask;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.core.Member;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.map.QueryResultSizeExceededException;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.operation.MapOperation;
 import com.hazelcast.map.impl.query.Query;
 import com.hazelcast.map.impl.query.Result;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.PartitionPredicate;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.QueryException;
 import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.security.permission.MapPermission;
+import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.impl.OperationServiceImpl;
-import com.hazelcast.util.IterationType;
-import com.hazelcast.util.collection.PartitionIdSet;
+import com.hazelcast.internal.util.IterationType;
+import com.hazelcast.internal.util.collection.PartitionIdSet;
 
 import java.security.Permission;
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ import java.util.function.IntConsumer;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
 
 public abstract class AbstractMapQueryMessageTask<P, QueryResult extends Result, AccumulatedResults, ReducedResult>
         extends AbstractCallableMessageTask<P> {
@@ -88,7 +89,7 @@ public abstract class AbstractMapQueryMessageTask<P, QueryResult extends Result,
         try {
             Predicate predicate = getPredicate();
             if (predicate instanceof PartitionPredicate) {
-                int partitionId = getPartitionId();
+                int partitionId = clientMessage.getPartitionId();
                 QueryResult queryResult = invokeOnPartition((PartitionPredicate) predicate, partitionId);
                 extractAndAppendResult(result, queryResult);
                 return reduce(result);
@@ -252,7 +253,7 @@ public abstract class AbstractMapQueryMessageTask<P, QueryResult extends Result,
         }
     }
 
-    private MapOperation createQueryOperation(Query query, MapServiceContext mapServiceContext) {
+    private Operation createQueryOperation(Query query, MapServiceContext mapServiceContext) {
         return mapServiceContext.getMapOperationProvider(query.getMapName()).createQueryOperation(query);
     }
 

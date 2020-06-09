@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 package com.hazelcast.topic;
 
 import com.hazelcast.core.DistributedObject;
-import com.hazelcast.monitor.LocalTopicStats;
+
+import javax.annotation.Nonnull;
+import java.util.UUID;
 
 /**
  * Hazelcast provides distribution mechanism for publishing messages that are
@@ -59,19 +61,21 @@ public interface ITopic<E> extends DistributedObject {
      * @throws TopicOverloadException if the consumer is too slow
      *                                (only works in combination with reliable topic)
      */
-    void publish(E message);
+    void publish(@Nonnull E message);
 
     /**
      * Subscribes to this topic. When a message is published, the
      * {@link MessageListener#onMessage(Message)} method of the given
      * MessageListener is called.
      * More than one message listener can be added on one instance.
+     * See {@link ReliableMessageListener} to better integrate with a reliable topic.
      *
      * @param listener the MessageListener to add
      * @return returns the registration ID
      * @throws java.lang.NullPointerException if listener is {@code null}
      */
-    String addMessageListener(MessageListener<E> listener);
+    @Nonnull
+    UUID addMessageListener(@Nonnull MessageListener<E> listener);
 
     /**
      * Stops receiving messages for the given message listener.
@@ -81,7 +85,7 @@ public interface ITopic<E> extends DistributedObject {
      * @param registrationId ID of listener registration
      * @return {@code true} if registration is removed, {@code false} otherwise
      */
-    boolean removeMessageListener(String registrationId);
+    boolean removeMessageListener(@Nonnull UUID registrationId);
 
     /**
      * Returns statistics about this topic, like total number of publishes/receives.
@@ -90,5 +94,5 @@ public interface ITopic<E> extends DistributedObject {
      *
      * @return statistics about this topic
      */
-    LocalTopicStats getLocalTopicStats();
+    @Nonnull LocalTopicStats getLocalTopicStats();
 }

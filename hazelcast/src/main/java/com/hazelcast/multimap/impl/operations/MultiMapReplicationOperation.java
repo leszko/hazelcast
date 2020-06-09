@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@
 package com.hazelcast.multimap.impl.operations;
 
 import com.hazelcast.config.MultiMapConfig;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.multimap.impl.MultiMapDataSerializerHook;
 import com.hazelcast.multimap.impl.MultiMapRecord;
 import com.hazelcast.multimap.impl.MultiMapService;
 import com.hazelcast.multimap.impl.MultiMapValue;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
@@ -33,8 +34,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
-import static com.hazelcast.util.SetUtil.createHashSet;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.SetUtil.createHashSet;
 
 public class MultiMapReplicationOperation extends Operation implements IdentifiedDataSerializable {
 
@@ -64,7 +65,7 @@ public class MultiMapReplicationOperation extends Operation implements Identifie
             out.writeInt(collections.size());
             for (Map.Entry<Data, MultiMapValue> collectionEntry : collections.entrySet()) {
                 Data key = collectionEntry.getKey();
-                out.writeData(key);
+                IOUtil.writeData(out, key);
                 MultiMapValue multiMapValue = collectionEntry.getValue();
                 Collection<MultiMapRecord> coll = multiMapValue.getCollection(false);
                 out.writeInt(coll.size());
@@ -89,7 +90,7 @@ public class MultiMapReplicationOperation extends Operation implements Identifie
             int collectionSize = in.readInt();
             Map<Data, MultiMapValue> collections = createHashMap(collectionSize);
             for (int j = 0; j < collectionSize; j++) {
-                Data key = in.readData();
+                Data key = IOUtil.readData(in);
                 int collSize = in.readInt();
                 String collectionType = in.readUTF();
                 Collection<MultiMapRecord> coll;

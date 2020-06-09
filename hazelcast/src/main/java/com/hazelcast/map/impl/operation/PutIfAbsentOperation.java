@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,17 @@
 package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.map.impl.MapDataSerializerHook;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
+
+import static com.hazelcast.map.impl.record.Record.UNSET;
 
 public class PutIfAbsentOperation extends BasePutOperation implements MutatingOperation {
 
-    private boolean successful;
+    protected transient boolean successful;
 
-    public PutIfAbsentOperation(String name, Data dataKey, Data value, long ttl, long maxIdle) {
-        super(name, dataKey, value, ttl, maxIdle);
+    public PutIfAbsentOperation(String name, Data dataKey, Data value) {
+        super(name, dataKey, value);
     }
 
     public PutIfAbsentOperation() {
@@ -33,9 +35,18 @@ public class PutIfAbsentOperation extends BasePutOperation implements MutatingOp
 
     @Override
     protected void runInternal() {
-        final Object oldValue = recordStore.putIfAbsent(dataKey, dataValue, ttl, maxIdle, getCallerAddress());
+        Object oldValue = recordStore.putIfAbsent(dataKey, dataValue,
+                getTtl(), getMaxIdle(), getCallerAddress());
         this.oldValue = mapServiceContext.toData(oldValue);
         successful = this.oldValue == null;
+    }
+
+    protected long getTtl() {
+        return UNSET;
+    }
+
+    protected long getMaxIdle() {
+        return UNSET;
     }
 
     @Override

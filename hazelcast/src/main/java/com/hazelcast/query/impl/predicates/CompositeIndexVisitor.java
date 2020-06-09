@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,8 +160,9 @@ public class CompositeIndexVisitor extends AbstractVisitor {
                 }
 
                 if (index.isOrdered()) {
-                    RangePredicate comparison =
-                            prefix < components.length && comparisons != null ? comparisons.get(components[prefix]) : null;
+                    RangePredicate comparison = prefix < components.length && comparisons != null
+                        ? comparisons.get(components[prefix]) : null;
+
                     if (comparison != null) {
                         ++prefix;
                     }
@@ -322,7 +323,9 @@ public class CompositeIndexVisitor extends AbstractVisitor {
         String[] components = index.getComponents();
         Comparable[] values = new Comparable[components.length];
         for (int i = 0; i < components.length; ++i) {
-            values[i] = fast ? prefixes.get(components[i]).value : prefixes.remove(components[i]).value;
+            String attribute = components[i];
+
+            values[i] = fast ? prefixes.get(attribute).value : prefixes.remove(attribute).value;
         }
         return new CompositeEqualPredicate(index, new CompositeValue(values));
     }
@@ -336,7 +339,9 @@ public class CompositeIndexVisitor extends AbstractVisitor {
         Comparable[] from = new Comparable[components.length];
         Comparable[] to = new Comparable[components.length];
         for (int i = 0; i < prefixLength; ++i) {
-            Comparable value = fast ? prefixes.get(components[i]).value : prefixes.remove(components[i]).value;
+            String attribute = components[i];
+
+            Comparable value = fast ? prefixes.get(attribute).value : prefixes.remove(attribute).value;
             from[i] = value;
             to[i] = value;
         }
@@ -366,7 +371,9 @@ public class CompositeIndexVisitor extends AbstractVisitor {
         Comparable[] from = new Comparable[components.length];
         Comparable[] to = new Comparable[components.length];
         for (int i = 0; i < prefixLength; ++i) {
-            Comparable value = fast ? prefixes.get(components[i]).value : prefixes.remove(components[i]).value;
+            String attribute = components[i];
+
+            Comparable value = fast ? prefixes.get(attribute).value : prefixes.remove(attribute).value;
             from[i] = value;
             to[i] = value;
         }

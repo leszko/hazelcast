@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package com.hazelcast.internal.ascii.rest;
 
 import com.hazelcast.internal.ascii.NoOpCommand;
-import com.hazelcast.nio.IOUtil;
-import com.hazelcast.nio.ascii.TextDecoder;
-import com.hazelcast.util.StringUtil;
+import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.nio.ascii.TextDecoder;
+import com.hazelcast.internal.server.ServerConnection;
+import com.hazelcast.internal.util.StringUtil;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import static com.hazelcast.internal.ascii.TextCommandConstants.TextCommandType.HTTP_POST;
-import static com.hazelcast.util.StringUtil.stringToBytes;
+import static com.hazelcast.internal.util.StringUtil.stringToBytes;
 
 public class HttpPostCommand extends HttpCommand {
 
@@ -45,10 +46,12 @@ public class HttpPostCommand extends HttpCommand {
     private ByteBuffer data;
     private String contentType;
     private ByteBuffer lineBuffer = ByteBuffer.allocate(INITIAL_CAPACITY);
+    private ServerConnection connection;
 
-    public HttpPostCommand(TextDecoder decoder, String uri) {
+    public HttpPostCommand(TextDecoder decoder, String uri, ServerConnection connection) {
         super(HTTP_POST, uri);
         this.decoder = decoder;
+        this.connection = connection;
     }
 
     /**
@@ -236,5 +239,9 @@ public class HttpPostCommand extends HttpCommand {
         } else if (currentLine.startsWith(HEADER_EXPECT_100)) {
             decoder.sendResponse(new NoOpCommand(RES_100));
         }
+    }
+
+    protected ServerConnection getConnection() {
+        return connection;
     }
 }

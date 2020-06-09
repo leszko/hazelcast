@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ import com.hazelcast.config.QueryCacheConfig;
 import com.hazelcast.core.EntryAdapter;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.QueryCache;
 import com.hazelcast.map.impl.querycache.subscriber.InternalQueryCache;
 import com.hazelcast.query.Predicates;
-import com.hazelcast.query.SqlPredicate;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -52,8 +51,8 @@ public class ServerQueryCacheRecreationTest extends HazelcastTestSupport {
     private final String queryCacheName = "queryCacheName";
     private final TestHazelcastInstanceFactory factory = createHazelcastInstanceFactory();
 
-    private HazelcastInstance serverWithQueryCache;
     private HazelcastInstance server;
+    private HazelcastInstance serverWithQueryCache;
 
     @Override
     protected Config getConfig() {
@@ -73,6 +72,7 @@ public class ServerQueryCacheRecreationTest extends HazelcastTestSupport {
     @Test
     public void query_cache_recreates_itself_after_server_restart() {
         IMap<Object, Object> map = server.getMap(mapName);
+
         for (int i = 0; i < 100; i++) {
             map.put(i, i);
         }
@@ -99,12 +99,7 @@ public class ServerQueryCacheRecreationTest extends HazelcastTestSupport {
             map.put(i, i);
         }
 
-        assertTrueEventually(new AssertTask() {
-            @Override
-            public void run() {
-                assertEquals(300, queryCache.size());
-            }
-        });
+        assertTrueEventually(() -> assertEquals(300, queryCache.size()));
 
         Set<Object> keySet = queryCache.keySet();
         for (int i = 0; i < 300; i++) {
@@ -123,7 +118,7 @@ public class ServerQueryCacheRecreationTest extends HazelcastTestSupport {
             public void entryAdded(EntryEvent event) {
                 entryAddedCounter.incrementAndGet();
             }
-        }, new SqlPredicate("__key >= 10"), true);
+        }, Predicates.sql("__key >= 10"), true);
 
         // Restart server
         server.shutdown();
@@ -137,12 +132,7 @@ public class ServerQueryCacheRecreationTest extends HazelcastTestSupport {
             map.put(i, i);
         }
 
-        AssertTask assertTask = new AssertTask() {
-            @Override
-            public void run() {
-                assertEquals(90, entryAddedCounter.get());
-            }
-        };
+        AssertTask assertTask = () -> assertEquals(90, entryAddedCounter.get());
 
         assertTrueEventually(assertTask);
         assertTrueAllTheTime(assertTask, 3);

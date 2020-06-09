@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,33 @@
 
 package com.hazelcast.client.impl.protocol.task;
 
+import com.hazelcast.client.AuthenticationException;
+import com.hazelcast.client.impl.ClientBackupAwareResponse;
 import com.hazelcast.client.impl.ClientEndpoint;
 import com.hazelcast.client.impl.ClientEndpointImpl;
 import com.hazelcast.client.impl.ClientEndpointManager;
 import com.hazelcast.client.impl.ClientEngine;
-import com.hazelcast.client.impl.StubAuthenticationException;
 import com.hazelcast.client.impl.client.SecureRequest;
 import com.hazelcast.client.impl.protocol.ClientExceptions;
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.BuildInfo;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
+import com.hazelcast.internal.nio.ConnectionType;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.server.ServerConnection;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.Connection;
 import com.hazelcast.security.Credentials;
 import com.hazelcast.security.SecurityContext;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.operationservice.impl.responses.NormalResponse;
 
 import java.lang.reflect.Field;
+import java.security.AccessControlException;
 import java.security.Permission;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,25 +50,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.hazelcast.util.ExceptionUtil.peel;
+import static com.hazelcast.internal.util.ExceptionUtil.peel;
 
 /**
  * Base Message task.
  */
+@SuppressWarnings({"checkstyle:methodcount"})
 public abstract class AbstractMessageTask<P> implements MessageTask, SecureRequest {
 
     private static final List<Class<? extends Throwable>> NON_PEELABLE_EXCEPTIONS =
             Arrays.asList(Error.class, MemberLeftException.class);
 
     protected final ClientMessage clientMessage;
-    protected final Connection connection;
+    protected final ServerConnection connection;
     protected final ClientEndpoint endpoint;
     protected final NodeEngineImpl nodeEngine;
     protected final InternalSerializationService serializationService;
     protected final ILogger logger;
     protected final ClientEngine clientEngine;
     protected P parameters;
-    final ClientEndpointManager endpointManager;
+    private final ClientEndpointManager endpointManager;
     private final Node node;
 
     protected AbstractMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
@@ -72,7 +78,7 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
         this.node = node;
         this.nodeEngine = node.nodeEngine;
         this.serializationService = node.getSerializationService();
-        this.connection = connection;
+        this.connection = (ServerConnection) connection;
         this.clientEngine = node.clientEngine;
         this.endpointManager = clientEngine.getEndpointManager();
         this.endpoint = initEndpoint();
@@ -96,14 +102,15 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
     protected abstract ClientMessage encodeResponse(Object response);
 
     @Override
-    public int getPartitionId() {
-        return clientMessage.getPartitionId();
-    }
-
-    @Override
     public final void run() {
         try {
-            if (requiresAuthentication() && !endpoint.isAuthenticated()) {
+            Address address = connection.getRemoteAddress();
+            if (isManagementTask() && !clientEngine.getManagementTasksChecker().isTrusted(address)) {
+                String message = "The client address " + address + " is not allowed for management task "
+                        + getClass().getName();
+                logger.info(message);
+                throw new AccessControlException(message);
+            } else if (requiresAuthentication() && !endpoint.isAuthenticated()) {
                 handleAuthenticationFailure();
             } else {
                 initializeAndProcessMessage();
@@ -117,9 +124,26 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
         return true;
     }
 
+    /**
+     * Used to accept hot restart messages (and some other messages required for
+     * client to connect) sent from MC client when node start is not complete yet.
+     */
+    protected boolean acceptOnIncompleteStart() {
+        return false;
+    }
+
+    /**
+     * Used as a workaround for calling {@link #validateNodeStart} after
+     * decoding auth messages, i.e. when connection type is unknown prior
+     * to decode is made.
+     */
+    protected boolean validateNodeStartBeforeDecode() {
+        return true;
+    }
+
     private void initializeAndProcessMessage() throws Throwable {
-        if (!node.getNodeExtension().isStartCompleted()) {
-            throw new HazelcastInstanceNotActiveException("Hazelcast instance is not ready yet!");
+        if (validateNodeStartBeforeDecode()) {
+            validateNodeStart();
         }
         parameters = decodeClientMessage(clientMessage);
         assert addressesDecodedWithTranslation() : formatWrongAddressInDecodedMessage();
@@ -130,12 +154,24 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
         interceptAfter(credentials);
     }
 
+    /**
+     * Throws if node start is incomplete or if the message is from a special
+     * subset of messages and it's sent from MC client.
+     */
+    protected final void validateNodeStart() {
+        boolean acceptOnIncompleteStart = acceptOnIncompleteStart()
+                && ConnectionType.MC_JAVA_CLIENT.equals(endpoint.getClientType());
+        if (!acceptOnIncompleteStart && !node.getNodeExtension().isStartCompleted()) {
+            throw new HazelcastInstanceNotActiveException("Hazelcast instance is not ready yet!");
+        }
+    }
+
     private void handleAuthenticationFailure() {
         Exception exception;
         if (nodeEngine.isRunning()) {
             String message = "Client " + endpoint + " must authenticate before any operation.";
             logger.severe(message);
-            exception = new RetryableHazelcastException(new StubAuthenticationException(message));
+            exception = new RetryableHazelcastException(new AuthenticationException(message));
         } else {
             exception = new HazelcastInstanceNotActiveException();
         }
@@ -192,7 +228,22 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
 
     protected void sendResponse(Object response) {
         try {
-            ClientMessage clientMessage = encodeResponse(response);
+            int numberOfBackups = 0;
+            if (response instanceof ClientBackupAwareResponse) {
+                ClientBackupAwareResponse backupAwareResponse = (ClientBackupAwareResponse) response;
+                response = backupAwareResponse.getResponse();
+                numberOfBackups = backupAwareResponse.getNumberOfBackups();
+            } else if (response instanceof NormalResponse) {
+                response = ((NormalResponse) response).getValue();
+            }
+            ClientMessage clientMessage;
+            if (response instanceof Throwable) {
+                clientMessage = encodeException((Throwable) response);
+            } else {
+                clientMessage = encodeResponse(response);
+            }
+            assert numberOfBackups >= 0 && numberOfBackups < Byte.MAX_VALUE;
+            clientMessage.setNumberOfBackupAcks((byte) numberOfBackups);
             sendClientMessage(clientMessage);
         } catch (Exception e) {
             handleProcessingFailure(e);
@@ -201,8 +252,6 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
 
     protected void sendClientMessage(ClientMessage resultClientMessage) {
         resultClientMessage.setCorrelationId(clientMessage.getCorrelationId());
-        resultClientMessage.addFlag(ClientMessage.BEGIN_AND_END_FLAGS);
-        resultClientMessage.setVersion(ClientMessage.VERSION);
         //TODO framing not implemented yet, should be split into frames before writing to connection
         // PETER: There is no point in chopping it up in frames and in 1 go write all these frames because it still will
         // not allow any interleaving with operations. It will only slow down the system. Framing should be done inside
@@ -216,10 +265,14 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
         sendClientMessage(resultClientMessage);
     }
 
-    protected void sendClientMessage(Throwable throwable) {
+    private void sendClientMessage(Throwable throwable) {
+        ClientMessage message = encodeException(throwable);
+        sendClientMessage(message);
+    }
+
+    private ClientMessage encodeException(Throwable throwable) {
         ClientExceptions exceptionFactory = clientEngine.getClientExceptions();
-        ClientMessage exception = exceptionFactory.createExceptionMessage(peelIfNeeded(throwable));
-        sendClientMessage(exception);
+        return exceptionFactory.createExceptionMessage(peelIfNeeded(throwable));
     }
 
     public abstract String getServiceName();
@@ -273,12 +326,12 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
         return true;
     }
 
-    final String formatWrongAddressInDecodedMessage() {
+    private String formatWrongAddressInDecodedMessage() {
         return "Decoded message of type " + parameters.getClass() + " contains untranslated addresses. "
                 + "Use ClientEngine.memberAddressOf to translate addresses while decoding this client message.";
     }
 
-    private Throwable peelIfNeeded(Throwable t) {
+    protected Throwable peelIfNeeded(Throwable t) {
         if (t == null) {
             return null;
         }
@@ -291,4 +344,15 @@ public abstract class AbstractMessageTask<P> implements MessageTask, SecureReque
 
         return peel(t);
     }
+
+
+    /**
+     * The default implementation returns false. Child classes which implement a logic related to a management operation should
+     * override it and return true so the proper access control mechanism is used.
+     */
+    @Override
+    public boolean isManagementTask() {
+        return false;
+    }
+
 }

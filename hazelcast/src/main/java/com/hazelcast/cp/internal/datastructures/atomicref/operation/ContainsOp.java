@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package com.hazelcast.cp.internal.datastructures.atomicref.operation;
 
-import com.hazelcast.core.IAtomicReference;
-import com.hazelcast.cp.internal.datastructures.atomicref.RaftAtomicRef;
-import com.hazelcast.cp.internal.datastructures.atomicref.RaftAtomicReferenceDataSerializerHook;
+import com.hazelcast.cp.IAtomicReference;
+import com.hazelcast.cp.internal.datastructures.atomicref.AtomicRef;
+import com.hazelcast.cp.internal.datastructures.atomicref.AtomicRefDataSerializerHook;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.cp.CPGroupId;
 import com.hazelcast.cp.internal.IndeterminateOperationStateAware;
@@ -45,7 +46,7 @@ public class ContainsOp extends AbstractAtomicRefOp implements IndeterminateOper
 
     @Override
     public Object run(CPGroupId groupId, long commitIndex) {
-        RaftAtomicRef ref = getAtomicRef(groupId);
+        AtomicRef ref = getAtomicRef(groupId);
         return ref.contains(value);
     }
 
@@ -56,20 +57,20 @@ public class ContainsOp extends AbstractAtomicRefOp implements IndeterminateOper
 
     @Override
     public int getClassId() {
-        return RaftAtomicReferenceDataSerializerHook.CONTAINS_OP;
+        return AtomicRefDataSerializerHook.CONTAINS_OP;
     }
 
     @Override
     public void writeData(ObjectDataOutput out)
             throws IOException {
         super.writeData(out);
-        out.writeData(value);
+        IOUtil.writeData(out, value);
     }
 
     @Override
     public void readData(ObjectDataInput in)
             throws IOException {
         super.readData(in);
-        value = in.readData();
+        value = IOUtil.readData(in);
     }
 }

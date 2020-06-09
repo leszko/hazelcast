@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ package com.hazelcast.cp.internal.datastructures.atomiclong.operation;
 import com.hazelcast.cp.internal.raft.QueryPolicy;
 import com.hazelcast.cp.CPGroupId;
 import com.hazelcast.cp.internal.IndeterminateOperationStateAware;
-import com.hazelcast.cp.internal.datastructures.atomiclong.RaftAtomicLongDataSerializerHook;
-import com.hazelcast.cp.internal.datastructures.atomiclong.proxy.RaftAtomicLongProxy;
+import com.hazelcast.cp.internal.datastructures.atomiclong.AtomicLongDataSerializerHook;
+import com.hazelcast.cp.internal.datastructures.atomiclong.proxy.AtomicLongProxy;
 
 /**
- * Operation for {@link RaftAtomicLongProxy#localGet(QueryPolicy)}
+ * Operation for {@link AtomicLongProxy#localGet(QueryPolicy)}
  */
 public class LocalGetOp extends AbstractAtomicLongOp implements IndeterminateOperationStateAware {
 
@@ -47,6 +47,6 @@ public class LocalGetOp extends AbstractAtomicLongOp implements IndeterminateOpe
 
     @Override
     public int getClassId() {
-        return RaftAtomicLongDataSerializerHook.LOCAL_GET_OP;
+        return AtomicLongDataSerializerHook.LOCAL_GET_OP;
     }
 }

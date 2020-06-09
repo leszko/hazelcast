@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.hazelcast.spi.impl.operationservice.impl;
 
-import com.hazelcast.core.Member;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.core.MemberLeftException;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.EndpointManager;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.server.ServerConnectionManager;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
@@ -41,8 +41,8 @@ final class TargetInvocation extends Invocation<Address> {
                      long tryPauseMillis,
                      long callTimeoutMillis,
                      boolean deserialize,
-                     EndpointManager endpointManager) {
-        super(context, op, doneCallback, tryCount, tryPauseMillis, callTimeoutMillis, deserialize, endpointManager);
+                     ServerConnectionManager connectionManager) {
+        super(context, op, doneCallback, tryCount, tryPauseMillis, callTimeoutMillis, deserialize, connectionManager);
         this.target = target;
     }
 

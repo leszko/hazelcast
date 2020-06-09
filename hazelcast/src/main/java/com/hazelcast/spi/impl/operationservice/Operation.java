@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,35 @@
 
 package com.hazelcast.spi.impl.operationservice;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.cluster.ClusterClock;
+import com.hazelcast.internal.server.ServerConnection;
 import com.hazelcast.internal.partition.InternalPartition;
+import com.hazelcast.internal.util.UUIDSerializationUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
-import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.exception.RetryableException;
 import com.hazelcast.spi.exception.SilentException;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.properties.ClusterProperty;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.logging.Level;
 
-import static com.hazelcast.spi.impl.operationservice.CallStatus.DONE_RESPONSE;
-import static com.hazelcast.spi.impl.operationservice.CallStatus.DONE_VOID;
+import static com.hazelcast.internal.util.EmptyStatement.ignore;
+import static com.hazelcast.internal.util.StringUtil.timeToString;
+import static com.hazelcast.spi.impl.operationservice.CallStatus.RESPONSE;
+import static com.hazelcast.spi.impl.operationservice.CallStatus.VOID;
 import static com.hazelcast.spi.impl.operationservice.CallStatus.WAIT;
 import static com.hazelcast.spi.impl.operationservice.ExceptionAction.RETRY_INVOCATION;
 import static com.hazelcast.spi.impl.operationservice.ExceptionAction.THROW_EXCEPTION;
-import static com.hazelcast.util.EmptyStatement.ignore;
-import static com.hazelcast.util.StringUtil.timeToString;
 
 /**
  * An operation could be compared to a {@link Runnable}. It contains logic that
@@ -64,6 +66,7 @@ public abstract class Operation implements DataSerializable {
     static final int BITMASK_PARTITION_ID_32_BIT = 1 << 4;
     static final int BITMASK_CALL_TIMEOUT_64_BIT = 1 << 5;
     static final int BITMASK_SERVICE_NAME_SET = 1 << 6;
+    static final int BITMASK_CLIENT_CALL_ID_SET = 1 << 7;
 
     private static final AtomicLongFieldUpdater<Operation> CALL_ID =
             AtomicLongFieldUpdater.newUpdater(Operation.class, "callId");
@@ -77,18 +80,28 @@ public abstract class Operation implements DataSerializable {
     private long invocationTime = -1;
     private long callTimeout = Long.MAX_VALUE;
     private long waitTimeout = -1;
-    private String callerUuid;
+    private UUID callerUuid;
 
     // injected
     private transient NodeEngine nodeEngine;
     private transient Object service;
     private transient Address callerAddress;
-    private transient Connection connection;
+    private transient ServerConnection connection;
     private transient OperationResponseHandler responseHandler;
+    private transient long clientCallId = -1;
 
     protected Operation() {
         setFlag(true, BITMASK_VALIDATE_TARGET);
         setFlag(true, BITMASK_CALL_TIMEOUT_64_BIT);
+    }
+
+    public void setClientCallId(long clientCallId) {
+        this.clientCallId = clientCallId;
+        setFlag(this.clientCallId != -1, BITMASK_CLIENT_CALL_ID_SET);
+    }
+
+    public long getClientCallId() {
+        return clientCallId;
     }
 
     /**
@@ -109,7 +122,7 @@ public abstract class Operation implements DataSerializable {
     /**
      * The beforeRun is called before either the {@link #run()} or the {@link #call()} method is called.
      *
-     *  runs before wait-support
+     * runs before wait-support
      */
     public void beforeRun() throws Exception {
     }
@@ -153,7 +166,7 @@ public abstract class Operation implements DataSerializable {
      * In the future it is very likely that for regular Operation that want to
      * return a concrete response, the actual response can be returned directly.
      * In this case we'll change the return type to {@link Object} to prevent
-     * forcing the response to be wrapped in a {@link CallStatus#DONE_RESPONSE}
+     * forcing the response to be wrapped in a {@link CallStatus#RESPONSE}
      * monad since that would force additional litter to be created.
      *
      * @return the CallStatus.
@@ -169,7 +182,7 @@ public abstract class Operation implements DataSerializable {
         }
 
         run();
-        return returnsResponse() ? DONE_RESPONSE : DONE_VOID;
+        return returnsResponse() ? RESPONSE : VOID;
     }
 
     /**
@@ -413,12 +426,12 @@ public abstract class Operation implements DataSerializable {
         return this;
     }
 
-    public final Connection getConnection() {
+    public final ServerConnection getConnection() {
         return connection;
     }
 
     // Accessed using OperationAccessor
-    final Operation setConnection(Connection connection) {
+    final Operation setConnection(ServerConnection connection) {
         this.connection = connection;
         return this;
     }
@@ -483,7 +496,7 @@ public abstract class Operation implements DataSerializable {
      * time.
      *
      * For more information about the default value, see
-     * {@link GroupProperty#OPERATION_CALL_TIMEOUT_MILLIS}
+     * {@link ClusterProperty#OPERATION_CALL_TIMEOUT_MILLIS}
      *
      * @return the call timeout in milliseconds.
      * @see #setCallTimeout(long)
@@ -517,9 +530,9 @@ public abstract class Operation implements DataSerializable {
      *
      * Examples:
      * <ol>
-     * <li>in case of ILock.tryLock(10, ms), the wait timeout is 10 ms</li>
-     * <li>in case of ILock.lock(), the wait timeout is -1</li>
-     * <li>in case of ILock.tryLock(), the wait timeout is 0.</li>
+     * <li>in case of IMap.tryLock(10, ms), the wait timeout is 10 ms</li>
+     * <li>in case of IMap.lock(), the wait timeout is -1</li>
+     * <li>in case of IMap.tryLock(), the wait timeout is 0.</li>
      * </ol>
      *
      * The waitTimeout is only relevant for blocking operations. For non
@@ -557,11 +570,11 @@ public abstract class Operation implements DataSerializable {
         return throwable instanceof RetryableException ? RETRY_INVOCATION : THROW_EXCEPTION;
     }
 
-    public String getCallerUuid() {
+    public UUID getCallerUuid() {
         return callerUuid;
     }
 
-    public Operation setCallerUuid(String callerUuid) {
+    public Operation setCallerUuid(UUID callerUuid) {
         this.callerUuid = callerUuid;
         setFlag(callerUuid != null, BITMASK_CALLER_UUID_SET);
         return this;
@@ -681,7 +694,11 @@ public abstract class Operation implements DataSerializable {
         }
 
         if (isFlagSet(BITMASK_CALLER_UUID_SET)) {
-            out.writeUTF(callerUuid);
+            UUIDSerializationUtil.writeUUID(out, callerUuid);
+        }
+
+        if (isFlagSet(BITMASK_CLIENT_CALL_ID_SET)) {
+            out.writeLong(clientCallId);
         }
 
         writeInternal(out);
@@ -723,7 +740,11 @@ public abstract class Operation implements DataSerializable {
         }
 
         if (isFlagSet(BITMASK_CALLER_UUID_SET)) {
-            callerUuid = in.readUTF();
+            callerUuid = UUIDSerializationUtil.readUUID(in);
+        }
+
+        if (isFlagSet(BITMASK_CLIENT_CALL_ID_SET)) {
+            clientCallId = in.readLong();
         }
 
         readInternal(in);

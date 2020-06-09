@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 package com.hazelcast.internal.cluster.impl;
 
-import com.hazelcast.nio.Address;
+import com.hazelcast.internal.util.UUIDSerializationUtil;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.UUID;
 
 // Used as request and response in join protocol
 public class JoinMessage implements IdentifiedDataSerializable {
@@ -34,11 +37,11 @@ public class JoinMessage implements IdentifiedDataSerializable {
     protected int buildNumber;
     /**
      * this is populated with the codebase version of the node trying to join the cluster
-     * (ie {@link com.hazelcast.instance.Node#getVersion()}).
+     * (ie {@link Node#getVersion()}).
      */
     protected MemberVersion memberVersion;
     protected Address address;
-    protected String uuid;
+    protected UUID uuid;
     protected boolean liteMember;
     protected ConfigCheck configCheck;
     protected Collection<Address> memberAddresses;
@@ -48,11 +51,11 @@ public class JoinMessage implements IdentifiedDataSerializable {
     }
 
     public JoinMessage(byte packetVersion, int buildNumber, MemberVersion memberVersion, Address address,
-                       String uuid, boolean liteMember, ConfigCheck configCheck) {
+                       UUID uuid, boolean liteMember, ConfigCheck configCheck) {
         this(packetVersion, buildNumber, memberVersion, address, uuid, liteMember, configCheck, Collections.emptySet(), 0);
     }
 
-    public JoinMessage(byte packetVersion, int buildNumber, MemberVersion memberVersion, Address address, String uuid,
+    public JoinMessage(byte packetVersion, int buildNumber, MemberVersion memberVersion, Address address, UUID uuid,
                        boolean liteMember, ConfigCheck configCheck, Collection<Address> memberAddresses, int dataMemberCount) {
         this.packetVersion = packetVersion;
         this.buildNumber = buildNumber;
@@ -81,7 +84,7 @@ public class JoinMessage implements IdentifiedDataSerializable {
         return address;
     }
 
-    public String getUuid() {
+    public UUID getUuid() {
         return uuid;
     }
 
@@ -111,7 +114,7 @@ public class JoinMessage implements IdentifiedDataSerializable {
         buildNumber = in.readInt();
         memberVersion = in.readObject();
         address = in.readObject();
-        uuid = in.readUTF();
+        uuid = UUIDSerializationUtil.readUUID(in);
         configCheck = in.readObject();
         liteMember = in.readBoolean();
 
@@ -130,7 +133,7 @@ public class JoinMessage implements IdentifiedDataSerializable {
         out.writeInt(buildNumber);
         out.writeObject(memberVersion);
         out.writeObject(address);
-        out.writeUTF(uuid);
+        UUIDSerializationUtil.writeUUID(out, uuid);
         out.writeObject(configCheck);
         out.writeBoolean(liteMember);
 

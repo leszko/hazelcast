@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.VersionAware;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.util.StringUtil;
+import com.hazelcast.internal.util.StringUtil;
 
 import java.io.IOException;
 
@@ -231,8 +231,8 @@ public final class Version implements IdentifiedDataSerializable, Comparable<Ver
     /**
      * Checks if the version is between specified version (both ends inclusive)
      *
-     * @param from
-     * @param to
+     * @param from the lower bound version
+     * @param to the upper bound version
      * @return true if the version is between from and to (both ends inclusive)
      */
     public boolean isBetween(Version from, Version to) {

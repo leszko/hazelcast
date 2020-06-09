@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.hazelcast.config;
 
 import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.instance.ProtocolType;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -55,21 +55,10 @@ public class AdvancedNetworkConfigTest extends HazelcastTestSupport {
         assertEquals(ServerSocketEndpointConfig.DEFAULT_PORT, defaultEndpointConfig.getPort());
         assertEquals(ServerSocketEndpointConfig.PORT_AUTO_INCREMENT, defaultEndpointConfig.getPortCount());
         assertTrue(defaultEndpointConfig.isPortAutoIncrement());
-        assertEquals(Integer.parseInt(GroupProperty.SOCKET_RECEIVE_BUFFER_SIZE.getDefaultValue()),
+        assertEquals(Integer.parseInt(ClusterProperty.SOCKET_RECEIVE_BUFFER_SIZE.getDefaultValue()),
                 defaultEndpointConfig.getSocketRcvBufferSizeKb());
-        assertEquals(Integer.parseInt(GroupProperty.SOCKET_SEND_BUFFER_SIZE.getDefaultValue()),
+        assertEquals(Integer.parseInt(ClusterProperty.SOCKET_SEND_BUFFER_SIZE.getDefaultValue()),
                 defaultEndpointConfig.getSocketSendBufferSizeKb());
-    }
-
-    @Test
-    public void testFailFast_whenRestEnabledWithoutTextEndpoint() {
-        Config config = new Config();
-        config.getAdvancedNetworkConfig()
-              .setEnabled(true);
-        config.setProperty(GroupProperty.REST_ENABLED.getName(), "true");
-
-        expected.expect(InvalidConfigurationException.class);
-        createHazelcastInstance(config);
     }
 
     @Test
@@ -79,9 +68,9 @@ public class AdvancedNetworkConfigTest extends HazelcastTestSupport {
         config.addWanReplicationConfig(
                 new WanReplicationConfig()
                         .setName("seattle-tokyo")
-                        .addWanPublisherConfig(
-                                new WanPublisherConfig()
-                                        .setGroupName("target-cluster")
+                        .addBatchReplicationPublisherConfig(
+                                new WanBatchPublisherConfig()
+                                        .setClusterName("target-cluster")
                                         .setEndpoint("does-not-exist")));
 
         expected.expect(InvalidConfigurationException.class);
@@ -104,11 +93,11 @@ public class AdvancedNetworkConfigTest extends HazelcastTestSupport {
         AdvancedNetworkConfig config = new AdvancedNetworkConfig();
         config.setMemberEndpointConfig(
                 new ServerSocketEndpointConfig().setProtocolType(ProtocolType.MEMBER)
-                .setPort(19999)
+                                                .setPort(19999)
         );
         config.setMemberEndpointConfig(
                 new ServerSocketEndpointConfig().setProtocolType(ProtocolType.MEMBER)
-                .setPort(11000)
+                                                .setPort(11000)
         );
 
         assertEquals(11000, ((ServerSocketEndpointConfig) config.getEndpointConfigs().get(MEMBER)).getPort());

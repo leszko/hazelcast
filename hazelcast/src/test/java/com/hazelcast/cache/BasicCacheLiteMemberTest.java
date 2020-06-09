@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ import javax.cache.event.CacheEntryUpdatedListener;
 import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.hazelcast.cache.CacheTestSupport.createServerCachingProvider;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertNull;
@@ -71,8 +72,8 @@ public class BasicCacheLiteMemberTest
         final HazelcastInstance instance = factory.newHazelcastInstance();
         final HazelcastInstance lite = factory.newHazelcastInstance(new Config().setLiteMember(true));
 
-        instanceCachingProvider = HazelcastServerCachingProvider.createCachingProvider(instance);
-        liteCachingProvider = HazelcastServerCachingProvider.createCachingProvider(lite);
+        instanceCachingProvider = createServerCachingProvider(instance);
+        liteCachingProvider = createServerCachingProvider(lite);
         cacheName = randomMapName();
     }
 

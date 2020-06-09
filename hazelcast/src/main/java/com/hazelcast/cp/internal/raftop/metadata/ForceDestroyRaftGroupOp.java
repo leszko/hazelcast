@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import java.io.IOException;
 
 /**
  * If a Raft node loses its majority completely, its remaining members cannot
- * leave the CP subsystem gracefully. It is because we need to make a commit to
+ * leave CP Subsystem gracefully. It is because we need to make a commit to
  * a halted Raft group, and the system block since we won't be able to do it.
  * To recover from this failure case, we forcefully destroy a Raft group.
  * Status of the Raft group will be directly changed to

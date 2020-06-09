@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ public class InitMetadataRaftGroupOp extends MetadataRaftGroupOp implements Inde
     public void readData(ObjectDataInput in) throws IOException {
         callerCPMember = in.readObject();
         int len = in.readInt();
-        discoveredCPMembers = new ArrayList<CPMemberInfo>(len);
+        discoveredCPMembers = new ArrayList<>(len);
         for (int i = 0; i < len; i++) {
             CPMemberInfo member = in.readObject();
             discoveredCPMembers.add(member);

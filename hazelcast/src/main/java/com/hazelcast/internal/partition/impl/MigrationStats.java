@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,50 +17,71 @@
 package com.hazelcast.internal.partition.impl;
 
 import com.hazelcast.internal.metrics.Probe;
-import com.hazelcast.util.Clock;
+import com.hazelcast.internal.partition.MigrationStateImpl;
+import com.hazelcast.internal.util.Clock;
+import com.hazelcast.partition.MigrationState;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_COMPLETED_MIGRATIONS;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_ELAPSED_DESTINATION_COMMIT_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_ELAPSED_MIGRATION_OPERATION_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_ELAPSED_MIGRATION_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_LAST_REPARTITION_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_PLANNED_MIGRATIONS;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_TOTAL_COMPLETED_MIGRATIONS;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_TOTAL_ELAPSED_DESTINATION_COMMIT_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_TOTAL_ELAPSED_MIGRATION_OPERATION_TIME;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.MIGRATION_METRIC_TOTAL_ELAPSED_MIGRATION_TIME;
+import static com.hazelcast.internal.metrics.ProbeUnit.MS;
+import static com.hazelcast.internal.metrics.ProbeUnit.NS;
 
 /**
  * Collection of stats for partition migration tasks.
  */
 public class MigrationStats {
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_LAST_REPARTITION_TIME, unit = MS)
     private final AtomicLong lastRepartitionTime = new AtomicLong();
 
-    @Probe
-    private final AtomicLong completedMigrations = new AtomicLong();
+    @Probe(name = MIGRATION_METRIC_PLANNED_MIGRATIONS)
+    private volatile int plannedMigrations;
 
-    @Probe
-    private final AtomicLong totalCompletedMigrations = new AtomicLong();
+    @Probe(name = MIGRATION_METRIC_COMPLETED_MIGRATIONS)
+    private final AtomicInteger completedMigrations = new AtomicInteger();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_TOTAL_COMPLETED_MIGRATIONS)
+    private final AtomicInteger totalCompletedMigrations = new AtomicInteger();
+
+    @Probe(name = MIGRATION_METRIC_ELAPSED_MIGRATION_OPERATION_TIME, unit = NS)
     private final AtomicLong elapsedMigrationOperationTime = new AtomicLong();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_ELAPSED_DESTINATION_COMMIT_TIME, unit = NS)
     private final AtomicLong elapsedDestinationCommitTime = new AtomicLong();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_ELAPSED_MIGRATION_TIME, unit = NS)
     private final AtomicLong elapsedMigrationTime = new AtomicLong();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_TOTAL_ELAPSED_MIGRATION_OPERATION_TIME, unit = NS)
     private final AtomicLong totalElapsedMigrationOperationTime = new AtomicLong();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_TOTAL_ELAPSED_DESTINATION_COMMIT_TIME, unit = NS)
     private final AtomicLong totalElapsedDestinationCommitTime = new AtomicLong();
 
-    @Probe
+    @Probe(name = MIGRATION_METRIC_TOTAL_ELAPSED_MIGRATION_TIME, unit = NS)
     private final AtomicLong totalElapsedMigrationTime = new AtomicLong();
 
     /**
      * Marks start of new repartitioning.
      * Resets stats from previous repartitioning round.
+     * @param migrations number of planned migration tasks
      */
-    void markNewRepartition() {
+    void markNewRepartition(int migrations) {
         lastRepartitionTime.set(Clock.currentTimeMillis());
+        plannedMigrations = migrations;
         elapsedMigrationOperationTime.set(0);
         elapsedDestinationCommitTime.set(0);
         elapsedMigrationTime.set(0);
@@ -95,16 +116,30 @@ public class MigrationStats {
     }
 
     /**
+     * Returns the number of planned migrations on the latest repartitioning round.
+     */
+    public int getPlannedMigrations() {
+        return plannedMigrations;
+    }
+
+    /**
      * Returns the number of completed migrations on the latest repartitioning round.
      */
-    public long getCompletedMigrations() {
+    public int getCompletedMigrations() {
         return completedMigrations.get();
+    }
+
+    /**
+     * Returns the number of remaining migrations on the latest repartitioning round.
+     */
+    public int getRemainingMigrations() {
+        return plannedMigrations - completedMigrations.get();
     }
 
     /**
      * Returns the total number of completed migrations since the beginning.
      */
-    public long getTotalCompletedMigrations() {
+    public int getTotalCompletedMigrations() {
         return totalCompletedMigrations.get();
     }
 
@@ -156,10 +191,17 @@ public class MigrationStats {
         return TimeUnit.NANOSECONDS.toMillis(totalElapsedMigrationTime.get());
     }
 
+    public MigrationState toMigrationState() {
+        return new MigrationStateImpl(lastRepartitionTime.get(), plannedMigrations,
+                completedMigrations.get(), getElapsedMigrationTime());
+    }
+
     public String formatToString(boolean detailed) {
         StringBuilder s = new StringBuilder();
-        s.append("lastRepartitionTime=").append(getLastRepartitionTime())
+        s.append("repartitionTime=").append(getLastRepartitionTime())
+                .append(", plannedMigrations=").append(plannedMigrations)
                 .append(", completedMigrations=").append(getCompletedMigrations())
+                .append(", remainingMigrations=").append(getRemainingMigrations())
                 .append(", totalCompletedMigrations=").append(getTotalCompletedMigrations());
 
         if (detailed) {

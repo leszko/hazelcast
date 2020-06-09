@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,19 @@
 
 package com.hazelcast.spi.impl.operationservice.impl;
 
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.partition.InternalPartition;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.partition.PartitionReplica;
 import com.hazelcast.internal.partition.PartitionReplicaVersionManager;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.spi.partition.FragmentedMigrationAwareService;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.partition.FragmentedMigrationAwareService;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.Operation;
-import com.hazelcast.spi.ServiceNamespace;
-import com.hazelcast.spi.ServiceNamespaceAware;
+import com.hazelcast.internal.services.ServiceNamespace;
+import com.hazelcast.internal.services.ServiceNamespaceAware;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.TargetAware;
 import com.hazelcast.spi.impl.operationservice.impl.operations.Backup;
@@ -66,9 +66,8 @@ final class OperationBackupHandler {
      *
      * @param op the Operation to backup.
      * @return the number of ACKS required to complete the invocation.
-     * @throws Exception if there is any exception sending the backups.
      */
-    int sendBackups(Operation op) throws Exception {
+    int sendBackups(Operation op) {
         if (!(op instanceof BackupAwareOperation)) {
             return 0;
         }
@@ -327,14 +326,14 @@ final class OperationBackupHandler {
         Operation op = (Operation) backupAwareOp;
         Backup backup;
         if (backupOp instanceof Operation) {
-            backup = new Backup((Operation) backupOp, op.getCallerAddress(), replicaVersions, respondBack);
+            backup = new Backup((Operation) backupOp, op.getCallerAddress(), replicaVersions, respondBack, op.getClientCallId());
         } else if (backupOp instanceof Data) {
-            backup = new Backup((Data) backupOp, op.getCallerAddress(), replicaVersions, respondBack);
+            backup = new Backup((Data) backupOp, op.getCallerAddress(), replicaVersions, respondBack, op.getClientCallId());
         } else {
             throw new IllegalArgumentException("Only 'Data' or 'Operation' typed backup operation is supported!");
         }
 
-        backup.setPartitionId(op.getPartitionId()).setReplicaIndex(replicaIndex);
+        backup.setPartitionId(op.getPartitionId()).setReplicaIndex(replicaIndex).setCallerUuid(op.getCallerUuid());
         if (hasActiveInvocation(op)) {
             setCallId(backup, op.getCallId());
         }

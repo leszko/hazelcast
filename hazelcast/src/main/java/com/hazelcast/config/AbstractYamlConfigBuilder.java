@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,11 @@ package com.hazelcast.config;
 
 import com.hazelcast.config.replacer.PropertyReplacer;
 import com.hazelcast.config.replacer.spi.ConfigReplacer;
-import com.hazelcast.config.yaml.ElementAdapter;
+import com.hazelcast.internal.config.ConfigLoader;
+import com.hazelcast.internal.config.ConfigReplacerHelper;
+import com.hazelcast.internal.config.ConfigSections;
+import com.hazelcast.internal.config.YamlDomVariableReplacer;
+import com.hazelcast.internal.config.yaml.ElementAdapter;
 import com.hazelcast.internal.yaml.MutableYamlMapping;
 import com.hazelcast.internal.yaml.MutableYamlSequence;
 import com.hazelcast.internal.yaml.YamlLoader;
@@ -37,10 +41,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import static com.hazelcast.config.DomConfigHelper.childElements;
-import static com.hazelcast.config.DomConfigHelper.cleanNodeName;
-import static com.hazelcast.config.DomConfigHelper.getAttribute;
-import static com.hazelcast.config.yaml.W3cDomUtil.asW3cNode;
+import static com.hazelcast.internal.config.DomConfigHelper.childElements;
+import static com.hazelcast.internal.config.DomConfigHelper.cleanNodeName;
+import static com.hazelcast.internal.config.DomConfigHelper.getAttribute;
+import static com.hazelcast.internal.config.yaml.W3cDomUtil.asW3cNode;
+import static com.hazelcast.internal.util.StringUtil.isNullOrEmpty;
 import static com.hazelcast.internal.yaml.YamlUtil.asMapping;
 import static com.hazelcast.internal.yaml.YamlUtil.asScalar;
 import static com.hazelcast.internal.yaml.YamlUtil.asSequence;
@@ -48,13 +53,12 @@ import static com.hazelcast.internal.yaml.YamlUtil.isMapping;
 import static com.hazelcast.internal.yaml.YamlUtil.isOfSameType;
 import static com.hazelcast.internal.yaml.YamlUtil.isScalar;
 import static com.hazelcast.internal.yaml.YamlUtil.isSequence;
-import static com.hazelcast.util.StringUtil.isNullOrEmpty;
 
 /**
  * Contains logic for replacing system variables in the YAML file and importing YAML files from different locations.
  */
 public abstract class AbstractYamlConfigBuilder {
-    private final Set<String> currentlyImportedFiles = new HashSet<String>();
+    private final Set<String> currentlyImportedFiles = new HashSet<>();
     private Properties properties = System.getProperties();
 
     /**
@@ -84,7 +88,7 @@ public abstract class AbstractYamlConfigBuilder {
      */
     protected void importDocuments(YamlNode imdgRoot) throws Exception {
         YamlMapping rootAsMapping = asMapping(imdgRoot);
-        YamlSequence importSeq = rootAsMapping.childAsSequence(ConfigSections.IMPORT.name);
+        YamlSequence importSeq = rootAsMapping.childAsSequence(ConfigSections.IMPORT.getName());
         if (importSeq == null || importSeq.childCount() == 0) {
             return;
         }
@@ -108,7 +112,7 @@ public abstract class AbstractYamlConfigBuilder {
 
             YamlNode imdgRootLoaded = asMapping(rootLoaded).child(getConfigRoot());
             if (imdgRootLoaded == null) {
-                return;
+                imdgRootLoaded = rootLoaded;
             }
 
             replaceVariables(asW3cNode(imdgRootLoaded));
@@ -118,8 +122,9 @@ public abstract class AbstractYamlConfigBuilder {
             // YAML documents define mappings where the name of the nodes should be unique
             merge(imdgRootLoaded, imdgRoot);
         }
+        replaceVariables(asW3cNode(imdgRoot));
 
-        ((MutableYamlMapping) rootAsMapping).removeChild(ConfigSections.IMPORT.name);
+        ((MutableYamlMapping) rootAsMapping).removeChild(ConfigSections.IMPORT.getName());
     }
 
     protected abstract String getConfigRoot();
@@ -192,7 +197,7 @@ public abstract class AbstractYamlConfigBuilder {
         // if no config-replacer is defined, use backward compatible default behavior for missing properties
         boolean failFast = false;
 
-        List<ConfigReplacer> replacers = new ArrayList<ConfigReplacer>();
+        List<ConfigReplacer> replacers = new ArrayList<>();
 
         // Always use the Property replacer first.
         PropertyReplacer propertyReplacer = new PropertyReplacer();
@@ -200,7 +205,7 @@ public abstract class AbstractYamlConfigBuilder {
         replacers.add(propertyReplacer);
 
         // Add other replacers
-        Node replacersNode = node.getAttributes().getNamedItem(ConfigSections.CONFIG_REPLACERS.name);
+        Node replacersNode = node.getAttributes().getNamedItem(ConfigSections.CONFIG_REPLACERS.getName());
 
         if (replacersNode != null) {
             String failFastAttr = getAttribute(replacersNode, "fail-if-value-missing", true);

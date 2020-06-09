@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.config;
 
-import com.hazelcast.nio.IOUtil;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -138,12 +138,12 @@ public class XmlYamlConfigBuilderEqualsTest extends HazelcastTestSupport {
         assertEquals(xmlConfigFromXml, xmlConfigFromYaml);
     }
 
-    public String readResourceToString(String resource) throws IOException {
+    public static String readResourceToString(String resource) throws IOException {
         InputStream xmlInputStream = XmlYamlConfigBuilderEqualsTest.class.getClassLoader().getResourceAsStream(resource);
         return new String(IOUtil.toByteArray(xmlInputStream));
     }
 
-    private File createPasswordFile(String passwordFileName, String passwordFileContent) throws IOException {
+    static File createPasswordFile(String passwordFileName, String passwordFileContent) throws IOException {
         File workDir = new File(".");
         File file = new File(workDir, passwordFileName);
         file.deleteOnExit();

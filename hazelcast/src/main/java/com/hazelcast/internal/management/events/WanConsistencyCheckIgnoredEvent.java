@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,12 @@ import com.hazelcast.internal.json.JsonObject;
 
 import static com.hazelcast.internal.management.events.EventMetadata.EventType.WAN_CONSISTENCY_CHECK_IGNORED;
 
-public class WanConsistencyCheckIgnoredEvent extends AbstractWanEventBase {
+public class WanConsistencyCheckIgnoredEvent extends AbstractWanAntiEntropyEventBase {
     private final String reason;
 
-    public WanConsistencyCheckIgnoredEvent(String wanReplicationName, String targetGroupName, String mapName,
+    public WanConsistencyCheckIgnoredEvent(String wanReplicationName, String wanPublisherId, String mapName,
                                            String reason) {
-        super(wanReplicationName, targetGroupName, mapName);
-
+        super(null, wanReplicationName, wanPublisherId, mapName);
         this.reason = reason;
     }
 

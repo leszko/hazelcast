@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package com.hazelcast.config;
 
-import com.hazelcast.config.yaml.YamlDomChecker;
+import com.hazelcast.internal.config.ConfigSections;
+import com.hazelcast.internal.config.YamlConfigLocator;
+import com.hazelcast.internal.config.YamlMemberDomConfigProcessor;
+import com.hazelcast.internal.config.yaml.YamlDomChecker;
 import com.hazelcast.internal.yaml.YamlLoader;
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.internal.yaml.YamlNode;
-import com.hazelcast.nio.IOUtil;
-import com.hazelcast.util.ExceptionUtil;
+import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.util.ExceptionUtil;
+import com.hazelcast.spi.annotation.PrivateApi;
 import org.w3c.dom.Node;
 
 import java.io.File;
@@ -32,9 +36,9 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Properties;
 
-import static com.hazelcast.config.yaml.W3cDomUtil.asW3cNode;
-import static com.hazelcast.util.Preconditions.checkNotNull;
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.config.yaml.W3cDomUtil.asW3cNode;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 
 /**
  * A YAML {@link ConfigBuilder} implementation.
@@ -105,6 +109,7 @@ public class YamlConfigBuilder extends AbstractYamlConfigBuilder implements Conf
      *
      * @param locator the configured locator to use
      */
+    @PrivateApi
     public YamlConfigBuilder(YamlConfigLocator locator) {
         if (locator == null) {
             locator = new YamlConfigLocator();
@@ -142,9 +147,9 @@ public class YamlConfigBuilder extends AbstractYamlConfigBuilder implements Conf
             throw new InvalidConfigurationException("Invalid YAML configuration", ex);
         }
 
-        YamlNode imdgRoot = yamlRootNode.childAsMapping(ConfigSections.HAZELCAST.name);
+        YamlNode imdgRoot = yamlRootNode.childAsMapping(ConfigSections.HAZELCAST.getName());
         if (imdgRoot == null) {
-            throw new InvalidConfigurationException("No mapping with hazelcast key is found in the provided configuration");
+            imdgRoot = yamlRootNode;
         }
 
         YamlDomChecker.check(imdgRoot);
@@ -163,6 +168,6 @@ public class YamlConfigBuilder extends AbstractYamlConfigBuilder implements Conf
 
     @Override
     protected String getConfigRoot() {
-        return ConfigSections.HAZELCAST.name;
+        return ConfigSections.HAZELCAST.getName();
     }
 }

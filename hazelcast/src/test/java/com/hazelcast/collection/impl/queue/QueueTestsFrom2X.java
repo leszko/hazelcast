@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -310,7 +311,7 @@ public class QueueTestsFrom2X extends HazelcastTestSupport {
             sleep(sleep);
             queue.destroy();
             queue = instance.getQueue(name);
-            String id = queue.addItemListener(listener, false);
+            UUID id = queue.addItemListener(listener, false);
             queue.offer(2);
             sleep(sleep);
             queue.removeItemListener(id);

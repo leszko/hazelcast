@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.hazelcast.wan.impl;
 
+import com.hazelcast.cache.impl.wan.WanCacheEntryView;
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
-import com.hazelcast.map.impl.wan.MapReplicationRemove;
-import com.hazelcast.map.impl.wan.MapReplicationUpdate;
+import com.hazelcast.map.impl.wan.WanMapRemoveEvent;
+import com.hazelcast.map.impl.wan.WanMapAddOrUpdateEvent;
 import com.hazelcast.map.impl.wan.WanMapEntryView;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
-import com.hazelcast.wan.WanReplicationEvent;
 
 import static com.hazelcast.internal.serialization.impl.FactoryIdHelper.WAN_REPLICATION_DS_FACTORY;
 import static com.hazelcast.internal.serialization.impl.FactoryIdHelper.WAN_REPLICATION_DS_FACTORY_ID;
@@ -34,10 +34,11 @@ public class WanDataSerializerHook implements DataSerializerHook {
 
     public static final int F_ID = FactoryIdHelper.getFactoryId(WAN_REPLICATION_DS_FACTORY, WAN_REPLICATION_DS_FACTORY_ID);
 
-    public static final int WAN_REPLICATION_EVENT = 0;
-    public static final int MAP_REPLICATION_UPDATE = 1;
-    public static final int MAP_REPLICATION_REMOVE = 2;
-    public static final int WAN_MAP_ENTRY_VIEW = 3;
+    public static final int MAP_REPLICATION_UPDATE = 0;
+    public static final int MAP_REPLICATION_REMOVE = 1;
+    public static final int WAN_MAP_ENTRY_VIEW = 2;
+    public static final int WAN_CACHE_ENTRY_VIEW = 3;
+    public static final int WAN_EVENT_CONTAINER_REPLICATION_OPERATION = 4;
 
     @Override
     public int getFactoryId() {
@@ -48,14 +49,16 @@ public class WanDataSerializerHook implements DataSerializerHook {
     public DataSerializableFactory createFactory() {
         return typeId -> {
             switch (typeId) {
-                case WAN_REPLICATION_EVENT:
-                    return new WanReplicationEvent();
                 case MAP_REPLICATION_UPDATE:
-                    return new MapReplicationUpdate();
+                    return new WanMapAddOrUpdateEvent();
                 case MAP_REPLICATION_REMOVE:
-                    return new MapReplicationRemove();
+                    return new WanMapRemoveEvent();
                 case WAN_MAP_ENTRY_VIEW:
                     return new WanMapEntryView<>();
+                case WAN_CACHE_ENTRY_VIEW:
+                    return new WanCacheEntryView<>();
+                case WAN_EVENT_CONTAINER_REPLICATION_OPERATION:
+                    return new WanEventContainerReplicationOperation();
                 default:
                     throw new IllegalArgumentException("Unknown type-id: " + typeId);
             }

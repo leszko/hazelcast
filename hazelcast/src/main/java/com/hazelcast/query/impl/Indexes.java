@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,28 @@
 
 package com.hazelcast.query.impl;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.core.TypeConverter;
+import com.hazelcast.internal.monitor.impl.GlobalIndexesStats;
+import com.hazelcast.internal.monitor.impl.IndexesStats;
+import com.hazelcast.internal.monitor.impl.PartitionIndexesStats;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.monitor.impl.GlobalIndexesStats;
-import com.hazelcast.monitor.impl.IndexesStats;
-import com.hazelcast.monitor.impl.PartitionIndexesStats;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.query.IndexAwarePredicate;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.map.impl.StoreAdapter;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.getters.Extractors;
-import com.hazelcast.query.impl.predicates.PredicateUtils;
-import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.query.impl.predicates.IndexAwarePredicate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * Contains all indexes for a data-structure, e.g. an IMap.
@@ -42,6 +45,12 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 @SuppressWarnings("checkstyle:finalclass")
 public class Indexes {
 
+    /**
+     * The partitions count check detects a race condition when a
+     * query is executed on the index which is under (re)construction.
+     * The negative value means the check should be skipped.
+     */
+    public static final int SKIP_PARTITIONS_COUNT_CHECK = -1;
     private static final InternalIndex[] EMPTY_INDEXES = {};
 
     private final boolean global;
@@ -53,10 +62,11 @@ public class Indexes {
     private final QueryContextProvider queryContextProvider;
     private final InternalSerializationService serializationService;
 
-    private final Map<String, InternalIndex> indexesByName = new ConcurrentHashMap<String, InternalIndex>(3);
+    private final Map<String, InternalIndex> indexesByName = new ConcurrentHashMap<>(3);
     private final AttributeIndexRegistry attributeIndexRegistry = new AttributeIndexRegistry();
+    private final AttributeIndexRegistry evaluateOnlyAttributeIndexRegistry = new AttributeIndexRegistry();
     private final ConverterCache converterCache = new ConverterCache(this);
-    private final Map<String, Boolean> definitions = new ConcurrentHashMap<String, Boolean>();
+    private final Map<String, IndexConfig> definitions = new ConcurrentHashMap<>();
 
     private volatile InternalIndex[] indexes = EMPTY_INDEXES;
     private volatile InternalIndex[] compositeIndexes = EMPTY_INDEXES;
@@ -107,45 +117,36 @@ public class Indexes {
         return new Builder(ss, indexCopyBehavior);
     }
 
-    /**
-     * Obtains the existing index or creates a new one (if an index doesn't exist
-     * yet) for the given name in this indexes instance.
-     *
-     * @param name    the name of the index; the passed value might not
-     *                represent a canonical index name (as specified by
-     *                {@link Index#getName()}, in this case the method
-     *                canonicalizes it.
-     * @param ordered {@code true} if the new index should be ordered, {@code
-     *                false} otherwise.
-     * @return the existing or created index.
-     */
-    public synchronized InternalIndex addOrGetIndex(String name, boolean ordered) {
+    public synchronized InternalIndex addOrGetIndex(IndexConfig indexConfig, StoreAdapter partitionStoreAdapter) {
+        String name = indexConfig.getName();
+
+        assert name != null;
+        assert !name.isEmpty();
+
         InternalIndex index = indexesByName.get(name);
         if (index != null) {
             return index;
         }
 
-        String[] components = PredicateUtils.parseOutCompositeIndexComponents(name);
-        if (components == null) {
-            name = PredicateUtils.canonicalizeAttribute(name);
-        } else {
-            name = PredicateUtils.constructCanonicalCompositeIndexName(components);
-        }
-
-        index = indexesByName.get(name);
-        if (index != null) {
-            return index;
-        }
-
-        index = indexProvider.createIndex(name, components, ordered, extractors, serializationService, indexCopyBehavior,
-                stats.createPerIndexStats(ordered, usesCachedQueryableEntries));
+        index = indexProvider.createIndex(
+                indexConfig,
+                extractors,
+                serializationService,
+                indexCopyBehavior,
+                stats.createPerIndexStats(indexConfig.getType() == IndexType.SORTED, usesCachedQueryableEntries),
+                partitionStoreAdapter
+        );
 
         indexesByName.put(name, index);
-        attributeIndexRegistry.register(index);
+        if (index.isEvaluateOnly()) {
+            evaluateOnlyAttributeIndexRegistry.register(index);
+        } else {
+            attributeIndexRegistry.register(index);
+        }
         converterCache.invalidate(index);
 
         indexes = indexesByName.values().toArray(EMPTY_INDEXES);
-        if (components != null) {
+        if (index.getComponents().length > 1) {
             InternalIndex[] oldCompositeIndexes = compositeIndexes;
             InternalIndex[] newCompositeIndexes = Arrays.copyOf(oldCompositeIndexes, oldCompositeIndexes.length + 1);
             newCompositeIndexes[oldCompositeIndexes.length] = index;
@@ -158,40 +159,31 @@ public class Indexes {
      * Records the given index definition in this indexes without creating an
      * index.
      *
-     * @param name    the name of the index; the passed value might not
-     *                represent a canonical index name (as specified by
-     *                {@link Index#getName()), in this case the method
-     *                canonicalizes it.
-     * @param ordered {@code true} if the new index should be ordered, {@code
-     *                false} otherwise.
+     * @param config Index configuration.
      */
-    public void recordIndexDefinition(String name, boolean ordered) {
+    public void recordIndexDefinition(IndexConfig config) {
+        String name = config.getName();
+
+        assert name != null && !name.isEmpty();
+
         if (definitions.containsKey(name) || indexesByName.containsKey(name)) {
             return;
         }
 
-        String[] components = PredicateUtils.parseOutCompositeIndexComponents(name);
-        if (components == null) {
-            name = PredicateUtils.canonicalizeAttribute(name);
-        } else {
-            name = PredicateUtils.constructCanonicalCompositeIndexName(components);
-        }
-        if (definitions.containsKey(name) || indexesByName.containsKey(name)) {
-            return;
-        }
-
-        definitions.put(name, ordered);
+        definitions.put(name, config);
     }
 
     /**
      * Creates indexes according to the index definitions stored inside this
      * indexes.
      */
-    public void createIndexesFromRecordedDefinitions() {
-        for (Map.Entry<String, Boolean> definition : definitions.entrySet()) {
-            addOrGetIndex(definition.getKey(), definition.getValue());
-        }
-        definitions.clear();
+    public void createIndexesFromRecordedDefinitions(StoreAdapter partitionStoreAdapter) {
+        definitions.forEach((name, indexConfig) -> {
+            addOrGetIndex(indexConfig, partitionStoreAdapter);
+            definitions.compute(name, (k, v) -> {
+                return indexConfig == v ? null : v;
+            });
+        });
     }
 
     /**
@@ -210,6 +202,10 @@ public class Indexes {
         return compositeIndexes;
     }
 
+    public Collection<IndexConfig> getIndexDefinitions() {
+        return definitions.values();
+    }
+
     /**
      * Destroys and then removes all the indexes from this indexes instance.
      */
@@ -220,6 +216,7 @@ public class Indexes {
         compositeIndexes = EMPTY_INDEXES;
         indexesByName.clear();
         attributeIndexRegistry.clear();
+        evaluateOnlyAttributeIndexRegistry.clear();
         converterCache.clear();
 
         for (InternalIndex index : indexesSnapshot) {
@@ -244,6 +241,19 @@ public class Indexes {
      */
     public boolean haveAtLeastOneIndex() {
         return indexes != EMPTY_INDEXES;
+    }
+
+    /**
+     * Returns {@code true} if the indexes instance contains either at least one index or its definition,
+     * {@code false} otherwise.
+     *
+     * @return
+     */
+    public boolean haveAtLeastOneIndexOrDefinition() {
+        boolean haveAtLeastOneIndexOrDefinition = haveAtLeastOneIndex() || !definitions.isEmpty();
+        // for local indexes assert that indexes and definitions are exclusive
+        assert isGlobal() || !haveAtLeastOneIndexOrDefinition || !haveAtLeastOneIndex() || definitions.isEmpty();
+        return haveAtLeastOneIndexOrDefinition;
     }
 
     /**
@@ -304,12 +314,14 @@ public class Indexes {
     /**
      * Performs a query on this indexes instance using the given predicate.
      *
-     * @param predicate the predicate to evaluate.
+     * @param predicate           the predicate to evaluate.
+     * @param ownedPartitionCount a count of owned partitions a query runs on.
+     *                            Negative value indicates that the value is not defined.
      * @return the produced result set or {@code null} if the query can't be
      * performed using the indexes known to this indexes instance.
      */
     @SuppressWarnings("unchecked")
-    public Set<QueryableEntry> query(Predicate predicate) {
+    public Set<QueryableEntry> query(Predicate predicate, int ownedPartitionCount) {
         stats.incrementQueryCount();
 
         if (!haveAtLeastOneIndex() || !(predicate instanceof IndexAwarePredicate)) {
@@ -317,7 +329,7 @@ public class Indexes {
         }
 
         IndexAwarePredicate indexAwarePredicate = (IndexAwarePredicate) predicate;
-        QueryContext queryContext = queryContextProvider.obtainContextFor(this);
+        QueryContext queryContext = queryContextProvider.obtainContextFor(this, ownedPartitionCount);
         if (!indexAwarePredicate.isIndexed(queryContext)) {
             return null;
         }
@@ -334,19 +346,70 @@ public class Indexes {
     /**
      * Matches an index for the given pattern and match hint.
      *
-     * @param pattern   the pattern to match an index for. May be either an
-     *                  attribute name or an exact index name.
-     * @param matchHint the match hint.
+     * @param pattern             the pattern to match an index for. May be either an
+     *                            attribute name or an exact index name.
+     * @param matchHint           the match hint.
+     * @param ownedPartitionCount a count of owned partitions a query runs on.
+     *                            Negative value indicates that the value is not defined.
      * @return the matched index or {@code null} if nothing matched.
      * @see QueryContext.IndexMatchHint
-     * @see Indexes#matchIndex
+     * @see QueryContext#matchIndex
      */
-    public InternalIndex matchIndex(String pattern, QueryContext.IndexMatchHint matchHint) {
+    public InternalIndex matchIndex(String pattern, QueryContext.IndexMatchHint matchHint, int ownedPartitionCount) {
+        InternalIndex index;
         if (matchHint == QueryContext.IndexMatchHint.EXACT_NAME) {
-            return indexesByName.get(pattern);
+            index = indexesByName.get(pattern);
         } else {
-            return attributeIndexRegistry.match(pattern, matchHint);
+            index = attributeIndexRegistry.match(pattern, matchHint);
         }
+
+        if (index == null || !index.allPartitionsIndexed(ownedPartitionCount)) {
+            return null;
+        }
+
+        return index;
+    }
+
+    /**
+     * Matches an index for the given pattern and match hint that can evaluate
+     * the given predicate class.
+     *
+     * @param pattern             the pattern to match an index for. May be either an
+     *                            attribute name or an exact index name.
+     * @param predicateClass      the predicate class the matched index must be
+     *                            able to evaluate.
+     * @param matchHint           the match hint.
+     * @param ownedPartitionCount a count of owned partitions a query runs on.
+     *                            Negative value indicates that the value is not defined.
+     * @return the matched index or {@code null} if nothing matched.
+     * @see QueryContext.IndexMatchHint
+     * @see Index#evaluate
+     */
+    public InternalIndex matchIndex(String pattern, Class<? extends Predicate> predicateClass,
+                                    QueryContext.IndexMatchHint matchHint, int ownedPartitionCount) {
+        InternalIndex index;
+        if (matchHint == QueryContext.IndexMatchHint.EXACT_NAME) {
+            index = indexesByName.get(pattern);
+        } else {
+            index = evaluateOnlyAttributeIndexRegistry.match(pattern, matchHint);
+            if (index == null) {
+                index = attributeIndexRegistry.match(pattern, matchHint);
+            }
+        }
+
+        if (index == null) {
+            return null;
+        }
+
+        if (!index.canEvaluate(predicateClass)) {
+            return null;
+        }
+
+        if (!index.allPartitionsIndexed(ownedPartitionCount)) {
+            return null;
+        }
+
+        return index;
     }
 
     /**

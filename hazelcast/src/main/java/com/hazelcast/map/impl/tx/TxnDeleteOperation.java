@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,31 @@
 
 package com.hazelcast.map.impl.tx;
 
+import com.hazelcast.internal.util.UUIDSerializationUtil;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.operation.BaseRemoveOperation;
-import com.hazelcast.map.impl.operation.RemoveBackupOperation;
 import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.WaitNotifyKey;
 import com.hazelcast.transaction.TransactionException;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Transactional delete operation
  */
-public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOperation {
+public class TxnDeleteOperation
+        extends BaseRemoveOperation implements MapTxnOperation {
 
     private long version;
-    private boolean successful;
-    private String ownerUuid;
+    private UUID ownerUuid;
+    private UUID transactionId;
+
+    private transient boolean successful;
 
     public TxnDeleteOperation() {
     }
@@ -51,6 +55,7 @@ public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOpe
         super.innerBeforeRun();
 
         if (!recordStore.canAcquireLock(dataKey, ownerUuid, threadId)) {
+            wbqCapacityCounter().decrement(transactionId);
             throw new TransactionException("Cannot acquire lock UUID: " + ownerUuid + ", threadId: " + threadId);
         }
     }
@@ -60,8 +65,13 @@ public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOpe
         recordStore.unlock(dataKey, ownerUuid, getThreadId(), getCallId());
         Record record = recordStore.getRecord(dataKey);
         if (record == null || version == record.getVersion()) {
-            dataOldValue = getNodeEngine().toData(recordStore.remove(dataKey, getCallerProvenance()));
+            dataOldValue = getNodeEngine().toData(recordStore.removeTxn(dataKey,
+                    getCallerProvenance(), transactionId));
             successful = dataOldValue != null;
+        }
+
+        if (record == null) {
+            wbqCapacityCounter().decrement(transactionId);
         }
     }
 
@@ -82,10 +92,12 @@ public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOpe
         sendResponse(false);
     }
 
+    @Override
     public long getVersion() {
         return version;
     }
 
+    @Override
     public void setVersion(long version) {
         this.version = version;
     }
@@ -95,22 +107,29 @@ public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOpe
         return Boolean.TRUE;
     }
 
+    @Override
     public boolean shouldNotify() {
         return true;
-    }
-
-    public Operation getBackupOperation() {
-        return new RemoveBackupOperation(name, dataKey, true);
-    }
-
-    @Override
-    public void setOwnerUuid(String ownerUuid) {
-        this.ownerUuid = ownerUuid;
     }
 
     @Override
     public boolean shouldBackup() {
         return true;
+    }
+
+    @Override
+    public Operation getBackupOperation() {
+        return new TxnDeleteBackupOperation(name, dataKey, transactionId);
+    }
+
+    @Override
+    public void setOwnerUuid(UUID ownerUuid) {
+        this.ownerUuid = ownerUuid;
+    }
+
+    @Override
+    public void setTransactionId(UUID transactionId) {
+        this.transactionId = transactionId;
     }
 
     public WaitNotifyKey getNotifiedKey() {
@@ -121,14 +140,16 @@ public class TxnDeleteOperation extends BaseRemoveOperation implements MapTxnOpe
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
         out.writeLong(version);
-        out.writeUTF(ownerUuid);
+        UUIDSerializationUtil.writeUUID(out, ownerUuid);
+        UUIDSerializationUtil.writeUUID(out, transactionId);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
         version = in.readLong();
-        ownerUuid = in.readUTF();
+        ownerUuid = UUIDSerializationUtil.readUUID(in);
+        transactionId = UUIDSerializationUtil.readUUID(in);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -69,7 +69,7 @@ public class ClusterDataSerializationTest {
     @Test
     public void testSerializationOf_clusterStateChangeTxnLogRecord_whenVersionChange() throws UnknownHostException {
         ClusterStateTransactionLogRecord txnLogRecord = new ClusterStateTransactionLogRecord(VERSION_CLUSTER_STATE_CHANGE,
-                new Address("127.0.0.1", 5071), new Address("127.0.0.1", 5702), UUID.randomUUID().toString(), 120,
+                new Address("127.0.0.1", 5071), new Address("127.0.0.1", 5702), UUID.randomUUID(), 120,
                 111, 130, false);
 
         Data serialized = SERIALIZATION_SERVICE.toData(txnLogRecord);
@@ -88,7 +88,7 @@ public class ClusterDataSerializationTest {
     @Test
     public void testSerializationOf_clusterStateChangeTxnLogRecord_whenStateChange() throws UnknownHostException {
         ClusterStateTransactionLogRecord txnLogRecord = new ClusterStateTransactionLogRecord(CLUSTER_STATE_CHANGE,
-                new Address("127.0.0.1", 5071), new Address("127.0.0.1", 5702), UUID.randomUUID().toString(), 120,
+                new Address("127.0.0.1", 5071), new Address("127.0.0.1", 5702), UUID.randomUUID(), 120,
                 111, 130, false);
 
         Data serialized = SERIALIZATION_SERVICE.toData(txnLogRecord);
@@ -117,7 +117,7 @@ public class ClusterDataSerializationTest {
         addressMap.put(MEMBER, memberAddress);
         addressMap.put(CLIENT, clientAddress);
         addressMap.put(REST, restAddress);
-        MemberInfo memberInfo = new MemberInfo(memberAddress, UUID.randomUUID().toString(), attributes,
+        MemberInfo memberInfo = new MemberInfo(memberAddress, UUID.randomUUID(), attributes,
                 false, MemberVersion.of(BuildInfoProvider.getBuildInfo().getVersion()), addressMap);
 
         Data serialized = SERIALIZATION_SERVICE.toData(memberInfo);

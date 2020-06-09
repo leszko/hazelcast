@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.hazelcast.cache;
 
-import com.hazelcast.cache.impl.HazelcastServerCachingProvider;
 import com.hazelcast.cache.jsr.JsrTestUtil;
 import com.hazelcast.config.CacheConfig;
 import com.hazelcast.config.CacheSimpleConfig;
@@ -49,7 +48,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.hazelcast.config.EvictionConfig.MaxSizePolicy.ENTRY_COUNT;
+import static com.hazelcast.cache.CacheTestSupport.createServerCachingProvider;
+import static com.hazelcast.config.MaxSizePolicy.ENTRY_COUNT;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -187,7 +187,7 @@ public class CacheCreationTest extends HazelcastTestSupport {
 
     protected CachingProvider createCachingProvider(Config hzConfig) {
         HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(hzConfig);
-        return HazelcastServerCachingProvider.createCachingProvider(hazelcastInstance);
+        return createServerCachingProvider(hazelcastInstance);
     }
 
     private Config getDeclarativeConfig() {
@@ -201,7 +201,8 @@ public class CacheCreationTest extends HazelcastTestSupport {
         CacheSimpleConfig cacheSimpleConfig = new CacheSimpleConfig()
                 .setName("test")
                 .setInMemoryFormat(InMemoryFormat.NATIVE)
-                .setEvictionConfig(new EvictionConfig(1000, ENTRY_COUNT, EvictionPolicy.LFU));
+                .setEvictionConfig(new EvictionConfig().setSize(1000)
+                        .setMaxSizePolicy(ENTRY_COUNT).setEvictionPolicy(EvictionPolicy.LFU));
 
         return createBasicConfig()
                 .addCacheConfig(cacheSimpleConfig);
@@ -210,7 +211,10 @@ public class CacheCreationTest extends HazelcastTestSupport {
     private CacheConfig createInvalidCacheConfig() {
         return new CacheConfig("test")
                 .setInMemoryFormat(InMemoryFormat.NATIVE)
-                .setEvictionConfig(new EvictionConfig(1000, ENTRY_COUNT, EvictionPolicy.LFU));
+                .setEvictionConfig(new EvictionConfig()
+                        .setSize(1000)
+                        .setMaxSizePolicy(ENTRY_COUNT)
+                        .setEvictionPolicy(EvictionPolicy.LFU));
     }
 
     protected Config createBasicConfig() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package com.hazelcast.cp.internal.session;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.config.cp.CPSubsystemConfig;
-import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.cp.CPGroup;
 import com.hazelcast.cp.CPGroupId;
 import com.hazelcast.cp.internal.RaftNodeLifecycleAwareService;
 import com.hazelcast.cp.internal.RaftService;
 import com.hazelcast.cp.internal.TermChangeAwareService;
+import com.hazelcast.cp.internal.datastructures.spi.AbstractCPMigrationAwareService;
+import com.hazelcast.cp.internal.operation.unsafe.UnsafeRaftReplicateOp;
 import com.hazelcast.cp.internal.raft.SnapshotAwareService;
 import com.hazelcast.cp.internal.raft.impl.RaftNode;
 import com.hazelcast.cp.internal.session.operation.CloseInactiveSessionsOp;
@@ -31,20 +31,18 @@ import com.hazelcast.cp.internal.session.operation.CloseSessionOp;
 import com.hazelcast.cp.internal.session.operation.ExpireSessionsOp;
 import com.hazelcast.cp.internal.session.operation.GetSessionsOp;
 import com.hazelcast.cp.internal.util.PartitionSpecificRunnableAdaptor;
-import com.hazelcast.cp.internal.util.Tuple2;
 import com.hazelcast.cp.session.CPSession;
 import com.hazelcast.cp.session.CPSession.CPSessionOwnerType;
 import com.hazelcast.cp.session.CPSessionManagementService;
-import com.hazelcast.internal.util.SimpleCompletableFuture;
+import com.hazelcast.internal.services.ManagedService;
+import com.hazelcast.internal.util.BiTuple;
+import com.hazelcast.internal.util.Clock;
+import com.hazelcast.internal.util.executor.ManagedExecutorService;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.spi.ExecutionService;
-import com.hazelcast.spi.ManagedService;
-import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.impl.executionservice.ExecutionService;
 import com.hazelcast.spi.impl.operationservice.impl.OperationServiceImpl;
-import com.hazelcast.util.Clock;
-import com.hazelcast.util.executor.ManagedExecutorService;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,13 +55,15 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.cp.CPGroup.METADATA_CP_GROUP_NAME;
+import static com.hazelcast.cp.internal.RaftService.getCPGroupPartitionId;
 import static com.hazelcast.cp.internal.raft.QueryPolicy.LINEARIZABLE;
-import static com.hazelcast.spi.ExecutionService.SYSTEM_EXECUTOR;
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static com.hazelcast.spi.impl.InternalCompletableFuture.completingCallback;
+import static com.hazelcast.spi.impl.executionservice.ExecutionService.SYSTEM_EXECUTOR;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -84,8 +84,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * be released automatically.
  */
 @SuppressWarnings({"checkstyle:methodcount"})
-public class RaftSessionService implements ManagedService, SnapshotAwareService<RaftSessionRegistry>, SessionAccessor,
-                                           TermChangeAwareService, RaftNodeLifecycleAwareService, CPSessionManagementService {
+public class RaftSessionService extends AbstractCPMigrationAwareService
+        implements ManagedService, SnapshotAwareService<RaftSessionRegistry>, SessionAccessor,
+        TermChangeAwareService, RaftNodeLifecycleAwareService, CPSessionManagementService {
 
     public static final String SERVICE_NAME = "hz:core:raftSession";
 
@@ -93,14 +94,13 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
     private static final long CHECK_INACTIVE_SESSIONS_TASK_PERIOD_IN_MILLIS = SECONDS.toMillis(30);
     private static final long COLLECT_INACTIVE_SESSIONS_TASK_TIMEOUT_SECONDS = 5;
 
-    private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private volatile RaftService raftService;
 
     private final Map<CPGroupId, RaftSessionRegistry> registries = new ConcurrentHashMap<>();
 
     public RaftSessionService(NodeEngine nodeEngine) {
-        this.nodeEngine = (NodeEngineImpl) nodeEngine;
+        super(nodeEngine);
         this.logger = nodeEngine.getLogger(getClass());
     }
 
@@ -151,7 +151,7 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
     }
 
     @Override
-    public void onRaftGroupDestroyed(CPGroupId groupId) {
+    public void onRaftNodeTerminated(CPGroupId groupId) {
         registries.remove(groupId);
     }
 
@@ -160,74 +160,45 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
     }
 
     @Override
-    public ICompletableFuture<Collection<CPSession>> getAllSessions(String groupName) {
+    public InternalCompletableFuture<Collection<CPSession>> getAllSessions(String groupName) {
         checkTrue(!METADATA_CP_GROUP_NAME.equals(groupName), "Cannot query CP sessions on the METADATA CP group!");
         ManagedExecutorService executor = nodeEngine.getExecutionService().getExecutor(SYSTEM_EXECUTOR);
-        SimpleCompletableFuture<Collection<CPSession>> future = new SimpleCompletableFuture<>(executor, logger);
-        ExecutionCallback<Collection<CPSession>> callback = new ExecutionCallback<Collection<CPSession>>() {
-            @Override
-            public void onResponse(Collection<CPSession> sessions) {
-                future.setResult(sessions);
-            }
+        InternalCompletableFuture<Collection<CPSession>> future = InternalCompletableFuture.withExecutor(executor);
 
-            @Override
-            public void onFailure(Throwable t) {
-                future.setResult(new ExecutionException(t));
-            }
-        };
-
-        raftService.getCPGroup(groupName).andThen(new ExecutionCallback<CPGroup>() {
-            @Override
-            public void onResponse(CPGroup group) {
+        raftService.getCPGroup(groupName).whenCompleteAsync((group, t) -> {
+            if (t == null) {
                 if (group != null) {
-                    raftService.getInvocationManager()
-                            .<Collection<CPSession>>query(group.id(), new GetSessionsOp(), LINEARIZABLE)
-                            .andThen(callback);
+                    getAllSessions(group.id()).whenCompleteAsync(completingCallback(future));
                 } else {
-                    future.setResult(new ExecutionException(new IllegalArgumentException()));
+                    future.completeExceptionally(new IllegalArgumentException());
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                future.setResult(new ExecutionException(t));
+            } else {
+                future.completeExceptionally(t);
             }
         });
 
         return future;
     }
 
+    public InternalCompletableFuture<Collection<CPSession>> getAllSessions(CPGroupId groupId) {
+        checkTrue(!METADATA_CP_GROUP_NAME.equals(groupId.getName()), "Cannot query CP sessions on the METADATA CP group!");
+        return raftService.getInvocationManager().query(groupId, new GetSessionsOp(), LINEARIZABLE);
+    }
+
     @Override
-    public ICompletableFuture<Boolean> forceCloseSession(String groupName, final long sessionId) {
+    public InternalCompletableFuture<Boolean> forceCloseSession(String groupName, final long sessionId) {
         ManagedExecutorService executor = nodeEngine.getExecutionService().getExecutor(SYSTEM_EXECUTOR);
-        SimpleCompletableFuture<Boolean> future = new SimpleCompletableFuture<>(executor, logger);
-        ExecutionCallback<Boolean> callback = new ExecutionCallback<Boolean>() {
-            @Override
-            public void onResponse(Boolean response) {
-                future.setResult(response);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                future.setResult(new ExecutionException(t));
-            }
-        };
-
-        raftService.getCPGroup(groupName).andThen(new ExecutionCallback<CPGroup>() {
-            @Override
-            public void onResponse(CPGroup group) {
+        InternalCompletableFuture<Boolean> future = InternalCompletableFuture.withExecutor(executor);
+        raftService.getCPGroup(groupName).whenCompleteAsync((group, t) -> {
+            if (t == null) {
                 if (group != null) {
-                    raftService.getInvocationManager()
-                            .<Boolean>invoke(group.id(), new CloseSessionOp(sessionId))
-                            .andThen(callback);
+                    raftService.getInvocationManager().<Boolean>invoke(group.id(), new CloseSessionOp(sessionId))
+                            .whenCompleteAsync(completingCallback(future));
                 } else {
-                    future.setResult(false);
+                    future.complete(false);
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                future.setResult(new ExecutionException(t));
+            } else {
+                future.completeExceptionally(t);
             }
         });
 
@@ -235,9 +206,9 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
     }
 
     public SessionResponse createNewSession(CPGroupId groupId, Address endpoint, String endpointName,
-                                            CPSessionOwnerType endpointType, long creationTime) {
+                                            CPSessionOwnerType endpointType) {
         RaftSessionRegistry registry = getOrInitRegistry(groupId);
-
+        long creationTime = Clock.currentTimeMillis();
         long sessionTTLMillis = getSessionTTLMillis();
         long sessionId = registry.createNewSession(sessionTTLMillis, endpoint, endpointName, endpointType, creationTime);
         logger.info("Created new session: " + sessionId + " in " + groupId + " for " + endpointType + " -> " + endpoint);
@@ -283,14 +254,14 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
         return false;
     }
 
-    public void expireSessions(CPGroupId groupId, Collection<Tuple2<Long, Long>> sessionsToExpire) {
+    public void expireSessions(CPGroupId groupId, Collection<BiTuple<Long, Long>> sessionsToExpire) {
         RaftSessionRegistry registry = registries.get(groupId);
         if (registry == null) {
             return;
         }
 
         List<Long> expired = new ArrayList<>();
-        for (Tuple2<Long, Long> s : sessionsToExpire) {
+        for (BiTuple<Long, Long> s : sessionsToExpire) {
             long sessionId = s.element1;
             long version = s.element2;
             if (registry.expireSession(sessionId, version)) {
@@ -376,10 +347,10 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
     }
 
     // queried locally
-    private Map<CPGroupId, Collection<Tuple2<Long, Long>>> getSessionsToExpire() {
-        Map<CPGroupId, Collection<Tuple2<Long, Long>>> expired = new HashMap<>();
+    private Map<CPGroupId, Collection<BiTuple<Long, Long>>> getSessionsToExpire() {
+        Map<CPGroupId, Collection<BiTuple<Long, Long>>> expired = new HashMap<>();
         for (RaftSessionRegistry registry : registries.values()) {
-            Collection<Tuple2<Long, Long>> e = registry.getSessionsToExpire();
+            Collection<BiTuple<Long, Long>> e = registry.getSessionsToExpire();
             if (!e.isEmpty()) {
                 expired.put(registry.groupId(), e);
             }
@@ -392,7 +363,7 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
         Map<CPGroupId, Collection<Long>> response = new ConcurrentHashMap<>();
         Semaphore semaphore = new Semaphore(0);
 
-        OperationServiceImpl operationService = (OperationServiceImpl) nodeEngine.getOperationService();
+        OperationServiceImpl operationService = nodeEngine.getOperationService();
         Collection<RaftSessionRegistry> registries = new ArrayList<>(this.registries.values());
 
         for (RaftSessionRegistry registry : registries) {
@@ -428,23 +399,63 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
         return response;
     }
 
+    @Override
+    protected int getBackupCount() {
+        return 1;
+    }
+
+    @Override
+    protected Map<CPGroupId, Object> getSnapshotMap(int partitionId) {
+        int partitionCount = nodeEngine.getPartitionService().getPartitionCount();
+        return registries.keySet().stream()
+                .filter(groupId -> getCPGroupPartitionId(groupId, partitionCount) == partitionId)
+                .distinct()
+                .map(groupId -> BiTuple.of(groupId, takeSnapshot(groupId, 0L)))
+                .collect(Collectors.toMap(tuple -> tuple.element1, tuple -> tuple.element2));
+    }
+
+    @Override
+    protected void clearPartitionReplica(int partitionId) {
+        registries.keySet().removeIf(groupId -> raftService.getCPGroupPartitionId(groupId) == partitionId);
+    }
+
     private class CheckSessionsToExpire implements Runnable {
         @Override
         public void run() {
-            Map<CPGroupId, Collection<Tuple2<Long, Long>>> sessionsToExpire = getSessionsToExpire();
-            for (Entry<CPGroupId, Collection<Tuple2<Long, Long>>> entry : sessionsToExpire.entrySet()) {
+            Map<CPGroupId, Collection<BiTuple<Long, Long>>> sessionsToExpire = getSessionsToExpire();
+            for (Entry<CPGroupId, Collection<BiTuple<Long, Long>>> entry : sessionsToExpire.entrySet()) {
                 CPGroupId groupId = entry.getKey();
-                RaftNode raftNode = raftService.getRaftNode(groupId);
-                if (raftNode != null) {
-                    Collection<Tuple2<Long, Long>> sessions = entry.getValue();
-                    try {
-                        ICompletableFuture f = raftNode.replicate(new ExpireSessionsOp(sessions));
-                        f.get();
-                    } catch (Exception e) {
-                        if (logger.isFineEnabled()) {
-                            logger.fine("Could not invalidate sessions: " + sessions + " of " + groupId, e);
-                        }
+                Collection<BiTuple<Long, Long>> sessions = entry.getValue();
+                if (raftService.isCpSubsystemEnabled()) {
+                    expireOnRaftNode(groupId, sessions);
+                } else {
+                    expireOnPartitionOwner(groupId, sessions);
+                }
+            }
+        }
+
+        private void expireOnRaftNode(CPGroupId groupId, Collection<BiTuple<Long, Long>> sessions) {
+            RaftNode raftNode = raftService.getRaftNode(groupId);
+            if (raftNode != null) {
+                try {
+                    InternalCompletableFuture f = raftNode.replicate(new ExpireSessionsOp(sessions));
+                    f.get();
+                } catch (Exception e) {
+                    if (logger.isFineEnabled()) {
+                        logger.fine("Could not invalidate sessions: " + sessions + " of " + groupId, e);
                     }
+                }
+            }
+        }
+
+        private void expireOnPartitionOwner(CPGroupId groupId, Collection<BiTuple<Long, Long>> sessions) {
+            InternalCompletableFuture<Object> future = raftService.getInvocationManager()
+                    .invokeOnPartition(new UnsafeRaftReplicateOp(groupId, new ExpireSessionsOp(sessions)));
+            try {
+                future.join();
+            } catch (Exception e) {
+                if (logger.isFineEnabled()) {
+                    logger.fine("Could not invalidate sessions: " + sessions + " of " + groupId, e);
                 }
             }
         }
@@ -456,20 +467,40 @@ public class RaftSessionService implements ManagedService, SnapshotAwareService<
             Map<CPGroupId, Collection<Long>> inactiveSessions = getInactiveSessions();
             for (Entry<CPGroupId, Collection<Long>> entry : inactiveSessions.entrySet()) {
                 CPGroupId groupId = entry.getKey();
-                RaftNode raftNode = raftService.getRaftNode(groupId);
-                if (raftNode != null) {
-                    Collection<Long> sessions = entry.getValue();
-                    try {
-                        ICompletableFuture f = raftNode.replicate(new CloseInactiveSessionsOp(sessions));
-                        f.get();
-                    } catch (Exception e) {
-                        if (logger.isFineEnabled()) {
-                            logger.fine("Could not close inactive sessions: " + sessions + " of " + groupId, e);
-                        }
-                    }
+                Collection<Long> sessions = entry.getValue();
+                if (raftService.isCpSubsystemEnabled()) {
+                    closeOnRaft(groupId, sessions);
+                } else {
+                    closeOnPartitionOwner(groupId, sessions);
                 }
             }
 
+        }
+
+        private void closeOnRaft(CPGroupId groupId, Collection<Long> sessions) {
+            RaftNode raftNode = raftService.getRaftNode(groupId);
+            if (raftNode != null) {
+                try {
+                    InternalCompletableFuture f = raftNode.replicate(new CloseInactiveSessionsOp(sessions));
+                    f.get();
+                } catch (Exception e) {
+                    if (logger.isFineEnabled()) {
+                        logger.fine("Could not close inactive sessions: " + sessions + " of " + groupId, e);
+                    }
+                }
+            }
+        }
+
+        private void closeOnPartitionOwner(CPGroupId groupId, Collection<Long> sessions) {
+            InternalCompletableFuture<Object> future = raftService.getInvocationManager()
+                    .invokeOnPartition(new UnsafeRaftReplicateOp(groupId, new CloseInactiveSessionsOp(sessions)));
+            try {
+                future.join();
+            } catch (Exception e) {
+                if (logger.isFineEnabled()) {
+                    logger.fine("Could not close inactive sessions: " + sessions + " of " + groupId, e);
+                }
+            }
         }
     }
 }

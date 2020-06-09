@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,15 @@ package com.hazelcast.json;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
-import com.hazelcast.config.MapIndexConfig;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MetadataPolicy;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastJsonValue;
-import com.hazelcast.core.IMap;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonObject;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
@@ -52,6 +53,7 @@ import java.util.Set;
 import static com.hazelcast.query.Predicates.equal;
 import static com.hazelcast.query.Predicates.lessThan;
 import static com.hazelcast.query.Predicates.notEqual;
+import static com.hazelcast.test.Accessors.getNode;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
@@ -102,12 +104,16 @@ public class MapIndexJsonTest extends HazelcastTestSupport {
 
     protected Config addIndexConfig(Config config) {
         config.getMapConfig("default")
-                .addMapIndexConfig(new MapIndexConfig("longValue", true))
-                .addMapIndexConfig(new MapIndexConfig("doubleValue", true))
-                .addMapIndexConfig(new MapIndexConfig("nestedObject.nestedLongValue", true))
-                .addMapIndexConfig(new MapIndexConfig("stringValue", true))
-                .addMapIndexConfig(new MapIndexConfig("stringValueArray", true));
+                .addIndexConfig(sortedIndexConfig("longValue"))
+                .addIndexConfig(sortedIndexConfig("doubleValue"))
+                .addIndexConfig(sortedIndexConfig("nestedObject.nestedLongValue"))
+                .addIndexConfig(sortedIndexConfig("stringValue"))
+                .addIndexConfig(sortedIndexConfig("stringValueArray"));
         return config;
+    }
+
+    private static IndexConfig sortedIndexConfig(String attribute) {
+        return new IndexConfig(IndexType.SORTED, attribute).setName(attribute);
     }
 
     @Test

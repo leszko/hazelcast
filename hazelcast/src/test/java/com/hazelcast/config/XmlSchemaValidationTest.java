@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,14 +38,10 @@ public class XmlSchemaValidationTest {
     public ExpectedException rule = ExpectedException.none();
 
     @Test
-    public void testXmlDeniesDuplicateGroupConfig() {
-        expectDuplicateElementError("group");
-        String groupConfig = ""
-                + "    <group>\n"
-                + "        <name>foobar</name>\n"
-                + "        <password>dev-pass</password>\n"
-                + "    </group>\n";
-        buildConfig(HAZELCAST_START_TAG + groupConfig + groupConfig + HAZELCAST_END_TAG);
+    public void testXmlDeniesDuplicateClusterNameConfig() {
+        expectDuplicateElementError("cluster-name");
+        String clusterName = "<cluster-name>foobar</cluster-name>";
+        buildConfig(HAZELCAST_START_TAG + clusterName + clusterName + HAZELCAST_END_TAG);
     }
 
     @Test
@@ -121,19 +117,6 @@ public class XmlSchemaValidationTest {
                 + "        <check-class-def-errors>true</check-class-def-errors>\n"
                 + "    </serialization>\n";
         buildConfig(HAZELCAST_START_TAG + serializationConfig + serializationConfig + HAZELCAST_END_TAG);
-    }
-
-    @Test
-    public void testXmlDeniesDuplicateServicesConfig() {
-        expectDuplicateElementError("services");
-        String servicesConfig = ""
-                + "   <services>\n"
-                + "       <service enabled=\"true\">\n"
-                + "            <name>custom-service</name>\n"
-                + "            <class-name>com.hazelcast.examples.MyService</class-name>\n"
-                + "        </service>\n"
-                + "   </services>";
-        buildConfig(HAZELCAST_START_TAG + servicesConfig + servicesConfig + HAZELCAST_END_TAG);
     }
 
     @Test

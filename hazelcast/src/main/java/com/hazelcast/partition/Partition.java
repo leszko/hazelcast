@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.hazelcast.partition;
 
-import com.hazelcast.core.Member;
+import com.hazelcast.cluster.Member;
 
 /**
  * In Hazelcast the data is split up in partitions: by default, 271 and configurable through the 'hazelcast.partition.count'
- * GroupProperty. Each partition is owned by one member and the ownership can change if members join or leave the cluster.
+ * ClusterProperty. Each partition is owned by one member and the ownership can change if members join or leave the cluster.
  *
  * Using this Partition object, you get access to who is the owner of a given partition. This object is not a DTO, so it will
  * be updated when a member changes ownership.

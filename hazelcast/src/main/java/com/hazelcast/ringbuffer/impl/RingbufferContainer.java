@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,18 @@ package com.hazelcast.ringbuffer.impl;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.RingbufferConfig;
 import com.hazelcast.core.HazelcastException;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.ringbuffer.StaleSequenceException;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.operationservice.Notifier;
-import com.hazelcast.spi.ObjectNamespace;
+import com.hazelcast.internal.services.ObjectNamespace;
 import com.hazelcast.spi.impl.operationservice.WaitNotifyKey;
-import com.hazelcast.spi.serialization.SerializationService;
+import com.hazelcast.internal.serialization.SerializationService;
 
 import java.io.IOException;
 
@@ -434,6 +435,31 @@ public class RingbufferContainer<T, E> implements IdentifiedDataSerializable, No
     }
 
     /**
+     * Checks if the provided {@code sequence} can be read immediately. If
+     * not, it will return the current oldest or newest immediately readable
+     * sequence. This method can be used for a loss-tolerant reader when
+     * trying to avoid a {@link com.hazelcast.ringbuffer.StaleSequenceException}.
+     *
+     * @param readSequence the sequence wanting to be read
+     * @return the bounded sequence
+     */
+    public long clampReadSequenceToBounds(long readSequence) {
+        // fast forward if late and no store is configured
+        final long headSequence = headSequence();
+        if (readSequence < headSequence && !store.isEnabled()) {
+            return headSequence;
+        }
+
+        // jump back if too far in future
+        final long tailSequence = tailSequence();
+        if (readSequence > tailSequence + 1) {
+            return tailSequence + 1;
+        }
+
+        return readSequence;
+    }
+
+    /**
      * Check if the sequence is of an item that can be read immediately
      * or is the sequence of the next item to be added into the ringbuffer.
      * Since this method allows the sequence to be one larger than
@@ -569,7 +595,7 @@ public class RingbufferContainer<T, E> implements IdentifiedDataSerializable, No
         // we only write the actual content of the ringbuffer. So we don't write empty slots.
         for (long seq = ringbuffer.headSequence(); seq <= ringbuffer.tailSequence(); seq++) {
             if (inMemoryFormat == BINARY) {
-                out.writeData((Data) ringbuffer.read(seq));
+                IOUtil.writeData(out, (Data) ringbuffer.read(seq));
             } else {
                 out.writeObject(ringbuffer.read(seq));
             }
@@ -607,7 +633,7 @@ public class RingbufferContainer<T, E> implements IdentifiedDataSerializable, No
         long now = System.currentTimeMillis();
         for (long seq = headSequence; seq <= tailSequence; seq++) {
             if (inMemoryFormat == BINARY) {
-                ringbuffer.set(seq, (E) in.readData());
+                ringbuffer.set(seq, (E) IOUtil.readData(in));
             } else {
                 ringbuffer.set(seq, (E) in.readObject());
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,20 @@ import com.hazelcast.config.ClasspathXmlConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MemberGroupConfig;
 import com.hazelcast.config.PartitionGroupConfig;
-import com.hazelcast.core.Member;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.instance.BuildInfoProvider;
-import com.hazelcast.instance.MemberImpl;
+import com.hazelcast.cluster.impl.MemberImpl;
 import com.hazelcast.internal.partition.InternalPartition;
 import com.hazelcast.internal.partition.PartitionReplica;
 import com.hazelcast.internal.partition.PartitionStateGenerator;
-import com.hazelcast.nio.Address;
-import com.hazelcast.partition.membergroup.ConfigMemberGroupFactory;
-import com.hazelcast.partition.membergroup.DefaultMemberGroup;
-import com.hazelcast.partition.membergroup.HostAwareMemberGroupFactory;
-import com.hazelcast.partition.membergroup.MemberGroup;
-import com.hazelcast.partition.membergroup.MemberGroupFactory;
-import com.hazelcast.partition.membergroup.SingleMemberGroupFactory;
+import com.hazelcast.internal.util.UuidUtil;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.partition.membergroup.ConfigMemberGroupFactory;
+import com.hazelcast.internal.partition.membergroup.DefaultMemberGroup;
+import com.hazelcast.internal.partition.membergroup.HostAwareMemberGroupFactory;
+import com.hazelcast.spi.partitiongroup.MemberGroup;
+import com.hazelcast.internal.partition.membergroup.MemberGroupFactory;
+import com.hazelcast.internal.partition.membergroup.SingleMemberGroupFactory;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -311,7 +312,7 @@ public class PartitionStateGeneratorTest {
             count++;
             port++;
             MemberImpl m = new MemberImpl(new Address(InetAddress.getByAddress(new byte[]{ip[0], ip[1], ip[2], ip[3]})
-                    , port), VERSION, false);
+                    , port), VERSION, false, UuidUtil.newUnsecureUUID());
             members.add(m);
             if ((0xff & ip[3]) == 255) {
                 ip[2] = ++ip[2];

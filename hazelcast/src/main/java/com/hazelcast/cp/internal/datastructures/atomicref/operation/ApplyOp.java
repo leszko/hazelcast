@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 package com.hazelcast.cp.internal.datastructures.atomicref.operation;
 
-import com.hazelcast.core.IAtomicReference;
+import com.hazelcast.cp.IAtomicReference;
 import com.hazelcast.core.IFunction;
-import com.hazelcast.cp.internal.datastructures.atomicref.RaftAtomicRef;
-import com.hazelcast.cp.internal.datastructures.atomicref.RaftAtomicReferenceDataSerializerHook;
+import com.hazelcast.cp.internal.datastructures.atomicref.AtomicRef;
+import com.hazelcast.cp.internal.datastructures.atomicref.AtomicRefDataSerializerHook;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.cp.CPGroupId;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngine;
 
 import java.io.IOException;
 
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * Operation for {@link IAtomicReference#apply(IFunction)},
@@ -98,7 +99,7 @@ public class ApplyOp extends AbstractAtomicRefOp implements IdentifiedDataSerial
 
     @Override
     public Object run(CPGroupId groupId, long commitIndex) {
-        RaftAtomicRef ref = getAtomicRef(groupId);
+        AtomicRef ref = getAtomicRef(groupId);
         Data currentData = ref.get();
         Data newData = callFunction(currentData);
 
@@ -124,14 +125,14 @@ public class ApplyOp extends AbstractAtomicRefOp implements IdentifiedDataSerial
 
     @Override
     public int getClassId() {
-        return RaftAtomicReferenceDataSerializerHook.APPLY_OP;
+        return AtomicRefDataSerializerHook.APPLY_OP;
     }
 
     @Override
     public void writeData(ObjectDataOutput out)
             throws IOException {
         super.writeData(out);
-        out.writeData(function);
+        IOUtil.writeData(out, function);
         out.writeUTF(returnValueType.name());
         out.writeBoolean(alter);
     }
@@ -140,7 +141,7 @@ public class ApplyOp extends AbstractAtomicRefOp implements IdentifiedDataSerial
     public void readData(ObjectDataInput in)
             throws IOException {
         super.readData(in);
-        function = in.readData();
+        function = IOUtil.readData(in);
         returnValueType = ReturnValueType.valueOf(in.readUTF());
         alter = in.readBoolean();
     }

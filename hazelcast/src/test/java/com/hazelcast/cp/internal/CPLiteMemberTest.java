@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.hazelcast.cp.internal;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.cp.CPMember;
-import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.test.Accessors.getAddress;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -72,7 +73,8 @@ public class CPLiteMemberTest extends HazelcastRaftTestSupport {
         assertTrue(awaitUntilDiscoveryCompleted(hz4_lite, 60));
         assertTrue(awaitUntilDiscoveryCompleted(hz5, 60));
 
-        Collection<CPMember> cpMembers = hz5.getCPSubsystem().getCPSubsystemManagementService().getCPMembers().get();
+        Collection<CPMember> cpMembers = hz5.getCPSubsystem().getCPSubsystemManagementService().getCPMembers()
+                                            .toCompletableFuture().get();
         // Lite members are not part of CP member list
         assertNotCpMember(hz2_lite, cpMembers);
         assertNotCpMember(hz4_lite, cpMembers);
@@ -101,13 +103,15 @@ public class CPLiteMemberTest extends HazelcastRaftTestSupport {
         assertTrue(awaitUntilDiscoveryCompleted(hz_lite, 60));
 
         try {
-            hz_lite.getCPSubsystem().getCPSubsystemManagementService().promoteToCPMember().get();
+            hz_lite.getCPSubsystem().getCPSubsystemManagementService().promoteToCPMember()
+                   .toCompletableFuture().get();
             fail("CP member promotion should have failed!");
         } catch (ExecutionException e) {
             assertInstanceOf(IllegalStateException.class, e.getCause());
         }
 
-        Collection<CPMember> cpMembers = hz1.getCPSubsystem().getCPSubsystemManagementService().getCPMembers().get();
+        Collection<CPMember> cpMembers = hz1.getCPSubsystem().getCPSubsystemManagementService().getCPMembers()
+                                            .toCompletableFuture().get();
         assertEquals(3, cpMembers.size());
         assertNotCpMember(hz_lite, cpMembers);
     }
@@ -125,9 +129,11 @@ public class CPLiteMemberTest extends HazelcastRaftTestSupport {
         assertTrue(awaitUntilDiscoveryCompleted(hz_lite, 60));
 
         hz_lite.getCluster().promoteLocalLiteMember();
-        hz_lite.getCPSubsystem().getCPSubsystemManagementService().promoteToCPMember().get();
+        hz_lite.getCPSubsystem().getCPSubsystemManagementService().promoteToCPMember()
+               .toCompletableFuture().get();
 
-        Collection<CPMember> cpMembers = hz1.getCPSubsystem().getCPSubsystemManagementService().getCPMembers().get();
+        Collection<CPMember> cpMembers = hz1.getCPSubsystem().getCPSubsystemManagementService().getCPMembers()
+                                            .toCompletableFuture().get();
         assertEquals(4, cpMembers.size());
 
         Set<Address> cpAddresses = cpMembers.stream().map(CPMember::getAddress).collect(Collectors.toSet());

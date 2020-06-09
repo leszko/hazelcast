@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 package com.hazelcast.config;
 
 import com.hazelcast.collection.ISet;
+import com.hazelcast.internal.config.ConfigDataSerializerHook;
 
 /**
  * Contains the configuration for an {@link ISet}.
  */
 public class SetConfig extends CollectionConfig<SetConfig> {
-
-    private transient SetConfigReadOnly readOnly;
 
     public SetConfig() {
     }
@@ -34,20 +33,6 @@ public class SetConfig extends CollectionConfig<SetConfig> {
 
     public SetConfig(SetConfig config) {
         super(config);
-    }
-
-    /**
-     * Gets immutable version of this configuration.
-     *
-     * @return immutable version of this configuration
-     * @deprecated this method will be removed in 4.0; it is meant for internal usage only
-     */
-    @Override
-    public SetConfigReadOnly getAsReadOnly() {
-        if (readOnly == null) {
-            readOnly = new SetConfigReadOnly(this);
-        }
-        return readOnly;
     }
 
     @Override

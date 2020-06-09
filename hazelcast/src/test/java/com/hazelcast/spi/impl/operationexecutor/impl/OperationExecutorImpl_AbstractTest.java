@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package com.hazelcast.spi.impl.operationexecutor.impl;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.instance.BuildInfo;
-import com.hazelcast.instance.DefaultNodeExtension;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.DefaultNodeExtension;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.logging.LoggingServiceImpl;
-import com.hazelcast.nio.Address;
+import com.hazelcast.logging.impl.LoggingServiceImpl;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.Packet;
+import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.UrgentSystemOperation;
 import com.hazelcast.spi.impl.operationexecutor.OperationHostileThread;
@@ -71,7 +71,7 @@ public abstract class OperationExecutorImpl_AbstractTest extends HazelcastTestSu
 
     @Before
     public void setup() throws Exception {
-        loggingService = new LoggingServiceImpl("foo", "jdk", new BuildInfo("1", "1", "1", 1, false, (byte) 1, "1"));
+        loggingService = new LoggingServiceImpl("foo", "jdk", new BuildInfo("1", "1", "1", 1, false, (byte) 1, "1"), true);
 
         serializationService = new DefaultSerializationServiceBuilder().build();
         config = smallInstanceConfig();

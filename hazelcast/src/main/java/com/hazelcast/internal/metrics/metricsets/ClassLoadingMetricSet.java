@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,11 @@ import com.hazelcast.internal.metrics.MetricsRegistry;
 import java.lang.management.ClassLoadingMXBean;
 import java.lang.management.ManagementFactory;
 
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.CLASSLOADING_FULL_METRIC_LOADED_CLASSES_COUNT;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.CLASSLOADING_FULL_METRIC_TOTAL_LOADED_CLASSES_COUNT;
+import static com.hazelcast.internal.metrics.MetricDescriptorConstants.CLASSLOADING_FULL_METRIC_UNLOADED_CLASSES_COUNT;
 import static com.hazelcast.internal.metrics.ProbeLevel.MANDATORY;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * A Metric set for exposing {@link java.lang.management.ClassLoadingMXBean} metrics.
@@ -42,11 +45,13 @@ public final class ClassLoadingMetricSet {
 
         ClassLoadingMXBean mxBean = ManagementFactory.getClassLoadingMXBean();
 
-        metricsRegistry.register(mxBean, "classloading.loadedClassesCount", MANDATORY, ClassLoadingMXBean::getLoadedClassCount);
+        metricsRegistry.registerStaticProbe(mxBean, CLASSLOADING_FULL_METRIC_LOADED_CLASSES_COUNT, MANDATORY,
+                ClassLoadingMXBean::getLoadedClassCount);
 
-        metricsRegistry.register(mxBean, "classloading.totalLoadedClassesCount", MANDATORY,
+        metricsRegistry.registerStaticProbe(mxBean, CLASSLOADING_FULL_METRIC_TOTAL_LOADED_CLASSES_COUNT, MANDATORY,
                 ClassLoadingMXBean::getTotalLoadedClassCount);
 
-        metricsRegistry.register(mxBean, "classloading.unloadedClassCount", MANDATORY, ClassLoadingMXBean::getUnloadedClassCount);
+        metricsRegistry.registerStaticProbe(mxBean, CLASSLOADING_FULL_METRIC_UNLOADED_CLASSES_COUNT, MANDATORY,
+                ClassLoadingMXBean::getUnloadedClassCount);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.hazelcast.config;
 
-import static com.hazelcast.util.Preconditions.checkNotNegative;
-import static com.hazelcast.util.Preconditions.checkPositive;
+import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static java.lang.String.format;
 
 /**
@@ -114,7 +114,8 @@ public class IcmpFailureDetectorConfig {
      */
     public IcmpFailureDetectorConfig setIntervalMilliseconds(int intervalMilliseconds) {
         if (intervalMilliseconds < MIN_INTERVAL_MILLIS) {
-            throw new ConfigurationException(format("Interval can't be set to less than %d milliseconds.", MIN_INTERVAL_MILLIS));
+            throw new InvalidConfigurationException(format("Interval can't be set to less than %d milliseconds.",
+                    MIN_INTERVAL_MILLIS));
         }
 
         this.intervalMilliseconds = intervalMilliseconds;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.hazelcast.collection;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.transaction.TransactionalQueue;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  * @see java.util.concurrent.BlockingQueue
  * @see IQueue
  * @see TransactionalQueue
- * @param <E>
+ * @param <E> queue item type
  */
 public interface BaseQueue<E> extends DistributedObject {
 
@@ -42,7 +43,7 @@ public interface BaseQueue<E> extends DistributedObject {
      * @return <code>true</code> if the element was added to this queue,
      *         <code>false</code> otherwise
      */
-    boolean offer(E e);
+    boolean offer(@Nonnull E e);
 
     /**
      * Inserts the specified element into this queue, waiting up to the
@@ -57,7 +58,7 @@ public interface BaseQueue<E> extends DistributedObject {
      *         the specified waiting time elapses before space is available
      * @throws InterruptedException if interrupted while waiting
      */
-    boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException;
+    boolean offer(@Nonnull E e, long timeout, @Nonnull TimeUnit unit) throws InterruptedException;
 
     /**
      * Retrieves and removes the head of this queue, waiting if necessary
@@ -66,7 +67,7 @@ public interface BaseQueue<E> extends DistributedObject {
      * @return the head of this queue
      * @throws InterruptedException if interrupted while waiting
      */
-    E take() throws InterruptedException;
+    @Nonnull E take() throws InterruptedException;
 
     /**
      * Retrieves and removes the head of this queue,
@@ -88,7 +89,7 @@ public interface BaseQueue<E> extends DistributedObject {
      *         specified waiting time elapses before an element is available
      * @throws InterruptedException if interrupted while waiting
      */
-    E poll(long timeout, TimeUnit unit) throws InterruptedException;
+    E poll(long timeout, @Nonnull TimeUnit unit) throws InterruptedException;
 
     /**
      * Returns the number of elements in this collection.  If this collection

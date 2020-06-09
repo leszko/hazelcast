@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,20 @@
 
 package com.hazelcast.internal.ascii;
 
+import com.hazelcast.collection.IQueue;
 import com.hazelcast.config.Config;
-import com.hazelcast.config.PermissionConfig;
 import com.hazelcast.config.RestApiConfig;
 import com.hazelcast.config.WanReplicationConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastJsonValue;
-import com.hazelcast.core.IMap;
-import com.hazelcast.collection.IQueue;
 import com.hazelcast.instance.EndpointQualifier;
+import com.hazelcast.internal.ascii.HTTPCommunicator.ConnectionResponse;
 import com.hazelcast.internal.json.Json;
+import com.hazelcast.internal.json.JsonObject;
 import com.hazelcast.internal.management.dto.WanReplicationConfigDTO;
-import com.hazelcast.internal.management.request.UpdatePermissionConfigRequest;
+import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestAwareInstanceFactory;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.After;
@@ -44,21 +43,19 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.HashSet;
-import java.util.Set;
 
 import static com.hazelcast.internal.ascii.rest.HttpCommand.CONTENT_TYPE_JSON;
-import static com.hazelcast.nio.IOUtil.readFully;
+import static com.hazelcast.internal.nio.IOUtil.readFully;
+import static com.hazelcast.internal.util.StringUtil.bytesToString;
+import static com.hazelcast.internal.util.StringUtil.stringToBytes;
+import static com.hazelcast.test.Accessors.getAddress;
+import static com.hazelcast.test.Accessors.getNode;
 import static com.hazelcast.test.HazelcastTestSupport.assertContains;
-import static com.hazelcast.test.HazelcastTestSupport.getNode;
 import static com.hazelcast.test.HazelcastTestSupport.randomMapName;
 import static com.hazelcast.test.HazelcastTestSupport.randomName;
 import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static com.hazelcast.test.HazelcastTestSupport.sleepAtLeastSeconds;
-import static com.hazelcast.util.StringUtil.bytesToString;
-import static com.hazelcast.util.StringUtil.stringToBytes;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -126,6 +123,19 @@ public class RestTest {
     }
 
     @Test
+    public void testMapPutGetByUrlEndingWithSlash() throws Exception {
+        String name = randomMapName();
+
+        String key = "key";
+        String value = "value";
+
+        assertEquals(HTTP_OK, communicator.mapPut(name, key + "/", value));
+        assertEquals(value, communicator.mapGetAndResponse(name, key));
+        assertEquals(value, communicator.mapGetAndResponse(name, key + "/"));
+        assertTrue(instance.getMap(name).containsKey(key));
+    }
+
+    @Test
     public void testMapGetWithJson() throws IOException {
         final String mapName = "mapName";
         final String key = "key";
@@ -146,6 +156,18 @@ public class RestTest {
 
         assertEquals(HTTP_OK, communicator.mapPut(name, key, value));
         assertEquals(HTTP_OK, communicator.mapDelete(name, key));
+        assertFalse(instance.getMap(name).containsKey(key));
+    }
+
+    @Test
+    public void testMapPutDeleteByUrlEndingWithSlash() throws Exception {
+        String name = randomMapName();
+
+        String key = "key";
+        String value = "value";
+
+        assertEquals(HTTP_OK, communicator.mapPut(name, key, value));
+        assertEquals(HTTP_OK, communicator.mapDelete(name, key + "/"));
         assertFalse(instance.getMap(name).containsKey(key));
     }
 
@@ -218,40 +240,41 @@ public class RestTest {
 
     @Test
     public void syncMapOverWAN() throws Exception {
-        String result = communicator.syncMapOverWAN("atob", "b", "default");
-        assertEquals("{\"status\":\"fail\",\"message\":\"WAN sync for map is not supported.\"}", result);
+        Config config = instance.getConfig();
+        String result = communicator.syncMapOverWAN(config.getClusterName(), "", "atob", "b", "default");
+        assertJsonContains(result,
+                "status", "fail",
+                "message", "WAN sync for map is not supported.");
     }
 
     @Test
     public void syncAllMapsOverWAN() throws Exception {
-        String result = communicator.syncMapsOverWAN("atob", "b");
-        assertEquals("{\"status\":\"fail\",\"message\":\"WAN sync is not supported.\"}", result);
+        Config config = instance.getConfig();
+        String result = communicator.syncMapsOverWAN(config.getClusterName(), "", "atob", "b");
+        assertJsonContains(result,
+                "status", "fail",
+                "message", "WAN sync is not supported.");
     }
 
     @Test
     public void wanClearQueues() throws Exception {
-        String result = communicator.wanClearQueues("atob", "b");
-        assertEquals("{\"status\":\"fail\",\"message\":\"Clearing WAN replication queues is not supported.\"}", result);
+        Config config = instance.getConfig();
+        String result = communicator.wanClearQueues(config.getClusterName(), "", "atob", "b");
+        assertJsonContains(result,
+                "status", "fail",
+                "message", "Clearing WAN replication queues is not supported.");
     }
 
     @Test
     public void addWanConfig() throws Exception {
-        WanReplicationConfig wanConfig = new WanReplicationConfig();
-        wanConfig.setName("test");
-        WanReplicationConfigDTO dto = new WanReplicationConfigDTO(wanConfig);
-        String result = communicator.addWanConfig(dto.toJson().toString());
-        assertEquals("{\"status\":\"fail\",\"message\":\"Adding new WAN config is not supported.\"}", result);
-    }
-
-    @Test
-    public void updatePermissions() throws Exception {
         Config config = instance.getConfig();
-        Set<PermissionConfig> permissionConfigs = new HashSet<PermissionConfig>();
-        permissionConfigs.add(new PermissionConfig(PermissionConfig.PermissionType.MAP, "test", "*"));
-        UpdatePermissionConfigRequest request = new UpdatePermissionConfigRequest(permissionConfigs);
-        String result = communicator.updatePermissions(config.getGroupConfig().getName(),
-                "", request.toJson().toString());
-        assertEquals("{\"status\":\"forbidden\"}", result);
+        WanReplicationConfig wanReplicationConfig = new WanReplicationConfig();
+        wanReplicationConfig.setName("test");
+        WanReplicationConfigDTO dto = new WanReplicationConfigDTO(wanReplicationConfig);
+        String result = communicator.addWanConfig(config.getClusterName(), "", dto.toJson().toString());
+        assertJsonContains(result,
+                "status", "fail",
+                "message", "Adding new WAN config is not supported.");
     }
 
     @Test
@@ -319,28 +342,24 @@ public class RestTest {
         assertEquals(HTTP_OK, response);
     }
 
-    @Test
+    @Test(expected = IOException.class)
     public void testUndefined_HeadRequest() throws IOException {
-        int response = communicator.headRequestToUndefinedURI().responseCode;
-        assertEquals(HTTP_NOT_FOUND, response);
+        communicator.headRequestToUndefinedURI();
     }
 
-    @Test
+    @Test(expected = IOException.class)
     public void testUndefined_GetRequest() throws IOException {
-        int response = communicator.getRequestToUndefinedURI().responseCode;
-        assertEquals(HTTP_NOT_FOUND, response);
+        communicator.getRequestToUndefinedURI();
     }
 
-    @Test
+    @Test(expected = IOException.class)
     public void testUndefined_PostRequest() throws IOException {
-        int response = communicator.postRequestToUndefinedURI().responseCode;
-        assertEquals(HTTP_NOT_FOUND, response);
+        communicator.postRequestToUndefinedURI();
     }
 
-    @Test
+    @Test(expected = IOException.class)
     public void testUndefined_DeleteRequest() throws IOException {
-        int response = communicator.deleteRequestToUndefinedURI().responseCode;
-        assertEquals(HTTP_NOT_FOUND, response);
+        communicator.deleteRequestToUndefinedURI();
     }
 
     @Test
@@ -351,8 +370,9 @@ public class RestTest {
 
     @Test
     public void testBad_PostRequest() throws IOException {
-        int response = communicator.postBadRequestURI().responseCode;
-        assertEquals(HTTP_BAD_REQUEST, response);
+        ConnectionResponse resp = communicator.postBadRequestURI();
+        assertEquals(HTTP_BAD_REQUEST, resp.responseCode);
+        assertJsonContains(resp.response, "status", "fail", "message", "Missing map name");
     }
 
     @Test
@@ -368,7 +388,7 @@ public class RestTest {
     public void testNoHeaders() throws IOException {
         InetSocketAddress address = getNode(instance).getLocalMember().getSocketAddress(EndpointQualifier.REST);
 
-        HazelcastTestSupport.getAddress(instance);
+        getAddress(instance);
         Socket socket = new Socket(address.getAddress(), address.getPort());
         socket.setSoTimeout(5000);
         try {
@@ -382,6 +402,16 @@ public class RestTest {
         } finally {
             socket.close();
         }
+    }
+
+    private JsonObject assertJsonContains(String json, String... attributesAndValues) {
+        JsonObject object = Json.parse(json).asObject();
+        for (int i = 0; i < attributesAndValues.length; ) {
+            String key = attributesAndValues[i++];
+            String expectedValue = attributesAndValues[i++];
+            assertEquals(expectedValue, object.getString(key, null));
+        }
+        return object;
     }
 
 }

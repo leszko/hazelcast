@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package com.hazelcast.test.mocknetwork;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.LifecycleService;
-import com.hazelcast.instance.Node;
-import com.hazelcast.instance.NodeContext;
-import com.hazelcast.instance.NodeState;
-import com.hazelcast.nio.Address;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.instance.impl.NodeContext;
+import com.hazelcast.instance.impl.NodeState;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.test.AssertTask;
-import com.hazelcast.util.AddressUtil;
+import com.hazelcast.internal.util.AddressUtil;
 
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertFalse;
 
 public final class TestNodeRegistry {
 
-    private final ConcurrentMap<Address, Node> nodes = new ConcurrentHashMap<Address, Node>(10);
+    private final ConcurrentMap<Address, Node> nodes = new ConcurrentHashMap<>(10);
     private final Collection<Address> joinAddresses;
     private final List<String> nodeExtensionPriorityList;
 

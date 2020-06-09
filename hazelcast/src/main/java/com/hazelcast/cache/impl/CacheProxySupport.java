@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,29 +22,28 @@ import com.hazelcast.cache.impl.event.CachePartitionLostListener;
 import com.hazelcast.cache.impl.event.InternalCachePartitionLostListenerAdapter;
 import com.hazelcast.cache.impl.operation.CacheListenerRegistrationOperation;
 import com.hazelcast.cache.impl.operation.MutableOperation;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.config.CacheConfig;
 import com.hazelcast.config.CachePartitionLostListenerConfig;
 import com.hazelcast.config.ListenerConfig;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ManagedContext;
-import com.hazelcast.core.Member;
+import com.hazelcast.internal.nio.ClassLoaderUtil;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.ExceptionUtil;
+import com.hazelcast.internal.util.FutureUtil;
+import com.hazelcast.internal.util.collection.PartitionIdSet;
+import com.hazelcast.internal.util.executor.CompletableFutureTask;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.ClassLoaderUtil;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.spi.AbstractDistributedObject;
-import com.hazelcast.spi.EventFilter;
-import com.hazelcast.spi.ExecutionService;
-import com.hazelcast.spi.InternalCompletableFuture;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.spi.impl.AbstractDistributedObject;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.impl.eventservice.EventFilter;
+import com.hazelcast.spi.impl.executionservice.ExecutionService;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationFactory;
 import com.hazelcast.spi.impl.operationservice.OperationService;
-import com.hazelcast.spi.partition.IPartitionService;
-import com.hazelcast.spi.serialization.SerializationService;
-import com.hazelcast.util.ExceptionUtil;
-import com.hazelcast.util.FutureUtil;
-import com.hazelcast.util.collection.PartitionIdSet;
-import com.hazelcast.util.executor.CompletableFutureTask;
+import com.hazelcast.spi.impl.operationservice.impl.InvocationFuture;
+import com.hazelcast.internal.partition.IPartitionService;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -60,6 +59,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -68,9 +68,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.cache.impl.CacheProxyUtil.validateNotNull;
 import static com.hazelcast.cache.impl.operation.MutableOperation.IGNORE_COMPLETION;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
-import static com.hazelcast.util.ExceptionUtil.rethrowAllowedTypeFirst;
-import static com.hazelcast.util.SetUtil.createHashSet;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrowAllowedTypeFirst;
+import static com.hazelcast.internal.util.SetUtil.createHashSet;
 
 /**
  * Abstract {@link com.hazelcast.cache.ICache} implementation which provides shared internal implementations
@@ -264,15 +264,9 @@ abstract class CacheProxySupport<K, V>
             final CompletableFutureTask<Object> future = (CompletableFutureTask<Object>) executionService
                     .submit("loadAll-" + nameWithPrefix, loadAllTask);
             loadAllTasks.add(future);
-            future.andThen(new ExecutionCallback<Object>() {
-                @Override
-                public void onResponse(Object response) {
-                    loadAllTasks.remove(future);
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-                    loadAllTasks.remove(future);
+            future.whenCompleteAsync((response, t) -> {
+                loadAllTasks.remove(future);
+                if (t != null) {
                     logger.warning("Problem in loadAll task", t);
                 }
             });
@@ -289,12 +283,12 @@ abstract class CacheProxySupport<K, V>
         managedContext.initialize(obj);
     }
 
-    protected <T> InternalCompletableFuture<T> invoke(Operation op, Data keyData, boolean completionOperation) {
+    protected <T> InvocationFuture<T> invoke(Operation op, Data keyData, boolean completionOperation) {
         int partitionId = getPartitionId(keyData);
         return invoke(op, partitionId, completionOperation);
     }
 
-    protected <T> InternalCompletableFuture<T> removeAsyncInternal(K key, V oldValue, boolean hasOldValue,
+    protected <T> InvocationFuture<T> removeAsyncInternal(K key, V oldValue, boolean hasOldValue,
                                                          boolean isGet, boolean withCompletionEvent) {
         ensureOpen();
         if (hasOldValue) {
@@ -315,7 +309,7 @@ abstract class CacheProxySupport<K, V>
         return invoke(operation, keyData, withCompletionEvent);
     }
 
-   protected  <T> InternalCompletableFuture<T> replaceAsyncInternal(K key, V oldValue, V newValue, ExpiryPolicy expiryPolicy,
+   protected  <T> InvocationFuture<T> replaceAsyncInternal(K key, V oldValue, V newValue, ExpiryPolicy expiryPolicy,
                                                           boolean hasOldValue, boolean isGet, boolean withCompletionEvent) {
         ensureOpen();
         if (hasOldValue) {
@@ -338,7 +332,7 @@ abstract class CacheProxySupport<K, V>
         return invoke(operation, keyData, withCompletionEvent);
     }
 
-   protected <T> InternalCompletableFuture<T> putAsyncInternal(K key, V value, ExpiryPolicy expiryPolicy,
+   protected <T> InvocationFuture<T> putAsyncInternal(K key, V value, ExpiryPolicy expiryPolicy,
                                                       boolean isGet, boolean withCompletionEvent) {
         ensureOpen();
         validateNotNull(key, value);
@@ -349,7 +343,7 @@ abstract class CacheProxySupport<K, V>
         return invoke(op, keyData, withCompletionEvent);
     }
 
-    protected InternalCompletableFuture<Boolean> putIfAbsentAsyncInternal(K key, V value, ExpiryPolicy expiryPolicy,
+    protected InvocationFuture<Boolean> putIfAbsentAsyncInternal(K key, V value, ExpiryPolicy expiryPolicy,
                                                                 boolean withCompletionEvent) {
         ensureOpen();
         validateNotNull(key, value);
@@ -412,7 +406,7 @@ abstract class CacheProxySupport<K, V>
         }
     }
 
-    protected void addListenerLocally(String regId, CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    protected void addListenerLocally(UUID regId, CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
         listenerCompleter.putListenerIfAbsent(cacheEntryListenerConfiguration, regId);
     }
 
@@ -420,7 +414,7 @@ abstract class CacheProxySupport<K, V>
         listenerCompleter.removeListener(cacheEntryListenerConfiguration);
     }
 
-    protected String getListenerIdLocal(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
+    protected UUID getListenerIdLocal(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
         return listenerCompleter.getListenerId(cacheEntryListenerConfiguration);
     }
 
@@ -431,8 +425,8 @@ abstract class CacheProxySupport<K, V>
         try {
             OperationService operationService = getNodeEngine().getOperationService();
             int partitionId = getPartitionId(keyData);
-            InternalCompletableFuture<T> future = operationService.invokeOnPartition(getServiceName(), op, partitionId);
-            T safely = future.join();
+            InvocationFuture<T> future = operationService.invokeOnPartition(getServiceName(), op, partitionId);
+            T safely = future.joinInternal();
             listenerCompleter.waitCompletionLatch(completionId);
             return safely;
         } catch (CacheException ce) {
@@ -551,9 +545,9 @@ abstract class CacheProxySupport<K, V>
         return partitionIds;
     }
 
-    private void deregisterAllCacheEntryListener(Collection<String> listenerRegistrations) {
+    private void deregisterAllCacheEntryListener(Collection<UUID> listenerRegistrations) {
         ICacheService service = getService();
-        for (String regId : listenerRegistrations) {
+        for (UUID regId : listenerRegistrations) {
             service.deregisterListener(nameWithPrefix, regId);
         }
     }
@@ -610,7 +604,7 @@ abstract class CacheProxySupport<K, V>
         listenerCompleter.clearListeners();
     }
 
-    private <T> InternalCompletableFuture<T> invoke(Operation op, int partitionId, boolean completionOperation) {
+    private <T> InvocationFuture<T> invoke(Operation op, int partitionId, boolean completionOperation) {
         Integer completionId = null;
         if (completionOperation) {
             completionId = listenerCompleter.registerCompletionLatch(1);
@@ -619,8 +613,8 @@ abstract class CacheProxySupport<K, V>
             }
         }
         try {
-            InternalCompletableFuture<T> future = getNodeEngine().getOperationService()
-                                                                 .invokeOnPartition(getServiceName(), op, partitionId);
+            InvocationFuture<T> future = getNodeEngine().getOperationService()
+                                                        .invokeOnPartition(getServiceName(), op, partitionId);
             if (completionOperation) {
                 listenerCompleter.waitCompletionLatch(completionId);
             }

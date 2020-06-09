@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.test.starter.answer;
 
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.operationservice.impl.OperationServiceImpl;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Default {@link org.mockito.stubbing.Answer} to create a mock for a proxied
- * {@link com.hazelcast.spi.NodeEngine}.
+ * {@link NodeEngine}.
  */
 public class NodeEngineAnswer extends AbstractAnswer {
 
@@ -43,6 +44,9 @@ public class NodeEngineAnswer extends AbstractAnswer {
             return mock(OperationServiceImpl.class, new OperationServiceAnswer(operationService));
         } else if (arguments.length == 0 && methodName.equals("getConfigClassLoader")) {
             return targetClassloader;
+        } else if (arguments.length == 0 && methodName.equals("getSplitBrainMergePolicyProvider")) {
+            Object provider = invokeForMock(invocation, arguments);
+            return createMockForTargetClass(provider, new DelegatingAnswer(provider));
         } else if (arguments.length == 0 && (methodName.startsWith("get") || methodName.startsWith("is"))) {
             return invoke(invocation);
         }

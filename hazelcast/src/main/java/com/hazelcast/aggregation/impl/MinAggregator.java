@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.impl.Comparables;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public final class MinAggregator<I, R extends Comparable> extends AbstractAggregator<I, R, R>
         implements IdentifiedDataSerializable {
@@ -88,4 +89,23 @@ public final class MinAggregator<I, R extends Comparable> extends AbstractAggreg
         this.min = in.readObject();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        MinAggregator<?, ?> that = (MinAggregator<?, ?>) o;
+        return Objects.equals(min, that.min);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), min);
+    }
 }

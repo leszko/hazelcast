@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,14 +92,14 @@ public class TestClientNetworkConfig {
     public void smokeAwsConfig() {
         AwsConfig aws = client.getClientConfig().getNetworkConfig().getAwsConfig();
         assertFalse(aws.isEnabled());
-        assertEquals("sample-access-key", aws.getAccessKey());
-        assertEquals("sample-secret-key", aws.getSecretKey());
-        assertEquals("sample-region", aws.getRegion());
-        assertEquals("sample-header", aws.getHostHeader());
-        assertEquals("sample-group", aws.getSecurityGroupName());
-        assertEquals("sample-tag-key", aws.getTagKey());
-        assertEquals("sample-tag-value", aws.getTagValue());
-        assertEquals("sample-role", aws.getIamRole());
+        assertEquals("sample-access-key", aws.getProperty("access-key"));
+        assertEquals("sample-secret-key", aws.getProperty("secret-key"));
+        assertEquals("sample-region", aws.getProperty("region"));
+        assertEquals("sample-header", aws.getProperty("host-header"));
+        assertEquals("sample-group", aws.getProperty("security-group-name"));
+        assertEquals("sample-tag-key", aws.getProperty("tag-key"));
+        assertEquals("sample-tag-value", aws.getProperty("tag-value"));
+        assertEquals("sample-role", aws.getProperty("iam-role"));
     }
 
     @Test
@@ -113,12 +113,14 @@ public class TestClientNetworkConfig {
     public void smokeAzureConfig() {
         AzureConfig azure = client.getClientConfig().getNetworkConfig().getAzureConfig();
         assertFalse(azure.isEnabled());
+        assertEquals("false", azure.getProperty("instance-metadata-available"));
         assertEquals("CLIENT_ID", azure.getProperty("client-id"));
         assertEquals("CLIENT_SECRET", azure.getProperty("client-secret"));
         assertEquals("TENANT_ID", azure.getProperty("tenant-id"));
         assertEquals("SUB_ID", azure.getProperty("subscription-id"));
-        assertEquals("HZLCAST001", azure.getProperty("cluster-id"));
-        assertEquals("GROUP-NAME", azure.getProperty("group-name"));
+        assertEquals("RESOURCE-GROUP-NAME", azure.getProperty("resource-group"));
+        assertEquals("SCALE-SET", azure.getProperty("scale-set"));
+        assertEquals("TAG-NAME=HZLCAST001", azure.getProperty("tag"));
     }
 
     @Test

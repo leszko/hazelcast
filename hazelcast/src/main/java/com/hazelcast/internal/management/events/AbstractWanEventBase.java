@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,20 +20,32 @@ import com.hazelcast.internal.json.JsonObject;
 
 abstract class AbstractWanEventBase extends AbstractEventBase {
     protected final String wanReplicationName;
-    protected final String targetGroupName;
+    protected final String wanPublisherId;
     protected final String mapName;
 
-    protected AbstractWanEventBase(String wanReplicationName, String targetGroupName, String mapName) {
+    AbstractWanEventBase(String wanReplicationName, String wanPublisherId, String mapName) {
         this.wanReplicationName = wanReplicationName;
-        this.targetGroupName = targetGroupName;
+        this.wanPublisherId = wanPublisherId;
         this.mapName = mapName;
+    }
+
+    public String getWanReplicationName() {
+        return wanReplicationName;
+    }
+
+    public String getWanPublisherId() {
+        return wanPublisherId;
+    }
+
+    public String getMapName() {
+        return mapName;
     }
 
     @Override
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.add("wanReplicationName", wanReplicationName);
-        json.add("targetGroupName", targetGroupName);
+        json.add("wanPublisherId", wanPublisherId);
         json.add("mapName", mapName);
         return json;
     }

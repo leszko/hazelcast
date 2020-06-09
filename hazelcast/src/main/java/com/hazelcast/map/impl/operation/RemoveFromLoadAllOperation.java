@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,13 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.recordstore.Storage;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
 
@@ -37,7 +39,7 @@ import java.util.List;
  * This operation is expected to be invoked locally as the key collection is mutated
  * when running the operation and the operation does not have a response object.
  *
- * @see com.hazelcast.core.IMap#loadAll(java.util.Set, boolean)
+ * @see IMap#loadAll(java.util.Set, boolean)
  */
 public class RemoveFromLoadAllOperation extends MapOperation implements PartitionAwareOperation, MutatingOperation {
 
@@ -77,7 +79,7 @@ public class RemoveFromLoadAllOperation extends MapOperation implements Partitio
         final int size = keys.size();
         out.writeInt(size);
         for (Data key : keys) {
-            out.writeData(key);
+            IOUtil.writeData(out, key);
         }
     }
 
@@ -89,7 +91,7 @@ public class RemoveFromLoadAllOperation extends MapOperation implements Partitio
             keys = new ArrayList<>(size);
         }
         for (int i = 0; i < size; i++) {
-            Data data = in.readData();
+            Data data = IOUtil.readData(in);
             keys.add(data);
         }
     }

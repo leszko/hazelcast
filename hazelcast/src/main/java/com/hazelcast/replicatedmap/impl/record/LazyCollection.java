@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class LazyCollection<K, V> implements Collection<V> {
 
     @Override
     public Object[] toArray() {
-        List<Object> result = new ArrayList<Object>(storage.values().size());
+        List<Object> result = new ArrayList<>(storage.values().size());
         Iterator<V> iterator = iterator();
         while (iterator.hasNext()) {
             result.add(iterator.next());
@@ -70,7 +70,7 @@ class LazyCollection<K, V> implements Collection<V> {
 
     @Override
     public <T> T[] toArray(T[] a) {
-        List<Object> result = new ArrayList<Object>(storage.values().size());
+        List<Object> result = new ArrayList<>(storage.values().size());
         Iterator<V> iterator = iterator();
         while (iterator.hasNext()) {
             result.add(iterator.next());

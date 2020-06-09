@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,11 +75,4 @@ public interface CallIdSequence {
      * <strong>ONLY FOR TESTING. Must not be used for production code.</strong>
      */
     long getLastCallId();
-
-    /**
-     * Returns the number of concurrent invocations.
-     *
-     * @return the number of concurrent invocations. Returns -1 if not known.
-     */
-    long concurrentInvocations();
 }

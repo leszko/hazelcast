@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.hazelcast.map.impl.query;
 
+import com.hazelcast.cluster.Member;
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.QueryResultSizeExceededException;
@@ -25,14 +25,15 @@ import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.query.PagingPredicate;
 import com.hazelcast.query.Predicate;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.query.QueryException;
-import com.hazelcast.query.TruePredicate;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.query.impl.predicates.PagingPredicateImpl;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationService;
-import com.hazelcast.spi.partition.IPartitionService;
-import com.hazelcast.util.IterationType;
-import com.hazelcast.util.collection.PartitionIdSet;
+import com.hazelcast.internal.partition.IPartitionService;
+import com.hazelcast.internal.util.IterationType;
+import com.hazelcast.internal.util.collection.PartitionIdSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,8 +45,8 @@ import java.util.function.IntConsumer;
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.map.impl.query.Target.ALL_NODES;
 import static com.hazelcast.map.impl.query.Target.LOCAL_NODE;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
-import static com.hazelcast.util.SetUtil.allPartitionIds;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
+import static com.hazelcast.internal.util.SetUtil.allPartitionIds;
 import static java.util.Collections.singletonList;
 
 /**
@@ -84,6 +85,7 @@ public class QueryEngineImpl implements QueryEngine {
         this.resultProcessorRegistry = mapServiceContext.getResultProcessorRegistry();
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public Result execute(Query query, Target target) {
         Query adjustedQuery = adjustQuery(query);
@@ -102,10 +104,10 @@ public class QueryEngineImpl implements QueryEngine {
     private Query adjustQuery(Query query) {
         IterationType retrievalIterationType = getRetrievalIterationType(query.getPredicate(), query.getIterationType());
         Query adjustedQuery = Query.of(query).iterationType(retrievalIterationType).build();
-        if (adjustedQuery.getPredicate() instanceof PagingPredicate) {
-            ((PagingPredicate) adjustedQuery.getPredicate()).setIterationType(query.getIterationType());
+        if (adjustedQuery.getPredicate() instanceof PagingPredicateImpl) {
+            ((PagingPredicateImpl) adjustedQuery.getPredicate()).setIterationType(query.getIterationType());
         } else {
-            if (adjustedQuery.getPredicate() == TruePredicate.INSTANCE) {
+            if (adjustedQuery.getPredicate() == Predicates.alwaysTrue()) {
                 queryResultSizeLimiter.precheckMaxResultLimitOnLocalPartitions(adjustedQuery.getMapName());
             }
         }
@@ -233,17 +235,22 @@ public class QueryEngineImpl implements QueryEngine {
     private IterationType getRetrievalIterationType(Predicate predicate, IterationType iterationType) {
         IterationType retrievalIterationType = iterationType;
         if (predicate instanceof PagingPredicate) {
-            // in case of value, we also need to get the keys for sorting.
-            retrievalIterationType = (iterationType == IterationType.VALUE) ? IterationType.ENTRY : iterationType;
+            PagingPredicate pagingPredicate = (PagingPredicate) predicate;
+            if (pagingPredicate.getComparator() != null) {
+                // custom comparators may act on keys and values at the same time
+                retrievalIterationType = IterationType.ENTRY;
+            } else {
+                // in case of value, we also need to get the keys for sorting
+                retrievalIterationType = iterationType == IterationType.VALUE ? IterationType.ENTRY : iterationType;
+            }
         }
         return retrievalIterationType;
     }
 
     private PartitionIdSet getLocalPartitionIds() {
         int partitionCount = partitionService.getPartitionCount();
-        PartitionIdSet partitionIds = new PartitionIdSet(partitionCount,
-                partitionService.getMemberPartitions(nodeEngine.getThisAddress()));
-        return partitionIds;
+        List<Integer> memberPartitions = partitionService.getMemberPartitions(nodeEngine.getThisAddress());
+        return new PartitionIdSet(partitionCount, memberPartitions);
     }
 
     private PartitionIdSet getAllPartitionIds() {

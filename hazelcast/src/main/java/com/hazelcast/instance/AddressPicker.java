@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.instance;
 
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 
 import java.nio.channels.ServerSocketChannel;
 import java.util.Map;
@@ -24,14 +24,13 @@ import java.util.Map;
 /**
  * Strategy to select an {@link Address} that a Hazelcast cluster member binds its server socket to
  * and a (potentially different) address that Hazelcast will advertise to other cluster members and clients.
- *
  */
 public interface AddressPicker {
 
     /**
      * Picks both server socket listener address and public address.
      *
-     * @throws Exception
+     * @throws Exception if failure happened while picking an address.
      */
     void pickAddress() throws Exception;
 

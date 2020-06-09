@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,14 @@
 package com.hazelcast.cp.internal.datastructures.lock.client;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.CPFencedLockGetLockOwnershipCodec;
-import com.hazelcast.client.impl.protocol.task.AbstractMessageTask;
-import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.client.impl.protocol.codec.FencedLockGetLockOwnershipCodec;
 import com.hazelcast.cp.internal.RaftService;
-import com.hazelcast.cp.internal.datastructures.lock.RaftLockOwnershipState;
-import com.hazelcast.cp.internal.datastructures.lock.RaftLockService;
+import com.hazelcast.cp.internal.client.AbstractCPMessageTask;
+import com.hazelcast.cp.internal.datastructures.lock.LockOwnershipState;
+import com.hazelcast.cp.internal.datastructures.lock.LockService;
 import com.hazelcast.cp.internal.datastructures.lock.operation.GetLockOwnershipStateOp;
-import com.hazelcast.instance.Node;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.security.permission.LockPermission;
 
@@ -36,8 +35,7 @@ import static com.hazelcast.cp.internal.raft.QueryPolicy.LINEARIZABLE;
 /**
  * Client message task for {@link GetLockOwnershipStateOp}
  */
-public class GetLockOwnershipStateMessageTask extends AbstractMessageTask<CPFencedLockGetLockOwnershipCodec.RequestParameters>
-        implements ExecutionCallback<RaftLockOwnershipState> {
+public class GetLockOwnershipStateMessageTask extends AbstractCPMessageTask<FencedLockGetLockOwnershipCodec.RequestParameters> {
 
     public GetLockOwnershipStateMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection);
@@ -47,25 +45,25 @@ public class GetLockOwnershipStateMessageTask extends AbstractMessageTask<CPFenc
     protected void processMessage() {
         RaftService service = nodeEngine.getService(RaftService.SERVICE_NAME);
         service.getInvocationManager()
-               .<RaftLockOwnershipState>query(parameters.groupId, new GetLockOwnershipStateOp(parameters.name), LINEARIZABLE)
-               .andThen(this);
+               .<LockOwnershipState>query(parameters.groupId, new GetLockOwnershipStateOp(parameters.name), LINEARIZABLE)
+               .whenCompleteAsync(this);
     }
 
     @Override
-    protected CPFencedLockGetLockOwnershipCodec.RequestParameters decodeClientMessage(ClientMessage clientMessage) {
-        return CPFencedLockGetLockOwnershipCodec.decodeRequest(clientMessage);
+    protected FencedLockGetLockOwnershipCodec.RequestParameters decodeClientMessage(ClientMessage clientMessage) {
+        return FencedLockGetLockOwnershipCodec.decodeRequest(clientMessage);
     }
 
     @Override
     protected ClientMessage encodeResponse(Object response) {
-        RaftLockOwnershipState lockState = (RaftLockOwnershipState) response;
-        return CPFencedLockGetLockOwnershipCodec.encodeResponse(lockState.getFence(), lockState.getLockCount(),
+        LockOwnershipState lockState = (LockOwnershipState) response;
+        return FencedLockGetLockOwnershipCodec.encodeResponse(lockState.getFence(), lockState.getLockCount(),
                 lockState.getSessionId(), lockState.getThreadId());
     }
 
     @Override
     public String getServiceName() {
-        return RaftLockService.SERVICE_NAME;
+        return LockService.SERVICE_NAME;
     }
 
     @Override
@@ -86,15 +84,5 @@ public class GetLockOwnershipStateMessageTask extends AbstractMessageTask<CPFenc
     @Override
     public Object[] getParameters() {
         return new Object[0];
-    }
-
-    @Override
-    public void onResponse(RaftLockOwnershipState response) {
-        sendResponse(response);
-    }
-
-    @Override
-    public void onFailure(Throwable t) {
-        handleProcessingFailure(t);
     }
 }

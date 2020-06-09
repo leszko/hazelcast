@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@
 package com.hazelcast.map;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapIndexConfig;
 import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.MapLoader;
-import com.hazelcast.core.Member;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -106,8 +105,8 @@ public class MapIndexBackupTest extends HazelcastTestSupport {
     private HazelcastInstance createNode(TestHazelcastInstanceFactory instanceFactory) {
         Config config = getConfig();
         MapConfig mapConfig = config.getMapConfig("book");
-        mapConfig.addMapIndexConfig(new MapIndexConfig("author", false));
-        mapConfig.addMapIndexConfig(new MapIndexConfig("year", true));
+        mapConfig.addIndexConfig(new IndexConfig(IndexType.HASH, "author"));
+        mapConfig.addIndexConfig(new IndexConfig(IndexType.SORTED, "year"));
         mapConfig.setMapStoreConfig(new MapStoreConfig().setImplementation(new BookMapLoader()));
         mapConfig.setBackupCount(1);
         return instanceFactory.newHazelcastInstance(config);

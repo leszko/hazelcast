@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.hazelcast.map.impl.recordstore;
 
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.map.MapLoader;
+import com.hazelcast.internal.serialization.Data;
 
 import java.util.List;
 import java.util.concurrent.Future;
@@ -34,7 +35,7 @@ interface RecordStoreLoader {
 
     /**
      * Triggers loading values for the given {@code keys} from the
-     * defined {@link com.hazelcast.core.MapLoader}.
+     * defined {@link MapLoader}.
      * The values will be loaded asynchronously and this method will
      * return as soon as the value loading task has been offloaded
      * to a different thread.

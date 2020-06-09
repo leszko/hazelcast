@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,25 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.ConfigDataSerializerHook;
+import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.merge.SplitBrainMergeTypeProvider;
-import com.hazelcast.spi.merge.SplitBrainMergeTypes;
-import com.hazelcast.util.StringUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.hazelcast.util.Preconditions.checkAsyncBackupCount;
-import static com.hazelcast.util.Preconditions.checkBackupCount;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkAsyncBackupCount;
+import static com.hazelcast.internal.util.Preconditions.checkBackupCount;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * Configuration for MultiMap.
  */
 @SuppressWarnings("checkstyle:methodcount")
-public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDataSerializable, NamedConfig {
+public class MultiMapConfig implements IdentifiedDataSerializable, NamedConfig {
 
     /**
      * The default number of synchronous backups for this MultiMap.
@@ -59,10 +58,8 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
     private int backupCount = DEFAULT_SYNC_BACKUP_COUNT;
     private int asyncBackupCount = DEFAULT_ASYNC_BACKUP_COUNT;
     private boolean statisticsEnabled = true;
-    private String quorumName;
+    private String splitBrainProtectionName;
     private MergePolicyConfig mergePolicyConfig = new MergePolicyConfig();
-
-    private transient MultiMapConfigReadOnly readOnly;
 
     public MultiMapConfig() {
     }
@@ -79,7 +76,7 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         this.backupCount = config.backupCount;
         this.asyncBackupCount = config.asyncBackupCount;
         this.statisticsEnabled = config.statisticsEnabled;
-        this.quorumName = config.quorumName;
+        this.splitBrainProtectionName = config.splitBrainProtectionName;
         this.mergePolicyConfig = config.mergePolicyConfig;
     }
 
@@ -199,17 +196,6 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         return this;
     }
 
-    @Deprecated
-    public int getSyncBackupCount() {
-        return backupCount;
-    }
-
-    @Deprecated
-    public MultiMapConfig setSyncBackupCount(int syncBackupCount) {
-        this.backupCount = syncBackupCount;
-        return this;
-    }
-
     /**
      * Gets the number of synchronous backups for this MultiMap.
      *
@@ -289,22 +275,22 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
     }
 
     /**
-     * Returns the quorum name for operations.
+     * Returns the split brain protection name for operations.
      *
-     * @return the quorum name
+     * @return the split brain protection name
      */
-    public String getQuorumName() {
-        return quorumName;
+    public String getSplitBrainProtectionName() {
+        return splitBrainProtectionName;
     }
 
     /**
-     * Sets the quorum name for operations.
+     * Sets the split brain protection name for operations.
      *
-     * @param quorumName the quorum name
+     * @param splitBrainProtectionName the split brain protection name
      * @return the updated configuration
      */
-    public MultiMapConfig setQuorumName(String quorumName) {
-        this.quorumName = quorumName;
+    public MultiMapConfig setSplitBrainProtectionName(String splitBrainProtectionName) {
+        this.splitBrainProtectionName = splitBrainProtectionName;
         return this;
     }
 
@@ -327,11 +313,6 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         return this;
     }
 
-    @Override
-    public Class getProvidedMergeTypes() {
-        return SplitBrainMergeTypes.MultiMapMergeTypes.class;
-    }
-
     public String toString() {
         return "MultiMapConfig{"
                 + "name='" + name + '\''
@@ -340,7 +321,7 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
                 + ", binary=" + binary
                 + ", backupCount=" + backupCount
                 + ", asyncBackupCount=" + asyncBackupCount
-                + ", quorumName=" + quorumName
+                + ", splitBrainProtectionName=" + splitBrainProtectionName
                 + ", mergePolicyConfig=" + mergePolicyConfig
                 + '}';
     }
@@ -372,7 +353,7 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         out.writeInt(backupCount);
         out.writeInt(asyncBackupCount);
         out.writeBoolean(statisticsEnabled);
-        out.writeUTF(quorumName);
+        out.writeUTF(splitBrainProtectionName);
         out.writeObject(mergePolicyConfig);
     }
 
@@ -393,7 +374,7 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         backupCount = in.readInt();
         asyncBackupCount = in.readInt();
         statisticsEnabled = in.readBoolean();
-        quorumName = in.readUTF();
+        splitBrainProtectionName = in.readUTF();
         mergePolicyConfig = in.readObject();
     }
 
@@ -431,7 +412,8 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         if (listenerConfigs != null ? !listenerConfigs.equals(that.listenerConfigs) : that.listenerConfigs != null) {
             return false;
         }
-        if (quorumName != null ? !quorumName.equals(that.quorumName) : that.quorumName != null) {
+        if (splitBrainProtectionName != null ? !splitBrainProtectionName.equals(that.splitBrainProtectionName)
+                : that.splitBrainProtectionName != null) {
             return false;
         }
         return mergePolicyConfig != null ? mergePolicyConfig.equals(that.mergePolicyConfig) : that.mergePolicyConfig == null;
@@ -447,21 +429,8 @@ public class MultiMapConfig implements SplitBrainMergeTypeProvider, IdentifiedDa
         result = 31 * result + backupCount;
         result = 31 * result + asyncBackupCount;
         result = 31 * result + (statisticsEnabled ? 1 : 0);
-        result = 31 * result + (quorumName != null ? quorumName.hashCode() : 0);
+        result = 31 * result + (splitBrainProtectionName != null ? splitBrainProtectionName.hashCode() : 0);
         result = 31 * result + (mergePolicyConfig != null ? mergePolicyConfig.hashCode() : 0);
         return result;
-    }
-
-    /**
-     * Gets immutable version of this configuration.
-     *
-     * @return Immutable version of this configuration
-     * @deprecated this method will be removed in 4.0; it is meant for internal usage only
-     */
-    public MultiMapConfigReadOnly getAsReadOnly() {
-        if (readOnly == null) {
-            readOnly = new MultiMapConfigReadOnly(this);
-        }
-        return readOnly;
     }
 }

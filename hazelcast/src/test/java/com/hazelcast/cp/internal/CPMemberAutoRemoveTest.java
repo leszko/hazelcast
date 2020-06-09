@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package com.hazelcast.cp.internal;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.cp.CPMember;
-import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.test.annotation.ParallelJVMTest;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.QuickTest;
 import org.hamcrest.Matchers;
 import org.junit.Test;
@@ -37,7 +37,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-@RunWith(HazelcastSerialClassRunner.class)
+@RunWith(HazelcastParallelClassRunner.class)
 @Category({QuickTest.class, ParallelJVMTest.class})
 public class CPMemberAutoRemoveTest extends HazelcastRaftTestSupport {
 
@@ -55,7 +55,7 @@ public class CPMemberAutoRemoveTest extends HazelcastRaftTestSupport {
             Collection<CPMemberInfo> activeMembers = getRaftService(instances[0]).getMetadataGroupManager()
                                                                                  .getActiveMembers();
             assertThat(activeMembers, not(hasItem(terminatedMember)));
-            assertThat(getRaftService(instances[0]).getMissingMembers(), Matchers.<CPMemberInfo>empty());
+            assertThat(getRaftService(instances[0]).getMissingMembers(), Matchers.empty());
         });
     }
 
@@ -105,8 +105,8 @@ public class CPMemberAutoRemoveTest extends HazelcastRaftTestSupport {
     @Override
     protected Config createConfig(int cpNodeCount, int groupSize) {
         Config config = super.createConfig(cpNodeCount, groupSize);
-        config.setProperty(GroupProperty.MERGE_FIRST_RUN_DELAY_SECONDS.getName(), "5")
-              .setProperty(GroupProperty.MERGE_NEXT_RUN_DELAY_SECONDS.getName(), "5")
+        config.setProperty(ClusterProperty.MERGE_FIRST_RUN_DELAY_SECONDS.getName(), "5")
+              .setProperty(ClusterProperty.MERGE_NEXT_RUN_DELAY_SECONDS.getName(), "5")
               .getCPSubsystemConfig()
               .setSessionTimeToLiveSeconds(missingRaftMemberRemovalSeconds)
               .setMissingCPMemberAutoRemovalSeconds(missingRaftMemberRemovalSeconds);

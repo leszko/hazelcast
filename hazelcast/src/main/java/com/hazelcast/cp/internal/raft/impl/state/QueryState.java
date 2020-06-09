@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package com.hazelcast.cp.internal.raft.impl.state;
 
-import com.hazelcast.core.Endpoint;
-import com.hazelcast.cp.internal.util.Tuple2;
-import com.hazelcast.internal.util.SimpleCompletableFuture;
+import com.hazelcast.internal.util.BiTuple;
+import com.hazelcast.cp.internal.raft.impl.RaftEndpoint;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 
 /**
  * This class is used to keep the queries until a heartbeat round is performed
@@ -64,20 +64,20 @@ public class QueryState {
     /**
      * Queries waiting to be executed.
      */
-    private final List<Tuple2<Object, SimpleCompletableFuture>> operations = new ArrayList<>();
+    private final List<BiTuple<Object, InternalCompletableFuture>> operations = new ArrayList<>();
 
     /**
      * The set of followers acknowledged the leader in the current heartbeat
      * round that is specified by {@link #queryRound}.
      */
-    private final Set<Endpoint> acks = new HashSet<>();
+    private final Set<RaftEndpoint> acks = new HashSet<>();
 
     /**
      * Adds the given query to the collection of queries and returns the number
      * of queries waiting to be executed. Also updates the minimum commit index
      * that is expected on the leader to execute the queries.
      */
-    public int addQuery(long commitIndex, Object operation, SimpleCompletableFuture resultFuture) {
+    public int addQuery(long commitIndex, Object operation, InternalCompletableFuture resultFuture) {
         if (commitIndex < queryCommitIndex) {
             throw new IllegalArgumentException("Cannot execute query: " + operation + " at commit index because of the current "
                     + this);
@@ -87,7 +87,7 @@ public class QueryState {
             queryCommitIndex = commitIndex;
         }
 
-        operations.add(Tuple2.of(operation, resultFuture));
+        operations.add(BiTuple.of(operation, resultFuture));
         int size = operations.size();
         if (size == 1) {
             queryRound++;
@@ -102,10 +102,10 @@ public class QueryState {
      * waiting queries to be executed and the {@code queryRound} argument
      * matches to the current query round.
      */
-    public boolean tryAck(long queryRound, Endpoint follower) {
+    public boolean tryAck(long queryRound, RaftEndpoint follower) {
         // If there is no query waiting to be executed or the received ack
         // belongs to an earlier query round, we ignore it.
-        if (operations.isEmpty() || this.queryRound > queryRound) {
+        if (queryCount() == 0  || this.queryRound > queryRound) {
             return false;
         }
 
@@ -118,7 +118,7 @@ public class QueryState {
     /**
      * Returns {@code true} if the given follower is removed from the ack list.
      */
-    public boolean removeAck(Endpoint follower) {
+    public boolean removeAck(RaftEndpoint follower) {
         return acks.remove(follower);
     }
 
@@ -147,11 +147,11 @@ public class QueryState {
             throw new IllegalStateException("Cannot execute: " + this + ", current commit index: " + commitIndex);
         }
 
-        return operations.size() > 0 && majority <= ackCount();
+        return queryCount() > 0 && majority <= ackCount();
     }
 
-    public boolean isAckNeeded(Endpoint follower, int majority) {
-        return !acks.contains(follower) && ackCount() < majority;
+    public boolean isAckNeeded(RaftEndpoint follower, int majority) {
+        return queryCount() > 0 && !acks.contains(follower) && ackCount() < majority;
     }
 
     private int ackCount() {
@@ -161,7 +161,7 @@ public class QueryState {
     /**
      * Returns the queries waiting to be executed.
      */
-    public Collection<Tuple2<Object, SimpleCompletableFuture>> operations() {
+    public Collection<BiTuple<Object, InternalCompletableFuture>> operations() {
         return operations;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package com.hazelcast.map.impl.querycache.subscriber.operation;
 
+import com.hazelcast.internal.util.ExceptionUtil;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.MapService;
-import com.hazelcast.map.impl.operation.MapOperation;
+import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.querycache.QueryCacheContext;
 import com.hazelcast.map.impl.querycache.accumulator.AccumulatorInfoSupplier;
 import com.hazelcast.map.impl.querycache.publisher.MapListenerRegistry;
@@ -28,15 +29,16 @@ import com.hazelcast.map.impl.querycache.publisher.PublisherRegistry;
 import com.hazelcast.map.impl.querycache.publisher.QueryCacheListenerRegistry;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.spi.EventService;
-import com.hazelcast.util.ExceptionUtil;
+import com.hazelcast.spi.impl.eventservice.EventService;
+import com.hazelcast.spi.impl.operationservice.AbstractNamedOperation;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * This operation removes all {@code QueryCache} resources on a node.
  */
-public class DestroyQueryCacheOperation extends MapOperation {
+public class DestroyQueryCacheOperation extends AbstractNamedOperation {
 
     private String cacheId;
     private transient boolean result;
@@ -50,7 +52,7 @@ public class DestroyQueryCacheOperation extends MapOperation {
     }
 
     @Override
-    protected void runInternal() {
+    public void run() {
         try {
             deregisterLocalIMapListener();
             removeAccumulatorInfo();
@@ -86,8 +88,8 @@ public class DestroyQueryCacheOperation extends MapOperation {
         if (listenerRegistry == null) {
             return;
         }
-        String listenerId = listenerRegistry.remove(cacheId);
-        mapService.getMapServiceContext().removeEventListener(name, listenerId);
+        UUID listenerId = listenerRegistry.remove(cacheId);
+        getMapServiceContext().removeEventListener(name, listenerId);
     }
 
     private void removeAccumulatorInfo() {
@@ -112,8 +114,13 @@ public class DestroyQueryCacheOperation extends MapOperation {
     }
 
     private PublisherContext getPublisherContext() {
-        QueryCacheContext queryCacheContext = mapServiceContext.getQueryCacheContext();
+        QueryCacheContext queryCacheContext = getMapServiceContext().getQueryCacheContext();
         return queryCacheContext.getPublisherContext();
+    }
+
+    private MapServiceContext getMapServiceContext() {
+        MapService service = getService();
+        return service.getMapServiceContext();
     }
 
     @Override

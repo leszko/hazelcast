@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,33 @@
 
 package com.hazelcast.internal.cluster.impl.operations;
 
+import com.hazelcast.cluster.Member;
 import com.hazelcast.config.OnJoinPermissionOperationName;
 import com.hazelcast.config.SecurityConfig;
+import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
+import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.management.operation.UpdatePermissionConfigOperation;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationAccessor;
 import com.hazelcast.spi.impl.operationservice.OperationResponseHandler;
-import com.hazelcast.spi.impl.operationservice.UrgentSystemOperation;
+import com.hazelcast.spi.impl.operationservice.OperationService;
 import com.hazelcast.spi.impl.operationservice.TargetAware;
+import com.hazelcast.spi.impl.operationservice.UrgentSystemOperation;
 
 import java.io.IOException;
 import java.util.Collection;
 
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.readCollection;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.writeCollection;
+import static com.hazelcast.spi.impl.operationexecutor.OperationRunner.runDirect;
 import static com.hazelcast.spi.impl.operationservice.OperationResponseHandlerFactory.createErrorLoggingResponseHandler;
-import static com.hazelcast.util.Preconditions.checkNegative;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNegative;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 public class OnJoinOp
         extends AbstractJoinOperation implements UrgentSystemOperation, TargetAware {
@@ -53,6 +58,11 @@ public class OnJoinOp
             checkNegative(op.getPartitionId(), "Post join operation can not have a partition ID!");
         }
         operations = ops;
+    }
+
+    @Override
+    public String getServiceName() {
+        return ClusterServiceImpl.SERVICE_NAME;
     }
 
     @Override
@@ -80,11 +90,21 @@ public class OnJoinOp
                 }
                 try {
                     // not running via OperationService since we don't want any restrictions like cluster state check etc.
-                    op.beforeRun();
-                    op.run();
-                    op.afterRun();
+                    runDirect(op);
                 } catch (Exception e) {
                     getLogger().warning("Error while running post-join operation: " + op, e);
+                }
+            }
+
+            final ClusterService clusterService = getService();
+            // if executed on master, broadcast to all other members except sender (joining member)
+            if (clusterService.isMaster()) {
+                final OperationService operationService = getNodeEngine().getOperationService();
+                for (Member member : clusterService.getMembers()) {
+                    if (!member.localMember() && !member.getUuid().equals(getCallerUuid())) {
+                        OnJoinOp operation = new OnJoinOp(operations);
+                        operationService.invokeOnTarget(getServiceName(), operation, member.getAddress());
+                    }
                 }
             }
         }

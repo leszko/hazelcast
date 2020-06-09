@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.CacheSimpleEntryListenerConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.EvictionConfig;
-import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.NativeMemoryConfig;
 import com.hazelcast.core.DistributedObject;
@@ -60,10 +59,12 @@ import java.util.Collection;
 import java.util.Collections;
 
 import static com.hazelcast.cache.HazelcastCachingProvider.propertiesByInstanceItself;
-import static com.hazelcast.config.EvictionConfig.MaxSizePolicy.USED_NATIVE_MEMORY_PERCENTAGE;
+import static com.hazelcast.config.EvictionPolicy.LFU;
 import static com.hazelcast.config.InMemoryFormat.BINARY;
 import static com.hazelcast.config.InMemoryFormat.NATIVE;
 import static com.hazelcast.config.InMemoryFormat.OBJECT;
+import static com.hazelcast.config.MaxSizePolicy.USED_NATIVE_MEMORY_PERCENTAGE;
+import static com.hazelcast.test.Accessors.getNode;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.not;
@@ -133,7 +134,8 @@ public class CacheCreateUseDestroyTest extends HazelcastTestSupport {
                 .setCacheEntryListeners(Collections.singletonList(entryListenerConfig));
 
         if (inMemoryFormat == NATIVE) {
-            EvictionConfig evictionConfig = new EvictionConfig(90, USED_NATIVE_MEMORY_PERCENTAGE, EvictionPolicy.LFU);
+            EvictionConfig evictionConfig = new EvictionConfig().setSize(90)
+                    .setMaxSizePolicy(USED_NATIVE_MEMORY_PERCENTAGE).setEvictionPolicy(LFU);
             cacheSimpleConfig.setEvictionConfig(evictionConfig);
 
             NativeMemoryConfig memoryConfig = new NativeMemoryConfig()

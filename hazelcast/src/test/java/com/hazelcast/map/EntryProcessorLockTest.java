@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,11 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.core.Offloadable;
 import com.hazelcast.core.ReadOnly;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.map.impl.LockAwareLazyMapEntry;
-import com.hazelcast.query.TruePredicate;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -46,6 +45,7 @@ import java.util.concurrent.ExecutionException;
 
 import static com.hazelcast.config.InMemoryFormat.BINARY;
 import static com.hazelcast.config.InMemoryFormat.OBJECT;
+import static com.hazelcast.test.Accessors.getSerializationService;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -103,7 +103,7 @@ public class EntryProcessorLockTest extends HazelcastTestSupport {
         IMap<String, String> map = getInitializedMap();
 
         map.lock("key1");
-        Map<String, Object> result = map.executeOnEntries(new TestNonOffloadableEntryProcessor(), TruePredicate.INSTANCE);
+        Map<String, Object> result = map.executeOnEntries(new TestNonOffloadableEntryProcessor(), Predicates.alwaysTrue());
 
         assertTrue((Boolean) result.get("key1"));
         assertFalse((Boolean) result.get("key2"));
@@ -152,7 +152,7 @@ public class EntryProcessorLockTest extends HazelcastTestSupport {
     public void test_submitToKey_notOffloadable() throws ExecutionException, InterruptedException {
         IMap<String, String> map = getInitializedMap();
 
-        Boolean result = (Boolean) map.submitToKey("key1", new TestNonOffloadableEntryProcessor()).get();
+        Boolean result = (Boolean) map.submitToKey("key1", new TestNonOffloadableEntryProcessor()).toCompletableFuture().get();
 
         assertFalse(result);
     }
@@ -161,7 +161,7 @@ public class EntryProcessorLockTest extends HazelcastTestSupport {
     public void test_submitToKey_Offloadable() throws ExecutionException, InterruptedException {
         IMap<String, String> map = getInitializedMap();
 
-        Boolean result = (Boolean) map.submitToKey("key1", new TestOffloadableEntryProcessor()).get();
+        Boolean result = (Boolean) map.submitToKey("key1", new TestOffloadableEntryProcessor()).toCompletableFuture().get();
 
         assertNull(result);
     }
@@ -170,7 +170,8 @@ public class EntryProcessorLockTest extends HazelcastTestSupport {
     public void test_submitToKey_Offloadable_ReadOnly() throws ExecutionException, InterruptedException {
         IMap<String, String> map = getInitializedMap();
 
-        Boolean result = (Boolean) map.submitToKey("key1", new TestOffloadableReadOnlyEntryProcessor()).get();
+        Boolean result = (Boolean) map.submitToKey("key1", new TestOffloadableReadOnlyEntryProcessor())
+                                      .toCompletableFuture().get();
 
         assertNull(result);
     }

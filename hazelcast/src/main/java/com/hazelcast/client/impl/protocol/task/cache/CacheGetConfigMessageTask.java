@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,15 @@ package com.hazelcast.client.impl.protocol.task.cache;
 import com.hazelcast.cache.impl.operation.CacheGetConfigOperation;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.CacheGetConfigCodec;
-import com.hazelcast.client.impl.protocol.task.AbstractAddressMessageTask;
-import com.hazelcast.instance.Node;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.Connection;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.client.impl.protocol.codec.holder.CacheConfigHolder;
+import com.hazelcast.client.impl.protocol.task.AbstractTargetMessageTask;
+import com.hazelcast.config.CacheConfig;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 import java.security.Permission;
+import java.util.UUID;
 
 import static com.hazelcast.cache.impl.ICacheService.SERVICE_NAME;
 
@@ -36,15 +37,15 @@ import static com.hazelcast.cache.impl.ICacheService.SERVICE_NAME;
  * @see CacheGetConfigOperation
  */
 public class CacheGetConfigMessageTask
-        extends AbstractAddressMessageTask<CacheGetConfigCodec.RequestParameters> {
+        extends AbstractTargetMessageTask<CacheGetConfigCodec.RequestParameters> {
 
     public CacheGetConfigMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection);
     }
 
     @Override
-    protected Address getAddress() {
-        return nodeEngine.getThisAddress();
+    protected UUID getTargetUuid() {
+        return nodeEngine.getClusterService().getLocalMember().getUuid();
     }
 
     @Override
@@ -79,9 +80,9 @@ public class CacheGetConfigMessageTask
 
     @Override
     protected ClientMessage encodeResponse(Object response) {
-        Data responseData = nodeEngine.toData(response);
+        CacheConfig cacheConfig = (CacheConfig) response;
 
-        return CacheGetConfigCodec.encodeResponse(responseData);
+        return CacheGetConfigCodec.encodeResponse(CacheConfigHolder.of(cacheConfig, serializationService));
     }
 
     @Override

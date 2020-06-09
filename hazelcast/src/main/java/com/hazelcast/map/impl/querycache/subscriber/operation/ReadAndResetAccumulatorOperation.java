@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,13 +33,14 @@ import java.util.Map;
 import static com.hazelcast.map.impl.querycache.utils.QueryCacheUtil.getAccumulators;
 
 /**
- * Reads all available items from the accumulator of the partition and resets it.
- * This operation is used to retrieve the events which are buffered during the initial
- * snapshot taking phase.
+ * Reads all available items from the accumulator of the partition
+ * and resets it. This operation is used to retrieve the events
+ * which are buffered during the initial snapshot taking phase.
  *
  * @see com.hazelcast.map.impl.querycache.subscriber.operation.PublisherCreateOperation
  */
-public class ReadAndResetAccumulatorOperation extends MapOperation implements PartitionAwareOperation {
+public class ReadAndResetAccumulatorOperation
+        extends MapOperation implements PartitionAwareOperation {
 
     private String cacheId;
     private List<Sequenced> eventDataList;

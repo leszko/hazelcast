@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package com.hazelcast.map.impl.querycache.subscriber;
 
-import com.hazelcast.core.IMapEvent;
+import com.hazelcast.map.IMapEvent;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.map.EventLostEvent;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.EntryEventFilter;
 import com.hazelcast.map.impl.ListenerAdapter;
 import com.hazelcast.map.impl.MapServiceContext;
@@ -28,26 +29,27 @@ import com.hazelcast.map.impl.querycache.QueryCacheListenerAdapter;
 import com.hazelcast.map.impl.querycache.event.LocalCacheWideEventData;
 import com.hazelcast.map.impl.querycache.event.LocalEntryEventData;
 import com.hazelcast.map.listener.MapListener;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.query.impl.QueryEntry;
 import com.hazelcast.query.impl.QueryableEntry;
 import com.hazelcast.query.impl.getters.Extractors;
-import com.hazelcast.spi.EventFilter;
-import com.hazelcast.spi.EventRegistration;
-import com.hazelcast.spi.EventService;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.eventservice.EventFilter;
+import com.hazelcast.spi.impl.eventservice.EventRegistration;
+import com.hazelcast.spi.impl.eventservice.EventService;
+import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.eventservice.impl.Registration;
 import com.hazelcast.spi.impl.eventservice.impl.TrueEventFilter;
-import com.hazelcast.spi.serialization.SerializationService;
-import com.hazelcast.util.ContextMutexFactory;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.ContextMutexFactory;
 
 import java.util.Collection;
+import java.util.UUID;
 
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
 import static com.hazelcast.map.impl.querycache.subscriber.QueryCacheEventListenerAdapters.createQueryCacheListenerAdaptor;
-import static com.hazelcast.nio.IOUtil.closeResource;
-import static com.hazelcast.util.Preconditions.checkHasText;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.nio.IOUtil.closeResource;
+import static com.hazelcast.internal.util.Preconditions.checkHasText;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * Node side event service implementation for query cache.
@@ -79,22 +81,22 @@ public class NodeQueryCacheEventService implements QueryCacheEventService<EventD
     }
 
     @Override
-    public String addListener(String mapName, String cacheId, MapListener listener) {
+    public UUID addListener(String mapName, String cacheId, MapListener listener) {
         return addListener(mapName, cacheId, listener, null);
     }
 
     @Override
-    public String addPublisherListener(String mapName, String cacheId, ListenerAdapter listenerAdapter) {
+    public UUID addPublisherListener(String mapName, String cacheId, ListenerAdapter listenerAdapter) {
         return mapServiceContext.addListenerAdapter(listenerAdapter, TrueEventFilter.INSTANCE, cacheId);
     }
 
     @Override
-    public boolean removePublisherListener(String mapName, String cacheId, String listenerId) {
+    public boolean removePublisherListener(String mapName, String cacheId, UUID listenerId) {
         return mapServiceContext.removeEventListener(cacheId, listenerId);
     }
 
     @Override
-    public String addListener(String mapName, String cacheId, MapListener listener, EventFilter filter) {
+    public UUID addListener(String mapName, String cacheId, MapListener listener, EventFilter filter) {
         checkHasText(mapName, "mapName");
         checkHasText(cacheId, "cacheId");
         checkNotNull(listener, "listener cannot be null");
@@ -115,7 +117,7 @@ public class NodeQueryCacheEventService implements QueryCacheEventService<EventD
     }
 
     @Override
-    public boolean removeListener(String mapName, String cacheId, String listenerId) {
+    public boolean removeListener(String mapName, String cacheId, UUID listenerId) {
         return eventService.deregisterListener(SERVICE_NAME, cacheId, listenerId);
     }
 
@@ -243,7 +245,7 @@ public class NodeQueryCacheEventService implements QueryCacheEventService<EventD
     /**
      * Listener for a {@link com.hazelcast.map.QueryCache QueryCache}.
      *
-     * @see com.hazelcast.core.IMap#getQueryCache(String, MapListener, com.hazelcast.query.Predicate, boolean)
+     * @see IMap#getQueryCache(String, MapListener, com.hazelcast.query.Predicate, boolean)
      */
     private static class SimpleQueryCacheListenerAdapter implements QueryCacheListenerAdapter<IMapEvent> {
 

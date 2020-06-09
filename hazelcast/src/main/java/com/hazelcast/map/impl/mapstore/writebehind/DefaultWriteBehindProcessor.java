@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package com.hazelcast.map.impl.mapstore.writebehind;
 
+import com.hazelcast.map.EntryLoader.MetadataAwareValue;
 import com.hazelcast.map.impl.mapstore.MapStoreContext;
 import com.hazelcast.map.impl.mapstore.writebehind.entry.DelayedEntry;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.hazelcast.util.CollectionUtil.isNotEmpty;
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.CollectionUtil.isNotEmpty;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -190,40 +191,8 @@ class DefaultWriteBehindProcessor extends AbstractWriteBehindProcessor<DelayedEn
      */
     private List<DelayedEntry> callSingleStoreWithListeners(final DelayedEntry entry,
                                                             final StoreOperationType operationType) {
-        return retryCall(new RetryTask<DelayedEntry>() {
-
-            @Override
-            public boolean run() throws Exception {
-                callBeforeStoreListeners(entry);
-                final Object key = toObject(entry.getKey());
-                final Object value = toObject(entry.getValue());
-                boolean result = operationType.processSingle(key, value, mapStore);
-                callAfterStoreListeners(entry);
-                return result;
-            }
-
-            /**
-             * Call when store failed.
-             */
-            @Override
-            public List<DelayedEntry> failureList() {
-                List failedDelayedEntries = new ArrayList<DelayedEntry>(1);
-                failedDelayedEntries.add(entry);
-                return failedDelayedEntries;
-            }
-        });
+        return retryCall(new StoreSingleEntryTask(entry, operationType, mapStore.isWithExpirationTime()));
     }
-
-    private Map convertToObject(Map<Object, DelayedEntry> batchMap) {
-        final Map map = createHashMap(batchMap.size());
-        for (DelayedEntry entry : batchMap.values()) {
-            final Object key = toObject(entry.getKey());
-            final Object value = toObject(entry.getValue());
-            map.put(key, value);
-        }
-        return map;
-    }
-
 
     /**
      * @param batchMap contains batched delayed entries.
@@ -231,31 +200,7 @@ class DefaultWriteBehindProcessor extends AbstractWriteBehindProcessor<DelayedEn
      */
     private List<DelayedEntry> callBatchStoreWithListeners(final Map<Object, DelayedEntry> batchMap,
                                                            final StoreOperationType operationType) {
-        return retryCall(new RetryTask<DelayedEntry>() {
-            private List<DelayedEntry> failedDelayedEntries = Collections.emptyList();
-
-            @Override
-            public boolean run() throws Exception {
-                callBeforeStoreListeners(batchMap.values());
-                final Map map = convertToObject(batchMap);
-                boolean result;
-                try {
-                    result = operationType.processBatch(map, mapStore);
-                } catch (Exception ex) {
-                    batchMap.keySet().removeIf(o -> !map.containsKey(toObject(o)));
-                    throw ex;
-                }
-                callAfterStoreListeners(batchMap.values());
-                return result;
-            }
-
-            @Override
-            public List<DelayedEntry> failureList() {
-                failedDelayedEntries = new ArrayList<>(batchMap.values().size());
-                failedDelayedEntries.addAll(batchMap.values());
-                return failedDelayedEntries;
-            }
-        });
+        return retryCall(new StoreBatchTask(batchMap, operationType, mapStore.isWithExpirationTime()));
     }
 
     private void callBeforeStoreListeners(DelayedEntry entry) {
@@ -370,9 +315,10 @@ class DefaultWriteBehindProcessor extends AbstractWriteBehindProcessor<DelayedEn
         // retry occurred.
         if (k > 0) {
             if (!result) {
-                // List of entries which can not be stored for this round. We will readd these entries
-                // in front of the relevant partition-write-behind-queues and will indefinitely retry to
-                // store them.
+                // List of entries which can not be stored for this round.
+                // We will re-add these failed entries to the front of the
+                // partition-write-behind-queues and will try to re-process
+                // them. This fail and retry cycle will be repeated indefinitely.
                 List failureList = task.failureList();
                 logger.severe("Number of entries which could not be stored is = [" + failureList.size() + "]"
                         + ", Hazelcast will indefinitely retry to store them", exception);
@@ -411,6 +357,94 @@ class DefaultWriteBehindProcessor extends AbstractWriteBehindProcessor<DelayedEn
          * @return failed store operations list.
          */
         List<T> failureList();
+    }
+
+    private class StoreSingleEntryTask implements RetryTask<DelayedEntry> {
+
+        private final DelayedEntry entry;
+        private final StoreOperationType operationType;
+        private final boolean withTtl;
+
+        StoreSingleEntryTask(DelayedEntry entry, StoreOperationType operationType, boolean withTtl) {
+            this.entry = entry;
+            this.operationType = operationType;
+            this.withTtl = withTtl;
+        }
+
+        @Override
+        public boolean run() throws Exception {
+            callBeforeStoreListeners(entry);
+            final Object key = toObject(entry.getKey());
+            final Object value = toObject(entry.getValue());
+            boolean result;
+            // if value is null, then we have a DeletedDelayedEntry. We should not create
+            // an EntryLoaderEntry for that
+            if (withTtl && value != null) {
+                long expirationTime = entry.getExpirationTime();
+                result = operationType.processSingle(key, new MetadataAwareValue(value, expirationTime), mapStore);
+            } else {
+                result = operationType.processSingle(key, value, mapStore);
+            }
+            callAfterStoreListeners(entry);
+            return result;
+        }
+
+        @Override
+        public List<DelayedEntry> failureList() {
+            List failedDelayedEntries = new ArrayList<DelayedEntry>(1);
+            failedDelayedEntries.add(entry);
+            return failedDelayedEntries;
+        }
+    }
+
+    private class StoreBatchTask implements RetryTask<DelayedEntry> {
+
+        private final Map<Object, DelayedEntry> batchMap;
+        private final StoreOperationType operationType;
+        private final boolean withTtl;
+        private List<DelayedEntry> failedDelayedEntries = Collections.emptyList();
+
+        StoreBatchTask(final Map<Object, DelayedEntry> batchMap, final StoreOperationType operationType, boolean withTtl) {
+            this.batchMap = batchMap;
+            this.operationType = operationType;
+            this.withTtl = withTtl;
+        }
+
+        @Override
+        public boolean run() throws Exception {
+            callBeforeStoreListeners(batchMap.values());
+            final Map map = convertToObject(batchMap);
+            boolean result;
+            try {
+                result = operationType.processBatch(map, mapStore);
+            } catch (Exception ex) {
+                batchMap.keySet().removeIf(o -> !map.containsKey(toObject(o)));
+                throw ex;
+            }
+            callAfterStoreListeners(batchMap.values());
+            return result;
+        }
+
+        @Override
+        public List<DelayedEntry> failureList() {
+            failedDelayedEntries = new ArrayList<>(batchMap.values().size());
+            failedDelayedEntries.addAll(batchMap.values());
+            return failedDelayedEntries;
+        }
+
+        private Map convertToObject(Map<Object, DelayedEntry> batchMap) {
+            final Map map = createHashMap(batchMap.size());
+            for (DelayedEntry entry : batchMap.values()) {
+                final Object key = toObject(entry.getKey());
+                final Object value = toObject(entry.getValue());
+                if (withTtl && value != null) {
+                    map.put(key, new MetadataAwareValue(value, entry.getExpirationTime()));
+                } else {
+                    map.put(key, value);
+                }
+            }
+            return map;
+        }
     }
 
     private void sleepSeconds(long secs) {

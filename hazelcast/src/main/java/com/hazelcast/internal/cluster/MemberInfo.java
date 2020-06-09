@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 package com.hazelcast.internal.cluster;
 
+import com.hazelcast.cluster.impl.MemberImpl;
+import com.hazelcast.internal.util.UUIDSerializationUtil;
 import com.hazelcast.instance.EndpointQualifier;
-import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -29,18 +30,19 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.hazelcast.instance.EndpointQualifier.MEMBER;
-import static com.hazelcast.instance.MemberImpl.NA_MEMBER_LIST_JOIN_VERSION;
+import static com.hazelcast.cluster.impl.MemberImpl.NA_MEMBER_LIST_JOIN_VERSION;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.readMap;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.writeMap;
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 import static java.util.Collections.singletonMap;
 
 public class MemberInfo implements IdentifiedDataSerializable {
 
     private Address address;
-    private String uuid;
+    private UUID uuid;
     private boolean liteMember;
     private MemberVersion version;
     private Map<String, String> attributes;
@@ -51,16 +53,21 @@ public class MemberInfo implements IdentifiedDataSerializable {
     public MemberInfo() {
     }
 
-    public MemberInfo(Address address, String uuid, Map<String, String> attributes, MemberVersion version) {
-        this(address, uuid, attributes, false, version, NA_MEMBER_LIST_JOIN_VERSION, Collections.emptyMap());
+    public MemberInfo(Address address, UUID uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version) {
+        this(address, uuid, attributes, liteMember, version, NA_MEMBER_LIST_JOIN_VERSION, Collections.emptyMap());
     }
 
-    public MemberInfo(Address address, String uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version,
+    public MemberInfo(Address address, UUID uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version,
                       Map<EndpointQualifier, Address> addressMap) {
         this(address, uuid, attributes, liteMember, version, NA_MEMBER_LIST_JOIN_VERSION, addressMap);
     }
 
-    public MemberInfo(Address address, String uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version,
+    public MemberInfo(Address address, UUID uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version,
+                      boolean isAddressMapExists, Map<EndpointQualifier, Address> addressMap) {
+        this(address, uuid, attributes, liteMember, version, NA_MEMBER_LIST_JOIN_VERSION, addressMap);
+    }
+
+    public MemberInfo(Address address, UUID uuid, Map<String, String> attributes, boolean liteMember, MemberVersion version,
                       int memberListJoinVersion, Map<EndpointQualifier, Address> addressMap) {
         this.address = address;
         this.uuid = uuid;
@@ -84,7 +91,7 @@ public class MemberInfo implements IdentifiedDataSerializable {
         return version;
     }
 
-    public String getUuid() {
+    public UUID getUuid() {
         return uuid;
     }
 
@@ -117,7 +124,7 @@ public class MemberInfo implements IdentifiedDataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         address = in.readObject();
-        uuid = in.readUTF();
+        uuid = UUIDSerializationUtil.readUUID(in);
         liteMember = in.readBoolean();
         int size = in.readInt();
         if (size > 0) {
@@ -136,7 +143,7 @@ public class MemberInfo implements IdentifiedDataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(address);
-        out.writeUTF(uuid);
+        UUIDSerializationUtil.writeUUID(out, uuid);
         out.writeBoolean(liteMember);
         out.writeInt(attributes == null ? 0 : attributes.size());
         if (attributes != null) {
@@ -151,30 +158,27 @@ public class MemberInfo implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((address == null) ? 0 : address.hashCode());
-        return result;
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MemberInfo that = (MemberInfo) o;
+
+        if (!address.equals(that.address)) {
+            return false;
+        }
+        return uuid != null ? uuid.equals(that.uuid) : that.uuid == null;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        MemberInfo other = (MemberInfo) obj;
-        if (address == null) {
-            return other.address == null;
-        } else {
-            return address.equals(other.address);
-        }
+    public int hashCode() {
+        int result = address.hashCode();
+        result = 31 * result + (uuid != null ? uuid.hashCode() : 0);
+        return result;
     }
 
     @Override

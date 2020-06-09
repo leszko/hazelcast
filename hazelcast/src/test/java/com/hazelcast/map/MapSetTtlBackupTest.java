@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
@@ -106,16 +105,16 @@ public class MapSetTtlBackupTest extends HazelcastTestSupport {
         String mapName = randomMapName();
         HazelcastInstance instance = instances[0];
 
-        putKeys(instance, mapName, 10, 0, 20);
+        putKeys(instance, mapName, 15, 0, 20);
         setTtl(instance, mapName, 0, 20, 0, TimeUnit.SECONDS);
-        sleepAtLeastMillis(10100);
+        sleepAtLeastMillis(15100);
         for (int i = 0; i < CLUSTER_SIZE; i++) {
             assertKeys(instances, mapName, 0, 20);
         }
     }
 
     protected Config getConfig() {
-        return new Config();
+        return smallInstanceConfig();
     }
 
     @SuppressWarnings("SameParameterValue")

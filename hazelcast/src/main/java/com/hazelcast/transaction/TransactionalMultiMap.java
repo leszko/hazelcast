@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 
 package com.hazelcast.transaction;
 
-import com.hazelcast.core.BaseMultiMap;
-import com.hazelcast.core.MultiMap;
+import com.hazelcast.config.SplitBrainProtectionConfig;
+import com.hazelcast.multimap.BaseMultiMap;
+import com.hazelcast.multimap.MultiMap;
 
 import java.util.Collection;
 
 /**
  * Transactional implementation of {@link BaseMultiMap}.
  * <p>
- * Supports Quorum {@link com.hazelcast.config.QuorumConfig} since 3.10 in
+ * Supports split brain protection {@link SplitBrainProtectionConfig} since 3.10 in
  * cluster versions 3.10 and higher.
  *
  * @param <K> type of the multimap key

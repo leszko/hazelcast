@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import com.hazelcast.config.MemberAddressProviderConfig;
 import com.hazelcast.config.RestServerEndpointConfig;
 import com.hazelcast.config.ServerSocketEndpointConfig;
 import com.hazelcast.config.TcpIpConfig;
-import com.hazelcast.config.WanPublisherConfig;
+import com.hazelcast.config.WanBatchPublisherConfig;
 import com.hazelcast.config.WanReplicationConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.EndpointQualifier;
-import com.hazelcast.instance.HazelcastInstanceFactory;
 import com.hazelcast.instance.ProtocolType;
+import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -117,13 +117,12 @@ public class TestAdvancedNetworkApplicationContext {
                 Arrays.asList(HEALTH_CHECK, CLUSTER_READ));
 
         WanReplicationConfig testWan = config.getWanReplicationConfig("testWan");
-        WanPublisherConfig tokyoWanPublisherConfig = null;
-        for (WanPublisherConfig wanPublisherConfig : testWan.getWanPublisherConfigs()) {
-            if (wanPublisherConfig.getPublisherId().equals("tokyoPublisherId")) {
-                tokyoWanPublisherConfig = wanPublisherConfig;
-                break;
-            }
-        }
+        WanBatchPublisherConfig tokyoWanPublisherConfig =
+                testWan.getBatchPublisherConfigs()
+                       .stream()
+                       .filter(pc -> pc.getPublisherId().equals("tokyoPublisherId"))
+                       .findFirst()
+                       .get();
 
         assertNotNull(tokyoWanPublisherConfig);
         assertEquals("wan-tokyo", tokyoWanPublisherConfig.getEndpoint());

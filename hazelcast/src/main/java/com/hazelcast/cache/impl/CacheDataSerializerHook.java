@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,8 @@ import com.hazelcast.cache.impl.operation.CacheClearBackupOperation;
 import com.hazelcast.cache.impl.operation.CacheClearOperation;
 import com.hazelcast.cache.impl.operation.CacheClearOperationFactory;
 import com.hazelcast.cache.impl.operation.CacheContainsKeyOperation;
-import com.hazelcast.cache.impl.operation.CacheCreateConfigOperation;
 import com.hazelcast.cache.impl.operation.CacheDestroyOperation;
-import com.hazelcast.cache.impl.operation.CacheEntryIteratorOperation;
+import com.hazelcast.cache.impl.operation.CacheFetchEntriesOperation;
 import com.hazelcast.cache.impl.operation.CacheEntryProcessorOperation;
 import com.hazelcast.cache.impl.operation.CacheExpireBatchBackupOperation;
 import com.hazelcast.cache.impl.operation.CacheGetAllOperation;
@@ -42,8 +41,7 @@ import com.hazelcast.cache.impl.operation.CacheGetAndReplaceOperation;
 import com.hazelcast.cache.impl.operation.CacheGetConfigOperation;
 import com.hazelcast.cache.impl.operation.CacheGetInvalidationMetaDataOperation;
 import com.hazelcast.cache.impl.operation.CacheGetOperation;
-import com.hazelcast.cache.impl.operation.CacheKeyIteratorOperation;
-import com.hazelcast.cache.impl.operation.CacheLegacyMergeOperation;
+import com.hazelcast.cache.impl.operation.CacheFetchKeysOperation;
 import com.hazelcast.cache.impl.operation.CacheListenerRegistrationOperation;
 import com.hazelcast.cache.impl.operation.CacheLoadAllOperation;
 import com.hazelcast.cache.impl.operation.CacheLoadAllOperationFactory;
@@ -73,13 +71,14 @@ import com.hazelcast.cache.impl.record.CacheObjectRecord;
 import com.hazelcast.cache.impl.tenantcontrol.CacheDestroyEventContext;
 import com.hazelcast.client.impl.protocol.task.cache.CacheAssignAndGetUuidsOperation;
 import com.hazelcast.client.impl.protocol.task.cache.CacheAssignAndGetUuidsOperationFactory;
-import com.hazelcast.internal.management.request.GetCacheEntryRequest;
+import com.hazelcast.config.CacheConfig;
+import com.hazelcast.internal.management.operation.GetCacheEntryViewEntryProcessor;
 import com.hazelcast.internal.serialization.DataSerializerHook;
 import com.hazelcast.internal.serialization.impl.ArrayDataSerializableFactory;
 import com.hazelcast.internal.serialization.impl.FactoryIdHelper;
+import com.hazelcast.internal.util.ConstructorFunction;
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.util.ConstructorFunction;
 
 import static com.hazelcast.internal.serialization.impl.FactoryIdHelper.CACHE_DS_FACTORY;
 import static com.hazelcast.internal.serialization.impl.FactoryIdHelper.CACHE_DS_FACTORY_ID;
@@ -119,55 +118,52 @@ public final class CacheDataSerializerHook
     public static final short KEY_ITERATION_RESULT = 23;
     public static final short ENTRY_PROCESSOR = 24;
     public static final short CLEAR_RESPONSE = 25;
-    public static final short CREATE_CONFIG = 26;
-    public static final short GET_CONFIG = 27;
-    public static final short MANAGEMENT_CONFIG = 28;
-    public static final short LISTENER_REGISTRATION = 29;
-    public static final short DESTROY_CACHE = 30;
-    public static final short CACHE_EVENT_DATA = 31;
-    public static final short CACHE_EVENT_DATA_SET = 32;
-    public static final short BACKUP_ENTRY_PROCESSOR = 33;
-    public static final short REMOVE_ALL = 34;
-    public static final short REMOVE_ALL_BACKUP = 35;
-    public static final short REMOVE_ALL_FACTORY = 36;
-    public static final short PUT_ALL = 37;
-    public static final short LEGACY_MERGE = 38;
-    public static final short INVALIDATION_MESSAGE = 39;
-    public static final short BATCH_INVALIDATION_MESSAGE = 40;
-    public static final short ENTRY_ITERATOR = 41;
-    public static final short ENTRY_ITERATION_RESULT = 42;
-    public static final short CACHE_PARTITION_LOST_EVENT_FILTER = 43;
-    public static final short DEFAULT_CACHE_ENTRY_VIEW = 44;
-    public static final short CACHE_REPLICATION = 45;
-    public static final short CACHE_POST_JOIN = 46;
-    public static final short CACHE_DATA_RECORD = 47;
-    public static final short CACHE_OBJECT_RECORD = 48;
-    public static final short CACHE_PARTITION_EVENT_DATA = 49;
+    public static final short GET_CONFIG = 26;
+    public static final short MANAGEMENT_CONFIG = 27;
+    public static final short LISTENER_REGISTRATION = 28;
+    public static final short DESTROY_CACHE = 29;
+    public static final short CACHE_EVENT_DATA = 30;
+    public static final short CACHE_EVENT_DATA_SET = 31;
+    public static final short BACKUP_ENTRY_PROCESSOR = 32;
+    public static final short REMOVE_ALL = 33;
+    public static final short REMOVE_ALL_BACKUP = 34;
+    public static final short REMOVE_ALL_FACTORY = 35;
+    public static final short PUT_ALL = 36;
+    public static final short ENTRY_ITERATOR = 37;
+    public static final short ENTRY_ITERATION_RESULT = 38;
+    public static final short CACHE_PARTITION_LOST_EVENT_FILTER = 39;
+    public static final short DEFAULT_CACHE_ENTRY_VIEW = 40;
+    public static final short CACHE_REPLICATION = 41;
+    public static final short CACHE_POST_JOIN = 42;
+    public static final short CACHE_DATA_RECORD = 43;
+    public static final short CACHE_OBJECT_RECORD = 44;
+    public static final short CACHE_PARTITION_EVENT_DATA = 45;
 
-    public static final short CACHE_INVALIDATION_METADATA = 50;
-    public static final short CACHE_INVALIDATION_METADATA_RESPONSE = 51;
-    public static final short CACHE_ASSIGN_AND_GET_UUIDS = 52;
-    public static final short CACHE_ASSIGN_AND_GET_UUIDS_FACTORY = 53;
-    public static final short CACHE_NEAR_CACHE_STATE_HOLDER = 54;
-    public static final short CACHE_EVENT_LISTENER_ADAPTOR = 55;
-    public static final short EVENT_JOURNAL_SUBSCRIBE_OPERATION = 56;
-    public static final short EVENT_JOURNAL_READ_OPERATION = 57;
-    public static final short EVENT_JOURNAL_DESERIALIZING_CACHE_EVENT = 58;
-    public static final short EVENT_JOURNAL_INTERNAL_CACHE_EVENT = 59;
-    public static final short EVENT_JOURNAL_READ_RESULT_SET = 60;
-    public static final int PRE_JOIN_CACHE_CONFIG = 61;
-    public static final int CACHE_BROWSER_ENTRY_VIEW = 62;
-    public static final int GET_CACHE_ENTRY_VIEW_PROCESSOR = 63;
+    public static final short CACHE_INVALIDATION_METADATA = 46;
+    public static final short CACHE_INVALIDATION_METADATA_RESPONSE = 47;
+    public static final short CACHE_ASSIGN_AND_GET_UUIDS = 48;
+    public static final short CACHE_ASSIGN_AND_GET_UUIDS_FACTORY = 49;
+    public static final short CACHE_NEAR_CACHE_STATE_HOLDER = 50;
+    public static final short CACHE_EVENT_LISTENER_ADAPTOR = 51;
+    public static final short EVENT_JOURNAL_SUBSCRIBE_OPERATION = 52;
+    public static final short EVENT_JOURNAL_READ_OPERATION = 53;
+    public static final short EVENT_JOURNAL_DESERIALIZING_CACHE_EVENT = 54;
+    public static final short EVENT_JOURNAL_INTERNAL_CACHE_EVENT = 55;
+    public static final short EVENT_JOURNAL_READ_RESULT_SET = 56;
+    public static final int PRE_JOIN_CACHE_CONFIG = 57;
+    public static final int CACHE_BROWSER_ENTRY_VIEW = 58;
+    public static final int GET_CACHE_ENTRY_VIEW_PROCESSOR = 59;
 
-    public static final int MERGE_FACTORY = 64;
-    public static final int MERGE = 65;
-    public static final int ADD_CACHE_CONFIG_OPERATION = 66;
-    public static final int SET_EXPIRY_POLICY = 67;
-    public static final int SET_EXPIRY_POLICY_BACKUP = 68;
-    public static final int EXPIRE_BATCH_BACKUP = 69;
-    public static final int CACHE_DESTROY_EVENT_CONTEXT = 70;
+    public static final int MERGE_FACTORY = 60;
+    public static final int MERGE = 61;
+    public static final int ADD_CACHE_CONFIG_OPERATION = 62;
+    public static final int SET_EXPIRY_POLICY = 63;
+    public static final int SET_EXPIRY_POLICY_BACKUP = 64;
+    public static final int EXPIRE_BATCH_BACKUP = 65;
+    public static final int CACHE_DESTROY_EVENT_CONTEXT = 66;
+    public static final int CACHE_CONFIG = 67;
 
-    private static final int LEN = CACHE_DESTROY_EVENT_CONTEXT + 1;
+    private static final int LEN = CACHE_CONFIG + 1;
 
     public int getFactoryId() {
         return F_ID;
@@ -194,11 +190,10 @@ public final class CacheDataSerializerHook
         constructors[LOAD_ALL] = arg -> new CacheLoadAllOperation();
         constructors[LOAD_ALL_FACTORY] = arg -> new CacheLoadAllOperationFactory();
         constructors[EXPIRY_POLICY] = arg -> new HazelcastExpiryPolicy();
-        constructors[KEY_ITERATOR] = arg -> new CacheKeyIteratorOperation();
-        constructors[KEY_ITERATION_RESULT] = arg -> new CacheKeyIterationResult();
+        constructors[KEY_ITERATOR] = arg -> new CacheFetchKeysOperation();
+        constructors[KEY_ITERATION_RESULT] = arg -> new CacheKeysWithCursor();
         constructors[ENTRY_PROCESSOR] = arg -> new CacheEntryProcessorOperation();
         constructors[CLEAR_RESPONSE] = arg -> new CacheClearResponse();
-        constructors[CREATE_CONFIG] = arg -> new CacheCreateConfigOperation();
         constructors[GET_CONFIG] = arg -> new CacheGetConfigOperation();
         constructors[MANAGEMENT_CONFIG] = arg -> new CacheManagementConfigOperation();
         constructors[LISTENER_REGISTRATION] = arg -> new CacheListenerRegistrationOperation();
@@ -212,9 +207,8 @@ public final class CacheDataSerializerHook
         constructors[REMOVE_ALL_BACKUP] = arg -> new CacheRemoveAllBackupOperation();
         constructors[REMOVE_ALL_FACTORY] = arg -> new CacheRemoveAllOperationFactory();
         constructors[PUT_ALL] = arg -> new CachePutAllOperation();
-        constructors[LEGACY_MERGE] = arg -> new CacheLegacyMergeOperation();
-        constructors[ENTRY_ITERATOR] = arg -> new CacheEntryIteratorOperation();
-        constructors[ENTRY_ITERATION_RESULT] = arg -> new CacheEntryIterationResult();
+        constructors[ENTRY_ITERATOR] = arg -> new CacheFetchEntriesOperation();
+        constructors[ENTRY_ITERATION_RESULT] = arg -> new CacheEntriesWithCursor();
         constructors[CACHE_PARTITION_LOST_EVENT_FILTER] = arg -> new CachePartitionLostEventFilter();
         constructors[DEFAULT_CACHE_ENTRY_VIEW] = arg -> new DefaultCacheEntryView();
         constructors[CACHE_REPLICATION] = arg -> new CacheReplicationOperation();
@@ -234,8 +228,8 @@ public final class CacheDataSerializerHook
         constructors[EVENT_JOURNAL_INTERNAL_CACHE_EVENT] = arg -> new InternalEventJournalCacheEvent();
         constructors[EVENT_JOURNAL_READ_RESULT_SET] = arg -> new CacheEventJournalReadResultSetImpl<>();
         constructors[PRE_JOIN_CACHE_CONFIG] = arg -> new PreJoinCacheConfig();
-        constructors[CACHE_BROWSER_ENTRY_VIEW] = arg -> new GetCacheEntryRequest.CacheBrowserEntryView();
-        constructors[GET_CACHE_ENTRY_VIEW_PROCESSOR] = arg -> new GetCacheEntryRequest.GetCacheEntryViewEntryProcessor();
+        constructors[CACHE_BROWSER_ENTRY_VIEW] = arg -> new GetCacheEntryViewEntryProcessor.CacheBrowserEntryView();
+        constructors[GET_CACHE_ENTRY_VIEW_PROCESSOR] = arg -> new GetCacheEntryViewEntryProcessor();
         constructors[MERGE_FACTORY] = arg -> new CacheMergeOperationFactory();
         constructors[MERGE] = arg -> new CacheMergeOperation();
         constructors[ADD_CACHE_CONFIG_OPERATION] = arg -> new AddCacheConfigOperation();
@@ -243,6 +237,7 @@ public final class CacheDataSerializerHook
         constructors[SET_EXPIRY_POLICY_BACKUP] = arg -> new CacheSetExpiryPolicyBackupOperation();
         constructors[EXPIRE_BATCH_BACKUP] = arg -> new CacheExpireBatchBackupOperation();
         constructors[CACHE_DESTROY_EVENT_CONTEXT] = arg -> new CacheDestroyEventContext();
+        constructors[CACHE_CONFIG] = arg -> new CacheConfig<>();
 
         return new ArrayDataSerializableFactory(constructors);
     }

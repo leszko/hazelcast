@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ import com.hazelcast.spi.impl.operationservice.ReadonlyOperation;
  * <p>
  * Returns the previous state of the key loading and dispatching future.
  */
-public class TriggerLoadIfNeededOperation extends MapOperation implements PartitionAwareOperation, ReadonlyOperation {
+public class TriggerLoadIfNeededOperation extends MapOperation
+        implements PartitionAwareOperation, ReadonlyOperation {
 
     private Boolean isLoaded;
 

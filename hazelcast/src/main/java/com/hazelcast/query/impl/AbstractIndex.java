@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,17 @@
 
 package com.hazelcast.query.impl;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.config.IndexType;
 import com.hazelcast.core.TypeConverter;
+import com.hazelcast.internal.monitor.impl.IndexOperationStats;
+import com.hazelcast.internal.monitor.impl.PerIndexStats;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.monitor.impl.IndexOperationStats;
-import com.hazelcast.monitor.impl.PerIndexStats;
+import com.hazelcast.map.impl.StoreAdapter;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.getters.Extractors;
 import com.hazelcast.query.impl.getters.MultiResult;
 import com.hazelcast.query.impl.predicates.PredicateDataSerializerHook;
@@ -30,9 +34,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.util.Set;
 
+import static com.hazelcast.internal.util.SetUtil.createHashSet;
 import static com.hazelcast.query.impl.CompositeValue.NEGATIVE_INFINITY;
 import static com.hazelcast.query.impl.TypeConverters.NULL_CONVERTER;
-import static com.hazelcast.util.SetUtil.createHashSet;
 import static java.util.Collections.emptySet;
 
 /**
@@ -52,37 +56,54 @@ public abstract class AbstractIndex implements InternalIndex {
     protected final IndexStore indexStore;
     protected final IndexCopyBehavior copyBehavior;
 
-    private final String name;
     private final String[] components;
+    private final IndexConfig config;
     private final boolean ordered;
     private final PerIndexStats stats;
+
+    /**
+     * Reference to the store if it is bound to the same partition as the index (local index), {@code null} otherwise.
+     */
+    private final StoreAdapter partitionStoreAdapter;
 
     private volatile TypeConverter converter;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
-    public AbstractIndex(String name, String[] components, boolean ordered, InternalSerializationService ss,
-                         Extractors extractors, IndexCopyBehavior copyBehavior, PerIndexStats stats) {
-        this.name = name;
-        this.components = components;
-        this.ordered = ordered;
+    public AbstractIndex(
+        IndexConfig config,
+        InternalSerializationService ss,
+        Extractors extractors,
+        IndexCopyBehavior copyBehavior,
+        PerIndexStats stats,
+        StoreAdapter partitionStoreAdapter
+    ) {
+        this.config = config;
+        this.components = IndexUtils.getComponents(config);
+        this.ordered = config.getType() == IndexType.SORTED;
         this.ss = ss;
         this.extractors = extractors;
         this.copyBehavior = copyBehavior;
-        this.indexStore = createIndexStore(ordered, stats);
+        this.partitionStoreAdapter = partitionStoreAdapter;
+        this.indexStore = createIndexStore(config, stats);
         this.stats = stats;
     }
 
-    protected abstract IndexStore createIndexStore(boolean ordered, PerIndexStats stats);
+    protected abstract IndexStore createIndexStore(IndexConfig config, PerIndexStats stats);
 
     @Override
     public String getName() {
-        return name;
+        return config.getName();
     }
 
     @SuppressFBWarnings("EI_EXPOSE_REP")
     @Override
     public String[] getComponents() {
         return components;
+    }
+
+    @Override
+    public IndexConfig getConfig() {
+        return config;
     }
 
     @Override
@@ -93,6 +114,10 @@ public abstract class AbstractIndex implements InternalIndex {
     @Override
     public TypeConverter getConverter() {
         return converter;
+    }
+
+    public StoreAdapter getPartitionStoreAdapter() {
+        return partitionStoreAdapter;
     }
 
     @Override
@@ -128,8 +153,24 @@ public abstract class AbstractIndex implements InternalIndex {
         IndexOperationStats operationStats = stats.createOperationStats();
 
         Object attributeValue = extractAttributeValue(key, value);
-        indexStore.remove(attributeValue, key, operationStats);
+        indexStore.remove(attributeValue, key, value, operationStats);
         stats.onRemove(timestamp, operationStats, operationSource);
+    }
+
+    @Override
+    public boolean isEvaluateOnly() {
+        return indexStore.isEvaluateOnly();
+    }
+
+    @Override
+    public boolean canEvaluate(Class<? extends Predicate> predicateClass) {
+        return indexStore.canEvaluate(predicateClass);
+    }
+
+    @Override
+    public Set<QueryableEntry> evaluate(Predicate predicate) {
+        assert converter != null;
+        return indexStore.evaluate(predicate, converter);
     }
 
     @Override
@@ -220,15 +261,17 @@ public abstract class AbstractIndex implements InternalIndex {
     }
 
     private Object extractAttributeValue(Data key, Object value) {
-        if (components == null) {
-            return QueryableEntry.extractAttributeValue(extractors, ss, name, key, value, null);
+        if (components.length == 1) {
+            return QueryableEntry.extractAttributeValue(extractors, ss, components[0], key, value, null);
         } else {
             Comparable[] valueComponents = new Comparable[components.length];
             for (int i = 0; i < components.length; ++i) {
-                Object extractedValue = QueryableEntry.extractAttributeValue(extractors, ss, components[i], key, value, null);
+                String attribute = components[i];
+
+                Object extractedValue = QueryableEntry.extractAttributeValue(extractors, ss, attribute, key, value, null);
                 if (extractedValue instanceof MultiResult) {
                     throw new IllegalStateException(
-                            "Collection/array attributes are not supported by composite indexes: " + components[i]);
+                            "Collection/array attributes are not supported by composite indexes: " + attribute);
                 } else if (extractedValue == null || extractedValue instanceof Comparable) {
                     valueComponents[i] = (Comparable) extractedValue;
                 } else {
@@ -254,8 +297,8 @@ public abstract class AbstractIndex implements InternalIndex {
     }
 
     private TypeConverter obtainConverter(QueryableEntry entry) {
-        if (components == null) {
-            return entry.getConverter(name);
+        if (components.length == 1) {
+            return entry.getConverter(components[0]);
         } else {
             CompositeConverter existingConverter = (CompositeConverter) converter;
             TypeConverter[] converters = new TypeConverter[components.length];

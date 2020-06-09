@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.MergePolicyConfigReadOnly;
 import com.hazelcast.spi.merge.DiscardMergePolicy;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -29,7 +30,7 @@ import org.junit.runner.RunWith;
 public class MergePolicyReadOnlyConfigTest {
 
     private MergePolicyConfig getReadOnlyConfig() {
-        return new MergePolicyConfig().getAsReadOnly();
+        return new MergePolicyConfigReadOnly(new MergePolicyConfig());
     }
 
     @Test(expected = UnsupportedOperationException.class)

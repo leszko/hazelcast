@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.UUID;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -32,16 +34,19 @@ import static org.junit.Assert.assertTrue;
 @Category({QuickTest.class, ParallelJVMTest.class})
 public class UuidFilterTest {
 
-    private UuidFilter uuidFilter = new UuidFilter("sourceUuid");
+    private static UUID uuid = new UUID(0, 0);
+    private static UUID otherUuid = new UUID(1, 1);
+
+    private UuidFilter uuidFilter = new UuidFilter(uuid);
 
     @Test
     public void testEval() {
-        assertTrue(uuidFilter.eval("sourceUuid"));
+        assertTrue(uuidFilter.eval(uuid));
     }
 
     @Test
     public void testEval_withNonMatchingParameter() {
-        assertFalse(uuidFilter.eval("otherUuid"));
+        assertFalse(uuidFilter.eval(otherUuid));
     }
 
     @RequireAssertEnabled

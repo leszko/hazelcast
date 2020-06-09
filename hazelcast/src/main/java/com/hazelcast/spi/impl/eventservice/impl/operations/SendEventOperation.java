@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.spi.impl.eventservice.impl.operations;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -33,7 +34,7 @@ import java.io.IOException;
  * It will process the event on a thread defined by the {@link #orderKey} and in case of an exception,
  * the exception is returned to the caller.
  *
- * @see EventServiceImpl#sendEvent(com.hazelcast.nio.Address, EventEnvelope, int)
+ * @see EventServiceImpl#sendEvent(Address, EventEnvelope, int)
  */
 public class SendEventOperation extends Operation implements AllowedDuringPassiveState, IdentifiedDataSerializable {
     private EventEnvelope eventEnvelope;

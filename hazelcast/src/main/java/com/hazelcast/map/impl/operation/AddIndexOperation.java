@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.config.IndexConfig;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.MapService;
-import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.map.impl.record.Records;
+import com.hazelcast.map.impl.recordstore.RecordStoreAdapter;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.query.impl.Index;
+import com.hazelcast.query.impl.IndexUtils;
 import com.hazelcast.query.impl.Indexes;
 import com.hazelcast.query.impl.InternalIndex;
 import com.hazelcast.query.impl.QueryableEntry;
@@ -31,24 +33,24 @@ import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
-import com.hazelcast.spi.serialization.SerializationService;
-import com.hazelcast.util.Clock;
 
 import java.io.IOException;
-import java.util.Iterator;
 
-public class AddIndexOperation extends MapOperation implements PartitionAwareOperation, MutatingOperation, BackupAwareOperation {
-
-    private String attributeName;
-    private boolean ordered;
+public class AddIndexOperation extends MapOperation
+        implements PartitionAwareOperation, MutatingOperation, BackupAwareOperation {
+    /**
+     * Configuration of the index.
+     */
+    private IndexConfig config;
 
     public AddIndexOperation() {
+        // No-op.
     }
 
-    public AddIndexOperation(String name, String attributeName, boolean ordered) {
+    public AddIndexOperation(String name, IndexConfig config) {
         super(name);
-        this.attributeName = attributeName;
-        this.ordered = ordered;
+
+        this.config = IndexUtils.validateAndNormalize(name, config);
     }
 
     @Override
@@ -68,7 +70,7 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
 
     @Override
     public Operation getBackupOperation() {
-        return new AddIndexBackupOperation(name, attributeName, ordered);
+        return new AddIndexBackupOperation(name, config);
     }
 
     @Override
@@ -81,27 +83,23 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
         int partitionId = getPartitionId();
 
         Indexes indexes = mapContainer.getIndexes(partitionId);
-        InternalIndex index = indexes.addOrGetIndex(attributeName, ordered);
+        RecordStoreAdapter recordStoreAdapter = new RecordStoreAdapter(recordStore);
+        InternalIndex index = indexes.addOrGetIndex(config, indexes.isGlobal() ? null : recordStoreAdapter);
         if (index.hasPartitionIndexed(partitionId)) {
             return;
         }
 
-        final long now = getNow();
-        @SuppressWarnings("unchecked")
-        final Iterator<Record> iterator = recordStore.iterator(now, false);
         SerializationService serializationService = getNodeEngine().getSerializationService();
-        while (iterator.hasNext()) {
-            final Record record = iterator.next();
-            Data key = record.getKey();
-            Object value = Records.getValueOrCachedValue(record, serializationService);
-            QueryableEntry queryEntry = mapContainer.newQueryEntry(key, value);
-            index.putEntry(queryEntry, null, Index.OperationSource.USER);
-        }
-        index.markPartitionAsIndexed(partitionId);
-    }
 
-    private long getNow() {
-        return Clock.currentTimeMillis();
+        recordStore.forEach((dataKey, record) -> {
+            Object value = Records.getValueOrCachedValue(record, serializationService);
+            QueryableEntry queryEntry = mapContainer.newQueryEntry(dataKey, value);
+            queryEntry.setRecord(record);
+            queryEntry.setStoreAdapter(recordStoreAdapter);
+            index.putEntry(queryEntry, null, Index.OperationSource.USER);
+        }, false);
+
+        index.markPartitionAsIndexed(partitionId);
     }
 
     @Override
@@ -112,15 +110,13 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
     @Override
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
-        out.writeUTF(attributeName);
-        out.writeBoolean(ordered);
+        out.writeObject(config);
     }
 
     @Override
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
-        attributeName = in.readUTF();
-        ordered = in.readBoolean();
+        config = in.readObject();
     }
 
     @Override

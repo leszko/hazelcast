@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 package com.hazelcast.cp.internal.raft.impl.handler;
 
-import com.hazelcast.core.Endpoint;
+import com.hazelcast.cp.internal.raft.impl.RaftEndpoint;
 import com.hazelcast.cp.internal.raft.impl.RaftIntegration;
 import com.hazelcast.cp.internal.raft.impl.RaftNodeImpl;
 import com.hazelcast.cp.internal.raft.impl.RaftRole;
+import com.hazelcast.cp.internal.raft.impl.dto.VoteRequest;
 import com.hazelcast.cp.internal.raft.impl.dto.VoteResponse;
 import com.hazelcast.cp.internal.raft.impl.state.CandidateState;
 import com.hazelcast.cp.internal.raft.impl.state.RaftState;
@@ -40,7 +41,7 @@ import static com.hazelcast.cp.internal.raft.impl.RaftRole.CANDIDATE;
  * paper by <i>Diego Ongaro</i> and <i>John Ousterhout</i>.
  *
  * @see VoteResponse
- * @see com.hazelcast.cp.internal.raft.impl.dto.VoteRequest
+ * @see VoteRequest
  */
 public class VoteResponseHandlerTask extends AbstractResponseHandlerTask {
     private final VoteResponse resp;
@@ -84,7 +85,7 @@ public class VoteResponseHandlerTask extends AbstractResponseHandlerTask {
     }
 
     @Override
-    protected Endpoint sender() {
+    protected RaftEndpoint sender() {
         return resp.voter();
     }
 }

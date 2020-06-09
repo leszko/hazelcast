@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+# Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,11 +23,7 @@
 # To learn how to configure Hazelcast, please see the Reference Manual
 # at https://hazelcast.org/documentation/
 hazelcast:
-  group:
-    name: dev
-  management-center:
-    enabled: false
-    url: http://localhost:8080/hazelcast-mancenter
+  cluster-name: dev
   network:
     port:
       auto-increment: true
@@ -64,12 +60,6 @@ hazelcast:
         zones: us-east1-b,us-east1-c
       azure:
         enabled: false
-        client-id: CLIENT_ID
-        client-secret: CLIENT_SECRET
-        tenant-id: TENANT_ID
-        subscription-id: SUB_ID
-        cluster-id: HZLCAST001
-        group-name: GROUP-NAME
       kubernetes:
         enabled: false
         namespace: MY-KUBERNETES-NAMESPACE
@@ -180,32 +170,19 @@ hazelcast:
       # Any integer between 0 and Integer.MAX_VALUE. 0 means infinite. Default is 0.
       max-idle-seconds: 0
 
-      # Valid values are:
-      # NONE (no eviction),
-      # LRU (Least Recently Used),
-      # LFU (Least Frequently Used).
-      # NONE is the default.
-      eviction-policy: NONE
-
-      # Maximum size of the map. When max size is reached,
-      # map is evicted based on the policy defined.
-      # Any integer between 0 and Integer.MAX_VALUE. 0 means
-      # Integer.MAX_VALUE. Default is 0.
-      max-size:
-        policy: PER_NODE
-        max-size: 0
-
-        # `eviction-percentage` property is deprecated and will be ignored when it is set.
-        #
-        # As of version 3.7, eviction mechanism changed.
-        # It uses a probabilistic algorithm based on sampling. Please see documentation for further details
-        eviction-percentage: 25
-
-        # `min-eviction-check-millis` property is deprecated  and will be ignored when it is set.
-        #
-        # As of version 3.7, eviction mechanism changed.
-        # It uses a probabilistic algorithm based on sampling. Please see documentation for further details
-        min-eviction-check-millis: 100
+      eviction:
+        # Valid values are:
+        # NONE (no eviction),
+        # LRU (Least Recently Used),
+        # LFU (Least Frequently Used).
+        # NONE is the default.
+        eviction-policy: NONE
+        max-size-policy: PER_NODE
+        # Maximum size of the map. When max size is reached,
+        # map is evicted based on the policy defined.
+        # Any integer between 0 and Integer.MAX_VALUE. 0 means
+        # Integer.MAX_VALUE. Default is 0.
+        size: 0
 
         # While recovering from split-brain (network partitioning),
         # map entries in the small cluster will merge into the bigger cluster
@@ -216,10 +193,10 @@ hazelcast:
         # the policy set here. Default policy is PutIfAbsentMapMergePolicy
         #
         # There are built-in merge policies such as
-        # com.hazelcast.map.merge.PassThroughMergePolicy; entry will be overwritten if merging entry exists for the key.
-        # com.hazelcast.map.merge.PutIfAbsentMapMergePolicy ; entry will be added if the merging entry doesn't exist in the cluster.
-        # com.hazelcast.map.merge.HigherHitsMapMergePolicy ; entry with the higher hits wins.
-        # com.hazelcast.map.merge.LatestUpdateMapMergePolicy ; entry with the latest update wins.
+        # com.hazelcast.spi.merge.PassThroughMergePolicy; entry will be overwritten if merging entry exists for the key.
+        # com.hazelcast.spi.merge.PutIfAbsentMergePolicy ; entry will be added if the merging entry doesn't exist in the cluster.
+        # com.hazelcast.spi.merge.HigherHitsMergePolicy ; entry with the higher hits wins.
+        # com.hazelcast.spi.merge.LatestUpdateMergePolicy ; entry with the latest update wins.
         merge-policy:
           batch-size: 100
           class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
@@ -230,32 +207,6 @@ hazelcast:
         #              INDEX-ONLY: Caches values only when they are inserted into an index.
         #              ALWAYS: Always cache deserialized values.
         cache-deserialized-values: INDEX-ONLY
-
-  # Configuration for an event journal. The event journal keeps events related
-  # to a specific partition and data structure. For instance, it could keep
-  # map add, update, remove, merge events along with the key, old value, new value and so on.
-  event-journal:
-    map:
-      mapName:
-        enabled: false
-        capacity: 10000
-        time-to-live-seconds: 0
-
-    cache:
-      cacheName:
-        enabled: false
-        capacity: 10000
-        time-to-live-seconds: 0
-
-  # Configuration for a merkle tree.
-  # The merkle tree is a data structure used for efficient comparison of the
-  # difference in the contents of large data structures. The precision of
-  # such a comparison mechanism is defined by the depth of the merkle tree.
-  merkle-tree:
-    map:
-      mapName:
-        enabled: false
-        depth: 10
 
   multimap:
     default:
@@ -288,12 +239,6 @@ hazelcast:
         batch-size: 100
         class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
 
-  semaphore:
-    default:
-      initial-permits: 0
-      backup-count: 1
-      async-backup-count: 0
-
   reliable-topic:
     default:
       read-batch-size: 10
@@ -315,30 +260,15 @@ hazelcast:
     default:
       prefetch-count: 100
       prefetch-validity-millis: 600000
-      id-offset: 0
+      epoch-start: 1514764800000
       node-id-offset: 0
+      bits-sequence: 6
+      bits-node-id: 16
+      allowed-future-millis: 15000
       statistics-enabled: true
-
-  atomic-long:
-    default:
-      merge-policy:
-        batch-size: 100
-        class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
-
-  atomic-reference:
-    default:
-      merge-policy:
-        batch-size: 100
-        class-name: com.hazelcast.spi.merge.PutIfAbsentMergePolicy
-
-  count-down-latch:
-    default: {}
 
   serialization:
     portable-version: 0
-
-  services:
-    enable-defaults: true
 
   cardinality-estimator:
     default:
@@ -384,3 +314,12 @@ hazelcast:
 #    locks:
 #      default:
 #        lock-acquire-limit: 0
+
+  metrics:
+    enabled: true
+    management-center:
+      enabled: true
+      retention-seconds: 5
+    jmx:
+      enabled: true
+    collection-frequency-seconds: 5

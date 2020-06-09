@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.hazelcast.map.impl.operation;
 
-import com.hazelcast.concurrent.lock.LockWaitNotifyKey;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.HazelcastException;
@@ -25,37 +24,37 @@ import com.hazelcast.core.Offloadable;
 import com.hazelcast.core.ReadOnly;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.MapDataSerializerHook;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
+import com.hazelcast.spi.exception.WrongTargetException;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.BlockingOperation;
 import com.hazelcast.spi.impl.operationservice.CallStatus;
+import com.hazelcast.spi.impl.operationservice.MutatingOperation;
 import com.hazelcast.spi.impl.operationservice.Offload;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationAccessor;
 import com.hazelcast.spi.impl.operationservice.OperationResponseHandler;
-import com.hazelcast.spi.impl.operationservice.WaitNotifyKey;
-import com.hazelcast.spi.exception.RetryableHazelcastException;
-import com.hazelcast.spi.exception.WrongTargetException;
-import com.hazelcast.spi.impl.operationservice.MutatingOperation;
 import com.hazelcast.spi.impl.operationservice.impl.responses.CallTimeoutResponse;
-import com.hazelcast.spi.serialization.SerializationService;
-import com.hazelcast.util.Clock;
-import com.hazelcast.util.UuidUtil;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.Clock;
+import com.hazelcast.internal.util.UuidUtil;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import static com.hazelcast.core.Offloadable.NO_OFFLOADING;
 import static com.hazelcast.internal.util.ToHeapDataConverter.toHeapData;
 import static com.hazelcast.map.impl.operation.EntryOperator.operator;
-import static com.hazelcast.spi.impl.operationservice.CallStatus.DONE_RESPONSE;
+import static com.hazelcast.spi.impl.executionservice.ExecutionService.OFFLOADABLE_EXECUTOR;
+import static com.hazelcast.spi.impl.operationservice.CallStatus.RESPONSE;
 import static com.hazelcast.spi.impl.operationservice.CallStatus.WAIT;
-import static com.hazelcast.spi.ExecutionService.OFFLOADABLE_EXECUTOR;
 import static com.hazelcast.spi.impl.operationservice.InvocationBuilder.DEFAULT_TRY_PAUSE_MILLIS;
-import static com.hazelcast.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.internal.util.ExceptionUtil.sneakyThrow;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -136,7 +135,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * GOTCHA: This operation LOADS missing keys from map-store, in contrast with PartitionWideEntryOperation.
  */
 @SuppressWarnings("checkstyle:methodcount")
-public class EntryOperation extends KeyBasedMapOperation
+public class EntryOperation extends LockAwareOperation
         implements BackupAwareOperation, BlockingOperation, MutatingOperation {
 
     private static final int SET_UNLOCK_FAST_RETRY_LIMIT = 10;
@@ -189,18 +188,13 @@ public class EntryOperation extends KeyBasedMapOperation
                     .operateOnKey(dataKey)
                     .doPostOperateOps()
                     .getResult();
-            return DONE_RESPONSE;
+            return RESPONSE;
         }
     }
 
     @Override
     protected void runInternal() {
         // NOP
-    }
-
-    @Override
-    public WaitNotifyKey getWaitKey() {
-        return new LockWaitNotifyKey(getServiceNamespace(), dataKey);
     }
 
     @Override
@@ -218,7 +212,7 @@ public class EntryOperation extends KeyBasedMapOperation
         //at this point we cannot offload. the entry is locked or the EP does not support offload
         //if the entry is locked by us then we can still run the EP on the partition thread
         offload = false;
-        return !recordStore.canAcquireLock(dataKey, getCallerUuid(), getThreadId());
+        return super.shouldWait();
     }
 
     private boolean isOffloadingRequested(EntryProcessor entryProcessor) {
@@ -378,7 +372,7 @@ public class EntryOperation extends KeyBasedMapOperation
         private void executeMutatingEntryProcessor(final Object oldValue, String executorName) {
             // callerId is random since the local locks are NOT re-entrant
             // using a randomID every time prevents from re-entering the already acquired lock
-            final String finalCaller = UuidUtil.newUnsecureUuidString();
+            final UUID finalCaller = UuidUtil.newUnsecureUUID();
             final Data finalDataKey = dataKey;
             final long finalThreadId = threadId;
             final long finalCallId = getCallId();
@@ -396,7 +390,7 @@ public class EntryOperation extends KeyBasedMapOperation
                         Data result = entryOperator.getResult();
                         EntryEventType modificationType = entryOperator.getEventType();
                         if (modificationType != null) {
-                            Data newValue = serializationService.toData(entryOperator.getNewValue());
+                            Data newValue = serializationService.toData(entryOperator.getByPreferringDataNewValue());
                             updateAndUnlock(serializationService.toData(oldValue),
                                     newValue, modificationType, finalCaller, finalThreadId, result, finalBegin);
                         } else {
@@ -413,7 +407,7 @@ public class EntryOperation extends KeyBasedMapOperation
             }
         }
 
-        private void lock(Data finalDataKey, String finalCaller, long finalThreadId, long finalCallId) {
+        private void lock(Data finalDataKey, UUID finalCaller, long finalThreadId, long finalCallId) {
             boolean locked = recordStore.localLock(finalDataKey, finalCaller, finalThreadId, finalCallId, -1);
             if (!locked) {
                 // should not happen since it's a lock-awaiting operation and we are on a partition-thread, but just to make sure
@@ -422,7 +416,7 @@ public class EntryOperation extends KeyBasedMapOperation
             }
         }
 
-        private void unlock(Data finalDataKey, String finalCaller, long finalThreadId, long finalCallId, Throwable cause) {
+        private void unlock(Data finalDataKey, UUID finalCaller, long finalThreadId, long finalCallId, Throwable cause) {
             boolean unlocked = recordStore.unlock(finalDataKey, finalCaller, finalThreadId, finalCallId);
             if (!unlocked) {
                 throw new IllegalStateException(
@@ -430,12 +424,12 @@ public class EntryOperation extends KeyBasedMapOperation
             }
         }
 
-        private void unlockOnly(final Object result, String caller, long threadId, long now) {
+        private void unlockOnly(final Object result, UUID caller, long threadId, long now) {
             updateAndUnlock(null, null, null, caller, threadId, result, now);
         }
 
         @SuppressWarnings({"unchecked", "checkstyle:methodlength"})
-        private void updateAndUnlock(Data previousValue, Data newValue, EntryEventType modificationType, String caller,
+        private void updateAndUnlock(Data previousValue, Data newValue, EntryEventType modificationType, UUID caller,
                                      long threadId, final Object result, long now) {
             EntryOffloadableSetUnlockOperation updateOperation = new EntryOffloadableSetUnlockOperation(name, modificationType,
                     dataKey, previousValue, newValue, caller, threadId, now, entryProcessor.getBackupProcessor());

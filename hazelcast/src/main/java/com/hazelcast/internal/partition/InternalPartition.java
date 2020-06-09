@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.internal.partition;
 
-import com.hazelcast.spi.partition.IPartition;
+import java.util.stream.IntStream;
 
 public interface InternalPartition extends IPartition {
 
@@ -55,4 +55,11 @@ public interface InternalPartition extends IPartition {
      * @throws ArrayIndexOutOfBoundsException when replica index is out of bounds
      */
     PartitionReplica getReplica(int replicaIndex);
+
+    /**
+     * Returns the integer replica indices of {@code InternalPartition} as a stream.
+     */
+    static IntStream replicaIndices() {
+        return IntStream.range(0, InternalPartition.MAX_REPLICA_COUNT);
+    }
 }

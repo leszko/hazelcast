@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.journal.AbstractEventJournalExpiringTest;
 import com.hazelcast.journal.EventJournalTestContext;
-import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.SlowTest;
@@ -36,11 +36,10 @@ public class MapEventJournalExpiringTest<K, V> extends AbstractEventJournalExpir
 
     @Override
     protected Config getConfig() {
-        final MapConfig nonExpiringMapConfig = new MapConfig(MAP_NAME)
-                .setInMemoryFormat(getInMemoryFormat());
-
-        return super.getConfig()
-                    .addMapConfig(nonExpiringMapConfig);
+        Config defConfig = super.getConfig();
+        defConfig.getMapConfig(MAP_NAME)
+                 .setInMemoryFormat(getInMemoryFormat());
+        return defConfig;
     }
 
     protected InMemoryFormat getInMemoryFormat() {
@@ -49,10 +48,10 @@ public class MapEventJournalExpiringTest<K, V> extends AbstractEventJournalExpir
 
     @Override
     protected EventJournalTestContext<K, V, EventJournalMapEvent<K, V>> createContext() {
-        return new EventJournalTestContext<K, V, EventJournalMapEvent<K, V>>(
-                new EventJournalMapDataStructureAdapter<K, V>(getRandomInstance().<K, V>getMap(MAP_NAME)),
+        return new EventJournalTestContext<>(
+                new EventJournalMapDataStructureAdapter<>(getRandomInstance().getMap(MAP_NAME)),
                 null,
-                new EventJournalMapEventAdapter<K, V>()
+                new EventJournalMapEventAdapter<>()
         );
     }
 }

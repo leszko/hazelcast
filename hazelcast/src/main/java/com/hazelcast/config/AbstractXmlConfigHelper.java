@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import com.hazelcast.instance.BuildInfo;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.util.StringUtil;
+import com.hazelcast.internal.util.StringUtil;
+import com.hazelcast.spi.annotation.PrivateApi;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -42,8 +43,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 
-import static com.hazelcast.nio.IOUtil.closeResource;
-import static com.hazelcast.util.StringUtil.LINE_SEPARATOR;
+import static com.hazelcast.internal.nio.IOUtil.closeResource;
+import static com.hazelcast.internal.util.StringUtil.LINE_SEPARATOR;
 
 /**
  * Contains Hazelcast XML Configuration helper methods and variables.
@@ -85,7 +86,9 @@ public abstract class AbstractXmlConfigHelper {
 
             // if this is hazelcast namespace but location is different log only warning
             if (namespace.equals(xmlns) && !uri.endsWith(hazelcastSchemaLocation)) {
-                LOGGER.warning("Name of the hazelcast schema location is incorrect, using default");
+                if (LOGGER.isWarningEnabled()) {
+                    LOGGER.warning("Name of the hazelcast schema location[" + uri + "] is incorrect, using default");
+                }
             }
 
             // if this is not hazelcast namespace then try to load from uri
@@ -136,7 +139,8 @@ public abstract class AbstractXmlConfigHelper {
         return inputStream;
     }
 
-    protected String getReleaseVersion() {
+    @PrivateApi
+    public String getReleaseVersion() {
         BuildInfo buildInfo = BuildInfoProvider.getBuildInfo();
         String[] versionTokens = StringUtil.tokenizeVersionString(buildInfo.getVersion());
         return versionTokens[0] + "." + versionTokens[1];
@@ -165,8 +169,8 @@ public abstract class AbstractXmlConfigHelper {
     }
 
     private String xmlRefToJavaName(final String name) {
-        if (name.equals("quorum-ref")) {
-            return "quorumName";
+        if (name.equals("split-brain-protection-ref")) {
+            return "splitBrainProtectionName";
         }
         return null;
     }

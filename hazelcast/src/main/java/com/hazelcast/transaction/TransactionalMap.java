@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.hazelcast.transaction;
 
-import com.hazelcast.core.BaseMap;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.BaseMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
 
 import java.util.Collection;
@@ -246,7 +246,7 @@ public interface TransactionalMap<K, V> extends TransactionalObject, BaseMap<K, 
      * @see IMap#keySet(com.hazelcast.query.Predicate)
      */
     @Override
-    Set<K> keySet(Predicate predicate);
+    Set<K> keySet(Predicate<K, V> predicate);
 
     /**
      * Transactional implementation of {@link IMap#values()}.
@@ -263,5 +263,5 @@ public interface TransactionalMap<K, V> extends TransactionalObject, BaseMap<K, 
      * @see IMap#values(com.hazelcast.query.Predicate)
      */
     @Override
-    Collection<V> values(Predicate predicate);
+    Collection<V> values(Predicate<K, V> predicate);
 }

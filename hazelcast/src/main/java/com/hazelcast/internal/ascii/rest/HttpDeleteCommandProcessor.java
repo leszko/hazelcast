@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,12 @@
 package com.hazelcast.internal.ascii.rest;
 
 import com.hazelcast.internal.ascii.TextCommandService;
-
-import static com.hazelcast.internal.ascii.rest.HttpCommand.CONTENT_TYPE_PLAIN_TEXT;
-import static com.hazelcast.util.StringUtil.stringToBytes;
+import com.hazelcast.internal.util.StringUtil;
 
 public class HttpDeleteCommandProcessor extends HttpCommandProcessor<HttpDeleteCommand> {
 
     public HttpDeleteCommandProcessor(TextCommandService textCommandService) {
-        super(textCommandService);
+        super(textCommandService, textCommandService.getNode().getLogger(HttpPostCommandProcessor.class));
     }
 
     @Override
@@ -56,6 +54,7 @@ public class HttpDeleteCommandProcessor extends HttpCommandProcessor<HttpDeleteC
         } else {
             String mapName = uri.substring(URI_MAPS.length(), indexEnd);
             String key = uri.substring(indexEnd + 1);
+            key = StringUtil.stripTrailingSlash(key);
             textCommandService.delete(mapName, key);
             command.send200();
         }
@@ -72,16 +71,13 @@ public class HttpDeleteCommandProcessor extends HttpCommandProcessor<HttpDeleteC
         if (value == null) {
             command.send204();
         } else {
-            if (value instanceof byte[]) {
-                command.setResponse(null, (byte[]) value);
-            } else if (value instanceof RestValue) {
-                RestValue restValue = (RestValue) value;
-                command.setResponse(restValue.getContentType(), restValue.getValue());
-            } else if (value instanceof String) {
-                command.setResponse(CONTENT_TYPE_PLAIN_TEXT, stringToBytes((String) value));
+            Object responseValue;
+            if (value instanceof byte[] || value instanceof RestValue || value instanceof String) {
+                responseValue = value;
             } else {
-                command.setResponse(null, textCommandService.toByteArray(value));
+                responseValue = textCommandService.toByteArray(value);
             }
+            prepareResponse(command, responseValue);
         }
     }
 

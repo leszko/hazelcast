@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,12 @@ package com.hazelcast.config.helpers;
 import com.hazelcast.config.Config;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Function;
 
 public class DeclarativeConfigFileHelper {
     private static final String HAZELCAST_START_TAG = "<hazelcast xmlns=\"http://www.hazelcast.com/schema/config\">\n";
@@ -51,6 +53,10 @@ public class DeclarativeConfigFileHelper {
         return givenYamlConfigFileInWorkDir("hazelcast.yaml", instanceName);
     }
 
+    public File givenYmlConfigFileInWorkDir(String instanceName) throws Exception {
+        return givenYamlConfigFileInWorkDir("hazelcast.yml", instanceName);
+    }
+
     public File givenYamlConfigFileInWorkDir(String filename, String instanceName) throws Exception {
         String xml = yamlConfig(instanceName);
         return givenConfigFileInWorkDir(filename, xml);
@@ -67,6 +73,10 @@ public class DeclarativeConfigFileHelper {
 
     public URL givenYamlConfigFileOnClasspath(String instanceName) throws Exception {
         return givenYamlConfigFileOnClasspath("hazelcast.yaml", instanceName);
+    }
+
+    public URL givenYmlConfigFileOnClasspath(String instanceName) throws Exception {
+        return givenYamlConfigFileOnClasspath("hazelcast.yml", instanceName);
     }
 
     public URL givenYamlConfigFileOnClasspath(String filename, String instanceName) throws Exception {
@@ -98,6 +108,10 @@ public class DeclarativeConfigFileHelper {
         return givenYamlClientConfigFileInWorkDir("hazelcast-client.yaml", instanceName);
     }
 
+    public File givenYmlClientConfigFileInWorkDir(String instanceName) throws Exception {
+        return givenYamlClientConfigFileInWorkDir("hazelcast-client.yml", instanceName);
+    }
+
     public File givenYamlClientConfigFileInWorkDir(String filename, String instanceName) throws Exception {
         String xml = yamlClientConfig(instanceName);
         return givenConfigFileInWorkDir(filename, xml);
@@ -105,6 +119,10 @@ public class DeclarativeConfigFileHelper {
 
     public URL givenYamlClientConfigFileOnClasspath(String instanceName) throws Exception {
         return givenYamlClientConfigFileOnClasspath("hazelcast-client.yaml", instanceName);
+    }
+
+    public URL givenYmlClientConfigFileOnClasspath(String instanceName) throws Exception {
+        return givenYamlClientConfigFileOnClasspath("hazelcast-client.yml", instanceName);
     }
 
     public URL givenYamlClientConfigFileOnClasspath(String filename, String instanceName) throws Exception {
@@ -136,6 +154,10 @@ public class DeclarativeConfigFileHelper {
         return givenYamlClientFailoverConfigFileInWorkDir("hazelcast-client-failover.yaml", tryCount);
     }
 
+    public File givenYmlClientFailoverConfigFileInWorkDir(int tryCount) throws Exception {
+        return givenYamlClientFailoverConfigFileInWorkDir("hazelcast-client-failover.yml", tryCount);
+    }
+
     public File givenYamlClientFailoverConfigFileInWorkDir(String filename, int tryCount) throws Exception {
         String xml = yamlFailoverClientConfig(tryCount);
         return givenConfigFileInWorkDir(filename, xml);
@@ -145,15 +167,19 @@ public class DeclarativeConfigFileHelper {
         return givenYamlClientFailoverConfigFileOnClasspath("hazelcast-client-failover.yaml", tryCount);
     }
 
+    public URL givenYmlClientFailoverConfigFileOnClasspath(int tryCount) throws Exception {
+        return givenYamlClientFailoverConfigFileOnClasspath("hazelcast-client-failover.yml", tryCount);
+    }
+
     public URL givenYamlClientFailoverConfigFileOnClasspath(String filename, int tryCount) throws Exception {
         String yaml = yamlFailoverClientConfig(tryCount);
         return givenConfigFileOnClasspath(filename, yaml);
     }
 
-    public File givenConfigFileInWorkDir(String filename, String content) throws Exception {
+    public File givenConfigFileInWorkDir(String filename, String content) throws IOException {
         File file = new File(filename);
         PrintWriter writer = new PrintWriter(file, "UTF-8");
-        writer.println(content);
+        writer.print(content);
         writer.close();
 
         testConfigPaths.add(file.getAbsolutePath());
@@ -174,6 +200,22 @@ public class DeclarativeConfigFileHelper {
         return getClass().getClassLoader().getResource(filename);
     }
 
+    public String createFilesWithCycleImports(Function<String, String> fileContentWithImportResource, String... paths) throws Exception {
+        for (int i = 1; i < paths.length; i++) {
+            createFileWithDependencyImport(paths[i - 1], paths[i], fileContentWithImportResource);
+        }
+        return createFileWithDependencyImport(paths[0], paths[1], fileContentWithImportResource);
+    }
+
+    private String createFileWithDependencyImport(
+            String dependent,
+            String pathToDependency,
+            Function<String, String> fileContentWithImportResource) throws Exception {
+        final String xmlContent = fileContentWithImportResource.apply(pathToDependency);
+        givenConfigFileInWorkDir(dependent, xmlContent);
+        return xmlContent;
+    }
+
     private String xmlConfig(String instanceName) {
         return ""
                 + HAZELCAST_START_TAG
@@ -185,8 +227,7 @@ public class DeclarativeConfigFileHelper {
         return ""
                 + HAZELCAST_CLIENT_START_TAG
                 + "  <instance-name>" + instanceName + "</instance-name>"
-                + "  <connection-strategy async-start=\"true\" reconnect-mode=\"OFF\">"
-                + "    <connection-retry enabled=\"false\" />"
+                + "  <connection-strategy async-start=\"true\" >"
                 + "  </connection-strategy>"
                 + HAZELCAST_CLIENT_END_TAG;
     }
@@ -212,10 +253,7 @@ public class DeclarativeConfigFileHelper {
                 + "hazelcast-client:\n"
                 + "  instance-name: " + instanceName + "\n"
                 + "  connection-strategy:\n"
-                + "    async-start: true\n"
-                + "    reconnect-mode: OFF\n"
-                + "    connection-retry:\n"
-                + "      enabled: false";
+                + "    async-start: true\n";
     }
 
     private String yamlFailoverClientConfig(int tryCount) {

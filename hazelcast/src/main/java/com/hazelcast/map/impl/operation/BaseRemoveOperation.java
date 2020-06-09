@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,31 +17,26 @@
 package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
-import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
+import com.hazelcast.spi.impl.operationservice.Operation;
 
 public abstract class BaseRemoveOperation extends LockAwareOperation
         implements BackupAwareOperation, MutatingOperation {
 
     protected transient Data dataOldValue;
 
-    public BaseRemoveOperation(String name, Data dataKey, boolean disableWanReplicationEvent) {
-        super(name, dataKey);
-        this.disableWanReplicationEvent = disableWanReplicationEvent;
+    public BaseRemoveOperation() {
     }
 
     public BaseRemoveOperation(String name, Data dataKey) {
-        this(name, dataKey, false);
-    }
-
-    public BaseRemoveOperation() {
+        super(name, dataKey);
     }
 
     @Override
     protected void afterRunInternal() {
-        mapServiceContext.interceptAfterRemove(name, dataOldValue);
+        mapServiceContext.interceptAfterRemove(mapContainer.getInterceptorRegistry(), dataOldValue);
         mapEventPublisher.publishEvent(getCallerAddress(), name,
                 EntryEventType.REMOVED, dataKey, dataOldValue, null);
         invalidateNearCache(dataKey);
@@ -56,8 +51,7 @@ public abstract class BaseRemoveOperation extends LockAwareOperation
 
     @Override
     public Operation getBackupOperation() {
-        return new RemoveBackupOperation(name, dataKey,
-                false, disableWanReplicationEvent);
+        return new RemoveBackupOperation(name, dataKey, disableWanReplicationEvent());
     }
 
     @Override

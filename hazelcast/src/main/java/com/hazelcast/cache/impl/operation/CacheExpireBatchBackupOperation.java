@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.hazelcast.cache.impl.operation;
 import com.hazelcast.cache.impl.CacheDataSerializerHook;
 import com.hazelcast.cache.impl.record.CacheRecord;
 import com.hazelcast.internal.eviction.ExpiredKey;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;
@@ -113,7 +114,7 @@ public class CacheExpireBatchBackupOperation extends CacheOperation {
         super.writeInternal(out);
         out.writeInt(expiredKeys.size());
         for (ExpiredKey expiredKey : expiredKeys) {
-            out.writeData(expiredKey.getKey());
+            IOUtil.writeData(out, expiredKey.getKey());
             out.writeLong(expiredKey.getCreationTime());
         }
         out.writeInt(primaryEntryCount);
@@ -125,7 +126,7 @@ public class CacheExpireBatchBackupOperation extends CacheOperation {
         int size = in.readInt();
         expiredKeys = new LinkedList<ExpiredKey>();
         for (int i = 0; i < size; i++) {
-            expiredKeys.add(new ExpiredKey(in.readData(), in.readLong()));
+            expiredKeys.add(new ExpiredKey(IOUtil.readData(in), in.readLong()));
         }
         primaryEntryCount = in.readInt();
     }

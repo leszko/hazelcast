@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@
 
 package com.hazelcast.spi.impl.operationservice.impl;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.executor.impl.DistributedExecutorService;
-import com.hazelcast.instance.HazelcastInstanceImpl;
-import com.hazelcast.instance.HazelcastInstanceProxy;
-import com.hazelcast.nio.Address;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.instance.impl.HazelcastInstanceProxy;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
-import com.hazelcast.spi.InternalCompletableFuture;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
 import com.hazelcast.spi.impl.operationservice.InvocationBuilder;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationService;
@@ -46,9 +46,12 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.concurrent.ExecutionException;
 
-import static com.hazelcast.spi.properties.GroupProperty.GENERIC_OPERATION_THREAD_COUNT;
-import static com.hazelcast.spi.properties.GroupProperty.PARTITION_OPERATION_THREAD_COUNT;
-import static com.hazelcast.spi.properties.GroupProperty.PRIORITY_GENERIC_OPERATION_THREAD_COUNT;
+import static com.hazelcast.spi.properties.ClusterProperty.GENERIC_OPERATION_THREAD_COUNT;
+import static com.hazelcast.spi.properties.ClusterProperty.PARTITION_OPERATION_THREAD_COUNT;
+import static com.hazelcast.spi.properties.ClusterProperty.PRIORITY_GENERIC_OPERATION_THREAD_COUNT;
+import static com.hazelcast.test.Accessors.getAddress;
+import static com.hazelcast.test.Accessors.getNode;
+import static com.hazelcast.test.Accessors.getOperationService;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -60,7 +63,7 @@ public class OperationServiceImpl_BasicTest extends HazelcastTestSupport {
         Config config = new Config();
         config.setProperty(PARTITION_OPERATION_THREAD_COUNT.getName(), "5");
         HazelcastInstance hz = createHazelcastInstance(config);
-        OperationServiceImpl operationService = getOperationServiceImpl(hz);
+        OperationServiceImpl operationService = getOperationService(hz);
 
         assertEquals(5, operationService.getPartitionThreadCount());
     }
@@ -71,7 +74,7 @@ public class OperationServiceImpl_BasicTest extends HazelcastTestSupport {
         config.setProperty(GENERIC_OPERATION_THREAD_COUNT.getName(), "5");
         config.setProperty(PRIORITY_GENERIC_OPERATION_THREAD_COUNT.getName(), "1");
         HazelcastInstance hz = createHazelcastInstance(config);
-        OperationServiceImpl operationService = getOperationServiceImpl(hz);
+        OperationServiceImpl operationService = getOperationService(hz);
 
         assertEquals(6, operationService.getGenericThreadCount());
     }
@@ -200,13 +203,13 @@ public class OperationServiceImpl_BasicTest extends HazelcastTestSupport {
         HazelcastInstance hz1 = factory.newHazelcastInstance();
         HazelcastInstance hz2 = factory.newHazelcastInstance();
 
-        OperationServiceImpl operationService = HazelcastTestSupport.getOperationService(hz1);
-        Address target = HazelcastTestSupport.getAddress(hz2);
+        OperationServiceImpl operationService = getOperationService(hz1);
+        Address target = getAddress(hz2);
 
         InternalCompletableFuture<Object> future = operationService
                 .invokeOnTarget(null, new NonSerializableResponseOperation(), target);
 
-        future.join();
+        future.joinInternal();
     }
 
     @Test(expected = HazelcastSerializationException.class)
@@ -215,14 +218,14 @@ public class OperationServiceImpl_BasicTest extends HazelcastTestSupport {
         HazelcastInstance hz1 = factory.newHazelcastInstance();
         HazelcastInstance hz2 = factory.newHazelcastInstance();
 
-        OperationServiceImpl operationService = HazelcastTestSupport.getOperationService(hz1);
-        Address target = HazelcastTestSupport.getAddress(hz2);
+        OperationServiceImpl operationService = getOperationService(hz1);
+        Address target = getAddress(hz2);
 
 
         InternalCompletableFuture<Object> future = operationService
                 .invokeOnTarget(null, new NonSerializableResponseOperation_withNormalResponseWrapper(), target);
 
-        future.join();
+        future.joinInternal();
     }
 
     private static class NonSerializableResponse {

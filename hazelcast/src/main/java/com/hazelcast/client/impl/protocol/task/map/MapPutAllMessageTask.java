@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package com.hazelcast.client.impl.protocol.task.map;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.MapPutAllCodec;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapEntries;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.map.impl.operation.MapOperationProvider;
-import com.hazelcast.nio.Connection;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.security.permission.ActionConstants;
 import com.hazelcast.security.permission.MapPermission;
 import com.hazelcast.spi.impl.operationservice.Operation;
@@ -32,7 +32,7 @@ import com.hazelcast.spi.impl.operationservice.Operation;
 import java.security.Permission;
 import java.util.Map;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 public class MapPutAllMessageTask
         extends AbstractMapPartitionMessageTask<MapPutAllCodec.RequestParameters> {
@@ -47,7 +47,8 @@ public class MapPutAllMessageTask
     protected Operation prepareOperation() {
         MapEntries mapEntries = new MapEntries(parameters.entries);
         MapOperationProvider operationProvider = getMapOperationProvider(parameters.name);
-        return operationProvider.createPutAllOperation(parameters.name, mapEntries);
+        boolean triggerMapLoader = !parameters.isTriggerMapLoaderExists || parameters.triggerMapLoader;
+        return operationProvider.createPutAllOperation(parameters.name, mapEntries, triggerMapLoader);
     }
 
     @Override
@@ -71,14 +72,14 @@ public class MapPutAllMessageTask
     }
 
     @Override
-    protected void beforeResponse() {
-        final long latencyNanos = System.nanoTime() - startTimeNanos;
-        final MapService mapService = getService(MapService.SERVICE_NAME);
+    protected Object processResponseBeforeSending(Object response) {
+        MapService mapService = getService(MapService.SERVICE_NAME);
         MapContainer mapContainer = mapService.getMapServiceContext().getMapContainer(parameters.name);
         if (mapContainer.getMapConfig().isStatisticsEnabled()) {
             mapService.getMapServiceContext().getLocalMapStatsProvider().getLocalMapStatsImpl(parameters.name)
-                    .incrementPutLatencyNanos(parameters.entries.size(), latencyNanos);
+                    .incrementPutLatencyNanos(parameters.entries.size(), System.nanoTime() - startTimeNanos);
         }
+        return response;
     }
 
     @Override

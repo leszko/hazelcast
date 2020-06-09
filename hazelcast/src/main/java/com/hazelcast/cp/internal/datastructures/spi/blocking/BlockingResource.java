@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,12 +111,15 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
         while (iter.hasNext()) {
             WaitKeyContainer<W> container = iter.next();
             if (container.invocationUid().equals(invocationUid)) {
-                expired.add(container.key());
-                expired.addAll(container.retries());
+                expired.addAll(container.keyAndRetries());
                 iter.remove();
+                onWaitKeyExpire(container.key());
                 return;
             }
         }
+    }
+
+    protected void onWaitKeyExpire(W waitKey) {
     }
 
     protected final Iterator<WaitKeyContainer<W>> waitKeyContainersIterator() {
@@ -132,8 +135,7 @@ public abstract class BlockingResource<W extends WaitKey> implements DataSeriali
         while (iter.hasNext()) {
             WaitKeyContainer<W> container = iter.next();
             if (container.sessionId() == sessionId) {
-                expiredWaitKeys.add(container.key().commitIndex());
-                for (W retry : container.retries()) {
+                for (W retry : container.keyAndRetries()) {
                     expiredWaitKeys.add(retry.commitIndex());
                 }
 

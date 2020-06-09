@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ import com.hazelcast.logging.Logger;
 import com.hazelcast.map.QueryResultSizeExceededException;
 import com.hazelcast.map.impl.MapServiceContext;
 import com.hazelcast.map.impl.recordstore.RecordStore;
-import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
-import com.hazelcast.util.collection.PartitionIdSet;
+import com.hazelcast.internal.util.collection.PartitionIdSet;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -40,8 +40,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static com.hazelcast.spi.properties.GroupProperty.QUERY_MAX_LOCAL_PARTITION_LIMIT_FOR_PRE_CHECK;
-import static com.hazelcast.spi.properties.GroupProperty.QUERY_RESULT_SIZE_LIMIT;
+import static com.hazelcast.spi.properties.ClusterProperty.QUERY_MAX_LOCAL_PARTITION_LIMIT_FOR_PRE_CHECK;
+import static com.hazelcast.spi.properties.ClusterProperty.QUERY_RESULT_SIZE_LIMIT;
 import static java.lang.String.valueOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -56,7 +56,7 @@ import static org.mockito.Mockito.when;
 public class QueryResultSizeLimiterTest {
 
     private static final String ANY_MAP_NAME = "foobar";
-    private static final int PARTITION_COUNT = Integer.valueOf(GroupProperty.PARTITION_COUNT.getDefaultValue());
+    private static final int PARTITION_COUNT = Integer.valueOf(ClusterProperty.PARTITION_COUNT.getDefaultValue());
 
     private final Map<Integer, Integer> localPartitions = new HashMap<>();
 
@@ -236,7 +236,7 @@ public class QueryResultSizeLimiterTest {
         Config config = new Config();
         config.setProperty(QUERY_RESULT_SIZE_LIMIT.getName(), valueOf(maxResultSizeLimit));
         config.setProperty(QUERY_MAX_LOCAL_PARTITION_LIMIT_FOR_PRE_CHECK.getName(), valueOf(maxLocalPartitionLimitForPreCheck));
-        config.setProperty(GroupProperty.PARTITION_COUNT.getName(), valueOf(PARTITION_COUNT));
+        config.setProperty(ClusterProperty.PARTITION_COUNT.getName(), valueOf(PARTITION_COUNT));
 
         HazelcastProperties hazelcastProperties = new HazelcastProperties(config);
 

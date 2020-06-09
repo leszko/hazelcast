@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ package com.hazelcast.client.impl.protocol.task.replicatedmap;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ReplicatedMapGetCodec;
 import com.hazelcast.client.impl.protocol.task.AbstractPartitionMessageTask;
-import com.hazelcast.instance.Node;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.monitor.impl.LocalReplicatedMapStatsImpl;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.replicatedmap.impl.ReplicatedMapService;
 import com.hazelcast.replicatedmap.impl.operation.GetOperation;
 import com.hazelcast.security.permission.ActionConstants;
@@ -54,13 +55,13 @@ public class ReplicatedMapGetMessageTask
     }
 
     @Override
-    protected void beforeResponse() {
-        long latencyNanos = System.nanoTime() - startTimeNanos;
+    protected Object processResponseBeforeSending(Object response) {
         ReplicatedMapService replicatedMapService = getService(ReplicatedMapService.SERVICE_NAME);
-
         if (replicatedMapService.getReplicatedMapConfig(parameters.name).isStatisticsEnabled()) {
-            replicatedMapService.getLocalReplicatedMapStatsImpl(parameters.name).incrementGets(latencyNanos);
+            LocalReplicatedMapStatsImpl stats = replicatedMapService.getLocalReplicatedMapStatsImpl(parameters.name);
+            stats.incrementGetsNanos(System.nanoTime() - startTimeNanos);
         }
+        return response;
     }
 
     @Override

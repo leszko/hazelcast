@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,35 @@
 
 package com.hazelcast.internal.partition;
 
-import com.hazelcast.core.Member;
-import com.hazelcast.instance.NodeState;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.instance.impl.NodeState;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.partition.operation.SafeStateCheckOperation;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.partition.MigrationListener;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.partition.PartitionLostListener;
 import com.hazelcast.partition.PartitionService;
-import com.hazelcast.spi.InternalCompletableFuture;
-import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.properties.GroupProperty;
-import com.hazelcast.util.FutureUtil;
+import com.hazelcast.spi.impl.operationservice.Operation;
+import com.hazelcast.spi.impl.operationservice.impl.InvocationFuture;
+import com.hazelcast.spi.properties.ClusterProperty;
+import com.hazelcast.internal.util.FutureUtil;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 public class PartitionServiceProxy implements PartitionService {
 
@@ -82,28 +85,29 @@ public class PartitionServiceProxy implements PartitionService {
     }
 
     @Override
-    public Partition getPartition(Object key) {
+    public Partition getPartition(@Nonnull Object key) {
+        checkNotNull(key, "key cannot be null");
         int partitionId = partitionService.getPartitionId(key);
         return partitionMap.get(partitionId);
     }
 
     @Override
-    public String addMigrationListener(final MigrationListener migrationListener) {
+    public UUID addMigrationListener(final MigrationListener migrationListener) {
         return partitionService.addMigrationListener(migrationListener);
     }
 
     @Override
-    public boolean removeMigrationListener(final String registrationId) {
+    public boolean removeMigrationListener(final UUID registrationId) {
         return partitionService.removeMigrationListener(registrationId);
     }
 
     @Override
-    public String addPartitionLostListener(PartitionLostListener partitionLostListener) {
+    public UUID addPartitionLostListener(PartitionLostListener partitionLostListener) {
         return partitionService.addPartitionLostListener(partitionLostListener);
     }
 
     @Override
-    public boolean removePartitionLostListener(String registrationId) {
+    public boolean removePartitionLostListener(UUID registrationId) {
         return partitionService.removePartitionLostListener(registrationId);
     }
 
@@ -150,8 +154,8 @@ public class PartitionServiceProxy implements PartitionService {
         }
         final Address target = member.getAddress();
         final Operation operation = new SafeStateCheckOperation();
-        final InternalCompletableFuture future = nodeEngine.getOperationService()
-                .invokeOnTarget(InternalPartitionService.SERVICE_NAME, operation, target);
+        final InvocationFuture future = nodeEngine.getOperationService()
+                                                  .invokeOnTarget(InternalPartitionService.SERVICE_NAME, operation, target);
         boolean safe;
         try {
             final Object result = future.get(10, TimeUnit.SECONDS);
@@ -192,7 +196,7 @@ public class PartitionServiceProxy implements PartitionService {
     }
 
     private int getMaxWaitTime() {
-        return nodeEngine.getProperties().getSeconds(GroupProperty.GRACEFUL_SHUTDOWN_MAX_WAIT);
+        return nodeEngine.getProperties().getSeconds(ClusterProperty.GRACEFUL_SHUTDOWN_MAX_WAIT);
     }
 
     private class PartitionProxy implements Partition, Comparable {

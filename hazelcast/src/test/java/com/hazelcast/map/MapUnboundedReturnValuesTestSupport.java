@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,16 @@ package com.hazelcast.map;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.transaction.TransactionalMap;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.query.QueryResultSizeLimiter;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.query.TruePredicate;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.query.Predicates;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
 import com.hazelcast.transaction.TransactionContext;
-import com.hazelcast.util.ExceptionUtil;
+import com.hazelcast.internal.util.ExceptionUtil;
 
 import java.util.Set;
 
@@ -146,9 +145,9 @@ abstract class MapUnboundedReturnValuesTestSupport extends HazelcastTestSupport 
 
     private Config createConfig(int partitionCount, int limit, int preCheckTrigger) {
         Config config = getConfig();
-        config.setProperty(GroupProperty.PARTITION_COUNT.getName(), valueOf(partitionCount));
-        config.setProperty(GroupProperty.QUERY_RESULT_SIZE_LIMIT.getName(), valueOf(limit));
-        config.setProperty(GroupProperty.QUERY_MAX_LOCAL_PARTITION_LIMIT_FOR_PRE_CHECK.getName(), valueOf(preCheckTrigger));
+        config.setProperty(ClusterProperty.PARTITION_COUNT.getName(), valueOf(partitionCount));
+        config.setProperty(ClusterProperty.QUERY_RESULT_SIZE_LIMIT.getName(), valueOf(limit));
+        config.setProperty(ClusterProperty.QUERY_MAX_LOCAL_PARTITION_LIMIT_FOR_PRE_CHECK.getName(), valueOf(preCheckTrigger));
         return config;
     }
 
@@ -262,21 +261,21 @@ abstract class MapUnboundedReturnValuesTestSupport extends HazelcastTestSupport 
      */
     private void internalRunQuick() {
         try {
-            map.values(TruePredicate.INSTANCE);
+            map.values(Predicates.alwaysTrue());
             failExpectedException("IMap.values(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);
         }
 
         try {
-            map.keySet(TruePredicate.INSTANCE);
+            map.keySet(Predicates.alwaysTrue());
             failExpectedException("IMap.keySet(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);
         }
 
         try {
-            map.entrySet(TruePredicate.INSTANCE);
+            map.entrySet(Predicates.alwaysTrue());
             failExpectedException("IMap.entrySet(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);
@@ -320,7 +319,7 @@ abstract class MapUnboundedReturnValuesTestSupport extends HazelcastTestSupport 
         }
 
         try {
-            map.localKeySet(TruePredicate.INSTANCE);
+            map.localKeySet(Predicates.alwaysTrue());
             failExpectedException("IMap.localKeySet(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);
@@ -340,14 +339,14 @@ abstract class MapUnboundedReturnValuesTestSupport extends HazelcastTestSupport 
         TransactionalMap<Object, Integer> txnMap = transactionContext.getMap(map.getName());
 
         try {
-            txnMap.values(TruePredicate.INSTANCE);
+            txnMap.values(Predicates.alwaysTrue());
             failExpectedException("TransactionalMap.values(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);
         }
 
         try {
-            txnMap.keySet(TruePredicate.INSTANCE);
+            txnMap.keySet(Predicates.alwaysTrue());
             failExpectedException("TransactionalMap.keySet(predicate)");
         } catch (QueryResultSizeExceededException e) {
             checkException(e);

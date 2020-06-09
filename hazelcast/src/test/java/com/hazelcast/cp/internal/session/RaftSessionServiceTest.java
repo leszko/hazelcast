@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,23 @@
 
 package com.hazelcast.cp.internal.session;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.cp.CPGroupId;
-import com.hazelcast.cp.internal.CPMemberInfo;
 import com.hazelcast.cp.internal.HazelcastRaftTestSupport;
 import com.hazelcast.cp.internal.RaftInvocationManager;
 import com.hazelcast.cp.internal.RaftService;
 import com.hazelcast.cp.internal.RaftServiceDataSerializerHook;
 import com.hazelcast.cp.internal.RaftTestApplyOp;
+import com.hazelcast.cp.internal.raft.impl.RaftEndpoint;
 import com.hazelcast.cp.internal.raft.impl.RaftNodeImpl;
 import com.hazelcast.cp.internal.session.operation.CloseSessionOp;
 import com.hazelcast.cp.internal.session.operation.CreateSessionOp;
 import com.hazelcast.cp.internal.session.operation.HeartbeatSessionOp;
 import com.hazelcast.cp.session.CPSession;
-import com.hazelcast.instance.Node;
-import com.hazelcast.nio.Address;
-import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.instance.impl.Node;
+import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.Before;
@@ -49,9 +49,10 @@ import java.util.concurrent.ExecutionException;
 import static com.hazelcast.cp.internal.raft.impl.RaftUtil.getLeaderMember;
 import static com.hazelcast.cp.internal.raft.impl.RaftUtil.getSnapshotEntry;
 import static com.hazelcast.cp.session.CPSession.CPSessionOwnerType.SERVER;
+import static com.hazelcast.test.Accessors.getNode;
+import static com.hazelcast.test.Accessors.getNodeEngineImpl;
 import static com.hazelcast.test.PacketFiltersUtil.dropOperationsBetween;
 import static com.hazelcast.test.PacketFiltersUtil.resetPacketFiltersFrom;
-import static java.lang.System.currentTimeMillis;
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasItem;
@@ -62,7 +63,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(HazelcastSerialClassRunner.class)
+@RunWith(HazelcastParallelClassRunner.class)
 @Category({QuickTest.class, ParallelJVMTest.class})
 public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
 
@@ -96,7 +97,7 @@ public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
                 CPSession session = registry.getSession(response.getSessionId());
                 assertNotNull(session);
 
-                Collection<CPSession> sessions = service.getAllSessions(groupId.name()).get();
+                Collection<CPSession> sessions = service.getAllSessions(groupId).get();
                 assertThat(sessions, hasItem(session));
             }
         });
@@ -151,7 +152,7 @@ public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
                 RaftSessionRegistry registry = service.getSessionRegistryOrNull(groupId);
                 assertNotNull(registry);
                 assertNull(registry.getSession(response.getSessionId()));
-                assertThat(service.getAllSessions(groupId.name()).get(), empty());
+                assertThat(service.getAllSessions(groupId).get(), empty());
             }
         });
     }
@@ -190,8 +191,8 @@ public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
             }
         });
 
-        CPMemberInfo leaderEndpoint = getLeaderMember(getRaftNode(instances[0], groupId));
-        HazelcastInstance leader = factory.getInstance(leaderEndpoint.getAddress());
+        RaftEndpoint leaderEndpoint = getLeaderMember(getRaftNode(instances[0], groupId));
+        HazelcastInstance leader = getInstance(leaderEndpoint);
         leader.getLifecycleService().terminate();
 
         assertTrueEventually(() -> {
@@ -246,6 +247,13 @@ public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
         dropOperationsBetween(leader, follower, RaftServiceDataSerializerHook.F_ID, asList(RaftServiceDataSerializerHook.APPEND_REQUEST_OP, RaftServiceDataSerializerHook.INSTALL_SNAPSHOT_OP));
 
         SessionResponse response = invocationManager.<SessionResponse>invoke(groupId, newCreateSessionOp()).get();
+
+        spawn(() -> {
+            for (int i = 0; i < 30; i++) {
+                invocationManager.invoke(groupId, new HeartbeatSessionOp(response.getSessionId())).joinInternal();
+                sleepAtLeastSeconds(5);
+            }
+        });
 
         for (int i = 0; i < LOG_ENTRY_COUNT_TO_SNAPSHOT; i++) {
             invocationManager.invoke(groupId, new RaftTestApplyOp("value" + i)).get();
@@ -321,6 +329,6 @@ public class RaftSessionServiceTest extends HazelcastRaftTestSupport {
     }
 
     private CreateSessionOp newCreateSessionOp() throws UnknownHostException {
-        return new CreateSessionOp(new Address("localhost", 1111), "server1", SERVER, currentTimeMillis());
+        return new CreateSessionOp(new Address("localhost", 1111), "server1", SERVER);
     }
 }

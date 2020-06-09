@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 package com.hazelcast.spi.impl.operationservice.impl;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.partition.NoDataMemberInClusterException;
-import com.hazelcast.spi.InternalCompletableFuture;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.OperationFactory;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -39,8 +38,10 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
 
 import static com.hazelcast.internal.partition.InternalPartitionService.SERVICE_NAME;
+import static com.hazelcast.test.Accessors.getOperationService;
 import static java.util.Collections.singletonList;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.TestCase.assertTrue;
@@ -92,13 +93,13 @@ public class OperationServiceImpl_invokeOnPartitionLiteMemberTest
     }
 
     @Test
-    public void test_asyncInvokeOnPartition_onLiteMember() {
+    public void test_invokeOnPartitionAsync_onLiteMember() {
         final TestHazelcastInstanceFactory factory = createHazelcastInstanceFactory(1);
         final HazelcastInstance instance = factory.newHazelcastInstance(liteMemberConfig);
 
         final OperationServiceImpl operationService = getOperationService(instance);
         final DummyExecutionCallback callback = new DummyExecutionCallback();
-        operationService.asyncInvokeOnPartition(null, operation, 0, callback);
+        operationService.<String>invokeOnPartitionAsync(null, operation, 0).whenComplete(callback);
 
         assertOpenEventually(callback.responseLatch);
         assertTrue(callback.response instanceof NoDataMemberInClusterException);
@@ -112,7 +113,7 @@ public class OperationServiceImpl_invokeOnPartitionLiteMemberTest
 
         final OperationServiceImpl operationService = getOperationService(instance);
         final DummyExecutionCallback callback = new DummyExecutionCallback();
-        operationService.asyncInvokeOnPartition(null, operation, 0, callback);
+        operationService.<String>invokeOnPartitionAsync(null, operation, 0).whenComplete(callback);
 
         assertOpenEventually(callback.responseLatch);
         assertEquals("foobar", callback.response);
@@ -196,21 +197,19 @@ public class OperationServiceImpl_invokeOnPartitionLiteMemberTest
         }
     }
 
-    static class DummyExecutionCallback
-            implements ExecutionCallback<String> {
+    static class DummyExecutionCallback implements BiConsumer<String, Throwable> {
 
         private final CountDownLatch responseLatch = new CountDownLatch(1);
 
         private volatile Object response;
 
         @Override
-        public void onResponse(String response) {
-            setResponse(response);
-        }
-
-        @Override
-        public void onFailure(Throwable t) {
-            setResponse(t);
+        public void accept(String response, Throwable t) {
+            if (t == null) {
+                setResponse(response);
+            } else {
+                setResponse(t);
+            }
         }
 
         private void setResponse(Object response) {

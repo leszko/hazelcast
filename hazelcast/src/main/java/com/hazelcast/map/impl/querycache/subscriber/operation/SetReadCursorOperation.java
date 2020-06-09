@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,16 +26,18 @@ import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
 
 import java.io.IOException;
 
+import static com.hazelcast.internal.util.Preconditions.checkHasText;
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.map.impl.querycache.utils.QueryCacheUtil.getAccumulatorOrNull;
-import static com.hazelcast.util.Preconditions.checkHasText;
-import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
- * Sets read cursor of {@code Accumulator} in this partition to the supplied sequence number.
+ * Sets read cursor of {@code Accumulator} in
+ * this partition to the supplied sequence number.
  *
  * @see Accumulator#setHead
  */
-public class SetReadCursorOperation extends MapOperation implements PartitionAwareOperation {
+public class SetReadCursorOperation
+        extends MapOperation implements PartitionAwareOperation {
 
     private long sequence;
     private String cacheId;

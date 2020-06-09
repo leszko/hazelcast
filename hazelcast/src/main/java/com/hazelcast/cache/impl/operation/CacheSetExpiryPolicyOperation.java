@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ package com.hazelcast.cache.impl.operation;
 
 import com.hazelcast.cache.impl.CacheDataSerializerHook;
 import com.hazelcast.cache.impl.record.CacheRecord;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupAwareOperation;
 import com.hazelcast.spi.impl.operationservice.Operation;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
@@ -85,9 +86,9 @@ public class CacheSetExpiryPolicyOperation extends CacheOperation
         super.writeInternal(out);
         out.writeInt(keys.size());
         for (Data key: keys) {
-            out.writeData(key);
+            IOUtil.writeData(out, key);
         }
-        out.writeData(expiryPolicy);
+        IOUtil.writeData(out, expiryPolicy);
     }
 
     @Override
@@ -96,9 +97,9 @@ public class CacheSetExpiryPolicyOperation extends CacheOperation
         int s = in.readInt();
         keys = new ArrayList<Data>(s);
         while (s-- > 0) {
-            keys.add(in.readData());
+            keys.add(IOUtil.readData(in));
         }
-        expiryPolicy = in.readData();
+        expiryPolicy = IOUtil.readData(in);
     }
 
     @Override

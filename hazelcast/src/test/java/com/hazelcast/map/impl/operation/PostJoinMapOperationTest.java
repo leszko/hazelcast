@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,17 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.config.IndexType;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.MapInterceptor;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.map.impl.MapService;
-import com.hazelcast.query.IndexAwarePredicate;
 import com.hazelcast.query.impl.Comparison;
 import com.hazelcast.query.impl.Index;
 import com.hazelcast.query.impl.QueryContext;
 import com.hazelcast.query.impl.QueryableEntry;
+import com.hazelcast.query.impl.predicates.IndexAwarePredicate;
 import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -42,6 +43,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.hazelcast.test.Accessors.getNodeEngineImpl;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -210,7 +212,7 @@ public class PostJoinMapOperationTest extends HazelcastTestSupport {
         IMap<String, Person> map = hz1.getMap("map");
         map.put("foo", new Person("foo", 32));
         map.put("bar", new Person("bar", 70));
-        map.addIndex("age", true);
+        map.addIndex(IndexType.SORTED, "age");
 
         // when: new node joins and original node is terminated
         HazelcastInstance hz2 = hzFactory.newHazelcastInstance();
@@ -242,7 +244,7 @@ public class PostJoinMapOperationTest extends HazelcastTestSupport {
         // given: a single node HazelcastInstance with a map configured with index and interceptor
         HazelcastInstance hz1 = hzFactory.newHazelcastInstance();
         IMap<String, Person> map = hz1.getMap("map");
-        map.addIndex("age", true);
+        map.addIndex(IndexType.SORTED, "age");
         map.addInterceptor(new FixedReturnInterceptor());
 
         assertEquals(RETURNED_FROM_INTERCEPTOR, map.get("foo"));

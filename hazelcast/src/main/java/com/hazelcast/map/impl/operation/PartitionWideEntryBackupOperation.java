@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,14 @@ package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.core.EntryEventType;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.MapDataSerializerHook;
-import com.hazelcast.map.impl.record.Record;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.BackupOperation;
-import com.hazelcast.util.Clock;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -56,55 +53,43 @@ public class PartitionWideEntryBackupOperation extends AbstractMultipleEntryBack
 
     private void runWithPartitionScan() {
         EntryOperator operator = operator(this, backupProcessor, getPredicate());
-
-        Iterator<Record> iterator = recordStore.iterator(Clock.currentTimeMillis(), true);
-        while (iterator.hasNext()) {
-            Record record = iterator.next();
-            operator.operateOnKey(record.getKey()).doPostOperateOps();
-        }
+        recordStore.forEach((key, record) -> operator.operateOnKey(key).doPostOperateOps(), true);
     }
 
     // TODO unify this method with `runWithPartitionScan`
     protected void runWithPartitionScanForNative() {
-        Queue<Object> outComes = null;
         EntryOperator operator = operator(this, backupProcessor, getPredicate());
 
-        Iterator<Record> iterator = recordStore.iterator(Clock.currentTimeMillis(), true);
-        while (iterator.hasNext()) {
-            Record record = iterator.next();
-            Data dataKey = toHeapData(record.getKey());
+        Queue<Object> outComes = new LinkedList<>();
+        recordStore.forEach((key, record) -> {
+            Data dataKey = toHeapData(key);
             operator.operateOnKey(dataKey);
 
             EntryEventType eventType = operator.getEventType();
             if (eventType != null) {
-                if (outComes == null) {
-                    outComes = new LinkedList<>();
-                }
-
                 outComes.add(dataKey);
                 outComes.add(operator.getOldValue());
-                outComes.add(operator.getNewValue());
+                outComes.add(operator.getByPreferringDataNewValue());
                 outComes.add(eventType);
             }
-        }
+        }, true);
 
-        if (outComes != null) {
-            // This iteration is needed to work around an issue related with binary elastic hash map (BEHM).
-            // Removal via map#remove() while iterating on BEHM distorts it and we can see some entries remain
-            // in the map even we know that iteration is finished. Because in this case, iteration can miss some entries.
-            do {
-                Data dataKey = (Data) outComes.poll();
-                Object oldValue = outComes.poll();
-                Object newValue = outComes.poll();
-                EntryEventType eventType = (EntryEventType) outComes.poll();
+        // This iteration is needed to work around an issue
+        // related with binary elastic hash map (BEHM). Removal
+        // via map#remove() while iterating on BEHM distorts
+        // it and we can see some entries remain in the map
+        // even we know that iteration is finished. Because
+        // in this case, iteration can miss some entries.
+        while (!outComes.isEmpty()) {
+            Data dataKey = (Data) outComes.poll();
+            Object oldValue = outComes.poll();
+            Object newValue = outComes.poll();
+            EntryEventType eventType = (EntryEventType) outComes.poll();
 
-                operator.init(dataKey, oldValue, newValue, null, eventType)
-                        .doPostOperateOps();
-
-            } while (!outComes.isEmpty());
+            operator.init(dataKey, oldValue, newValue, null, eventType, null)
+                    .doPostOperateOps();
         }
     }
-
 
     @Override
     public Object getResponse() {
@@ -112,13 +97,15 @@ public class PartitionWideEntryBackupOperation extends AbstractMultipleEntryBack
     }
 
     @Override
-    protected void readInternal(ObjectDataInput in) throws IOException {
+    protected void readInternal(ObjectDataInput in) throws
+            IOException {
         super.readInternal(in);
         backupProcessor = in.readObject();
     }
 
     @Override
-    protected void writeInternal(ObjectDataOutput out) throws IOException {
+    protected void writeInternal(ObjectDataOutput out) throws
+            IOException {
         super.writeInternal(out);
         out.writeObject(backupProcessor);
     }

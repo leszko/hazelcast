@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.hazelcast.flakeidgen.impl;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
-import com.hazelcast.monitor.LocalFlakeIdGeneratorStats;
+import com.hazelcast.internal.monitor.LocalFlakeIdGeneratorStats;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.TestHazelcastInstanceFactory;
@@ -34,8 +34,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
+import static com.hazelcast.test.Accessors.getNodeEngineImpl;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -62,12 +62,7 @@ public class FlakeIdGenerator_MemberIntegrationTest extends HazelcastTestSupport
     public void smokeTest() throws Exception {
         HazelcastInstance instance = factory.newHazelcastInstance();
         final FlakeIdGenerator generator = instance.getFlakeIdGenerator("gen");
-        FlakeIdConcurrencyTestUtil.concurrentlyGenerateIds(new Supplier<Long>() {
-            @Override
-            public Long get() {
-                return generator.newId();
-            }
-        });
+        FlakeIdConcurrencyTestUtil.concurrentlyGenerateIds(generator::newId);
     }
 
     @Test

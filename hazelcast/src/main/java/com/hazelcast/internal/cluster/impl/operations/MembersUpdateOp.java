@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,23 @@
 
 package com.hazelcast.internal.cluster.impl.operations;
 
-import com.hazelcast.instance.Node;
+import com.hazelcast.internal.util.UUIDSerializationUtil;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.internal.partition.PartitionRuntimeState;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.util.Clock;
+import com.hazelcast.internal.util.Clock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.readList;
 import static com.hazelcast.internal.serialization.impl.SerializationUtil.writeList;
@@ -43,7 +45,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
     /** The updated member info collection. */
     private List<MemberInfo> memberInfos;
     /** The UUID of the receiving member. */
-    private String targetUuid;
+    private UUID targetUuid;
     private boolean returnResponse;
     private PartitionRuntimeState partitionRuntimeState;
     private int memberListVersion;
@@ -52,7 +54,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
         memberInfos = emptyList();
     }
 
-    public MembersUpdateOp(String targetUuid, MembersView membersView, long masterTime,
+    public MembersUpdateOp(UUID targetUuid, MembersView membersView, long masterTime,
                            PartitionRuntimeState partitionRuntimeState, boolean returnResponse) {
         this.targetUuid = targetUuid;
         this.masterTime = masterTime;
@@ -66,7 +68,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
     public void run() throws Exception {
         ClusterServiceImpl clusterService = getService();
         Address callerAddress = getConnectionEndpointOrThisAddress();
-        String callerUuid = getCallerUuid();
+        UUID callerUuid = getCallerUuid();
         if (clusterService.updateMembers(getMembersView(), callerAddress, callerUuid, targetUuid)) {
             processPartitionState();
         }
@@ -80,7 +82,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
         return new MembersView(getMemberListVersion(), unmodifiableList(memberInfos));
     }
 
-    final String getTargetUuid() {
+    final UUID getTargetUuid() {
         return targetUuid;
     }
 
@@ -89,7 +91,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
         NodeEngineImpl nodeEngine = clusterService.getNodeEngine();
         Node node = nodeEngine.getNode();
         Connection conn = getConnection();
-        return conn != null ? conn.getEndPoint() : node.getThisAddress();
+        return conn != null ? conn.getRemoteAddress() : node.getThisAddress();
     }
 
     final void processPartitionState() {
@@ -109,7 +111,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
     }
 
     protected void readInternalImpl(ObjectDataInput in) throws IOException {
-        targetUuid = in.readUTF();
+        targetUuid = UUIDSerializationUtil.readUUID(in);
         masterTime = in.readLong();
         memberInfos = readList(in);
         partitionRuntimeState = in.readObject();
@@ -123,7 +125,7 @@ public class MembersUpdateOp extends AbstractClusterOperation {
     }
 
     protected void writeInternalImpl(ObjectDataOutput out) throws IOException {
-        out.writeUTF(targetUuid);
+        UUIDSerializationUtil.writeUUID(out, targetUuid);
         out.writeLong(masterTime);
         writeList(memberInfos, out);
         out.writeObject(partitionRuntimeState);

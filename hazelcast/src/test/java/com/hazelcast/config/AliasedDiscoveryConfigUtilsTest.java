@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.AliasedDiscoveryConfigUtils;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -68,7 +69,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void createDiscoveryStrategyConfigsFromWanPublisherConfig() {
         // given
-        WanPublisherConfig config = new WanPublisherConfig();
+        WanBatchPublisherConfig config = new WanBatchPublisherConfig();
         config.getGcpConfig().setEnabled(true);
 
         // when
@@ -82,7 +83,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void map() {
         // given
-        List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        List<AliasedDiscoveryConfig<?>> aliasedDiscoveryConfigs = new ArrayList<>();
         aliasedDiscoveryConfigs
                 .add(new GcpConfig().setEnabled(true).setProperty("projects", "hazelcast-33").setProperty("zones", "us-east1-b"));
         aliasedDiscoveryConfigs.add(new AwsConfig() { }.setEnabled(true).setProperty("access-key", "someAccessKey")
@@ -107,7 +108,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void skipNotEnabledConfigs() {
         // given
-        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<>();
         configs.add(new GcpConfig().setEnabled(false));
 
         // when
@@ -120,7 +121,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void skipPropertyWithNullKey() {
         // given
-        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<>();
         configs.add(new GcpConfig().setEnabled(true).setProperty(null, "value"));
 
         // when
@@ -135,7 +136,7 @@ public class AliasedDiscoveryConfigUtilsTest {
         // given
         AliasedDiscoveryConfig aliasedDiscoveryConfig = new DummyAliasedDiscoveryConfig("invalid-tag") {
         }.setEnabled(true);
-        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<>();
         configs.add(aliasedDiscoveryConfig);
 
         // when
@@ -172,7 +173,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void getConfigByTagFromWanPublisherConfig() {
         // given
-        WanPublisherConfig config = new WanPublisherConfig();
+        WanBatchPublisherConfig config = new WanBatchPublisherConfig();
 
         // when
         AliasedDiscoveryConfig result = AliasedDiscoveryConfigUtils.getConfigByTag(config, "gcp");
@@ -184,7 +185,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test(expected = IllegalArgumentException.class)
     public void getConfigByInvalidTagFromWanPublisherConfig() {
         // given
-        WanPublisherConfig config = new WanPublisherConfig();
+        WanBatchPublisherConfig config = new WanBatchPublisherConfig();
 
         // when
         AliasedDiscoveryConfigUtils.getConfigByTag(config, "unknown");
@@ -224,7 +225,7 @@ public class AliasedDiscoveryConfigUtilsTest {
     @Test
     public void allUsePublicAddressEmpty() {
         // given
-        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<AliasedDiscoveryConfig<?>>();
+        List<AliasedDiscoveryConfig<?>> configs = new ArrayList<>();
 
         // when
         boolean result = AliasedDiscoveryConfigUtils.allUsePublicAddress(configs);

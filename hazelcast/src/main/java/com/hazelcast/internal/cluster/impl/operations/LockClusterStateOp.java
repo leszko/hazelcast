@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ package com.hazelcast.internal.cluster.impl.operations;
 
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.core.MemberLeftException;
+import com.hazelcast.internal.util.UUIDSerializationUtil;
 import com.hazelcast.internal.cluster.impl.ClusterDataSerializerHook;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.ClusterStateChange;
 import com.hazelcast.internal.cluster.impl.ClusterStateManager;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -34,13 +35,14 @@ import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 import com.hazelcast.transaction.TransactionException;
 
 import java.io.IOException;
+import java.util.UUID;
 
 public class LockClusterStateOp  extends Operation implements AllowedDuringPassiveState, UrgentSystemOperation,
         IdentifiedDataSerializable {
 
     private ClusterStateChange stateChange;
     private Address initiator;
-    private String txnId;
+    private UUID txnId;
     private long leaseTime;
     private int memberListVersion;
     private int partitionStateVersion;
@@ -48,8 +50,8 @@ public class LockClusterStateOp  extends Operation implements AllowedDuringPassi
     public LockClusterStateOp() {
     }
 
-    public LockClusterStateOp(ClusterStateChange stateChange, Address initiator, String txnId, long leaseTime,
-            int memberListVersion, int partitionStateVersion) {
+    public LockClusterStateOp(ClusterStateChange stateChange, Address initiator, UUID txnId, long leaseTime,
+                              int memberListVersion, int partitionStateVersion) {
         this.stateChange = stateChange;
         this.initiator = initiator;
         this.txnId = txnId;
@@ -108,7 +110,7 @@ public class LockClusterStateOp  extends Operation implements AllowedDuringPassi
         super.writeInternal(out);
         out.writeObject(stateChange);
         out.writeObject(initiator);
-        out.writeUTF(txnId);
+        UUIDSerializationUtil.writeUUID(out, txnId);
         out.writeLong(leaseTime);
         out.writeInt(partitionStateVersion);
         out.writeInt(memberListVersion);
@@ -119,7 +121,7 @@ public class LockClusterStateOp  extends Operation implements AllowedDuringPassi
         super.readInternal(in);
         stateChange = in.readObject();
         initiator = in.readObject();
-        txnId = in.readUTF();
+        txnId = UUIDSerializationUtil.readUUID(in);
         leaseTime = in.readLong();
         partitionStateVersion = in.readInt();
         memberListVersion = in.readInt();

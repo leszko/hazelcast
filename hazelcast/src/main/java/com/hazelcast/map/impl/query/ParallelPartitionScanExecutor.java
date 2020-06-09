@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 package com.hazelcast.map.impl.query;
 
-import com.hazelcast.query.PagingPredicate;
+import com.hazelcast.internal.iteration.IterationPointer;
+import com.hazelcast.internal.util.executor.ManagedExecutorService;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.impl.QueryableEntriesSegment;
-import com.hazelcast.util.executor.ManagedExecutorService;
+import com.hazelcast.query.impl.predicates.PagingPredicateImpl;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,10 +29,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
-import static com.hazelcast.query.PagingPredicateAccessor.getNearestAnchorEntry;
-import static com.hazelcast.util.FutureUtil.RETHROW_EVERYTHING;
-import static com.hazelcast.util.FutureUtil.returnWithDeadline;
-import static com.hazelcast.util.SetUtil.singletonPartitionIdSet;
+import static com.hazelcast.internal.util.FutureUtil.RETHROW_EVERYTHING;
+import static com.hazelcast.internal.util.FutureUtil.returnWithDeadline;
+import static com.hazelcast.internal.util.SetUtil.singletonPartitionIdSet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -52,12 +52,14 @@ public class ParallelPartitionScanExecutor implements PartitionScanExecutor {
         this.timeoutInMillis = timeoutInMillis;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void execute(String mapName, Predicate predicate, Collection<Integer> partitions, Result result) {
         runUsingPartitionScanWithoutPaging(mapName, predicate, partitions, result);
-        if (predicate instanceof PagingPredicate) {
-            Map.Entry<Integer, Map.Entry> nearestAnchorEntry = getNearestAnchorEntry((PagingPredicate) predicate);
-            result.orderAndLimit((PagingPredicate) predicate, nearestAnchorEntry);
+        if (predicate instanceof PagingPredicateImpl) {
+            PagingPredicateImpl pagingPredicate = (PagingPredicateImpl) predicate;
+            Map.Entry<Integer, Map.Entry> nearestAnchorEntry = pagingPredicate.getNearestAnchorEntry();
+            result.orderAndLimit(pagingPredicate, nearestAnchorEntry);
         }
     }
 
@@ -66,8 +68,10 @@ public class ParallelPartitionScanExecutor implements PartitionScanExecutor {
      * Parallel execution for a partition chunk query is not supported.
      */
     @Override
-    public QueryableEntriesSegment execute(String mapName, Predicate predicate, int partitionId, int tableIndex, int fetchSize) {
-        return partitionScanRunner.run(mapName, predicate, partitionId, tableIndex, fetchSize);
+    public QueryableEntriesSegment execute(
+            String mapName, Predicate predicate, int partitionId,
+            IterationPointer[] pointers, int fetchSize) {
+        return partitionScanRunner.run(mapName, predicate, partitionId, pointers, fetchSize);
     }
 
     protected void runUsingPartitionScanWithoutPaging(String name, Predicate predicate, Collection<Integer> partitions,

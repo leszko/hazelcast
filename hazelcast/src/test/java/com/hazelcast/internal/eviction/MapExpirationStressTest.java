@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.hazelcast.internal.eviction;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.OverridePropertyRule;
@@ -36,7 +36,6 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.map.impl.eviction.MapClearExpiredRecordsTask.PROP_TASK_PERIOD_SECONDS;
@@ -82,7 +81,8 @@ public class MapExpirationStressTest extends HazelcastTestSupport {
 
     @Test
     public void test() throws InterruptedException {
-        List<Thread> list = new ArrayList<Thread>();
+        assertClusterSize(CLUSTER_SIZE, instances);
+        List<Thread> list = new ArrayList<>();
         for (int i = 0; i < CLUSTER_SIZE; i++) {
             list.add(new Thread(new TestRunner(instances[i].getMap(mapName), done)));
         }
@@ -108,12 +108,7 @@ public class MapExpirationStressTest extends HazelcastTestSupport {
         }
         for (int i = 0; i < instances.length; i++) {
             final int index = i;
-            assertEqualsEventually(new Callable<Integer>() {
-                @Override
-                public Integer call() {
-                    return instances[index].getMap(mapName).size();
-                }
-            }, 0);
+            assertEqualsEventually(() -> instances[index].getMap(mapName).size(), 0);
         }
         instances[0].getMap(mapName).destroy();
     }

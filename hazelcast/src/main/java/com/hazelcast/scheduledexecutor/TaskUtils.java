@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ public final class TaskUtils {
      *
      * @param name     The name that the task will have
      * @param callable The callable task to be named
+     * @param <V>      The return type of callable task
      * @return A new Callable implementing the {@link NamedTask} interface
      */
     public static <V> Callable<V> named(final String name, final Callable<V> callable) {

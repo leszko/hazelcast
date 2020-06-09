@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.internal.config.CacheConfigReadOnly;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -28,7 +29,7 @@ import org.junit.runner.RunWith;
 public class CacheConfigReadOnlyTest {
 
     private CacheConfig getReadOnlyConfig() {
-        return new CacheConfig().getAsReadOnly();
+        return new CacheConfigReadOnly(new CacheConfig());
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -117,13 +118,13 @@ public class CacheConfigReadOnlyTest {
     }
 
     @Test(expected = UnsupportedOperationException.class)
-    public void setQuorumNameOfReadOnlyCacheConfigShouldFail() {
-        getReadOnlyConfig().setQuorumName("my-quorum");
+    public void setSplitBrainProtectionNameOfReadOnlyCacheConfigShouldFail() {
+        getReadOnlyConfig().setSplitBrainProtectionName("my-split-brain-protection");
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void setMergePolicyOfReadOnlyCacheConfigShouldFail() {
-        getReadOnlyConfig().setMergePolicy("my-merge-policy");
+        getReadOnlyConfig().setMergePolicyConfig(new MergePolicyConfig());
     }
 
     @Test(expected = UnsupportedOperationException.class)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.hazelcast.test.starter.test;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.annotation.NightlyTest;
 import com.hazelcast.test.starter.HazelcastStarter;
@@ -32,6 +32,7 @@ import static com.hazelcast.test.HazelcastTestSupport.assertClusterSizeEventuall
 import static com.hazelcast.test.HazelcastTestSupport.smallInstanceConfig;
 import static org.junit.Assert.assertEquals;
 
+@Ignore("https://github.com/hazelcast/hazelcast/issues/15021")
 @RunWith(HazelcastSerialClassRunner.class)
 @Category(NightlyTest.class)
 public class PatchLevelCompatibilityTest {
@@ -73,7 +74,6 @@ public class PatchLevelCompatibilityTest {
         testAllGivenVersions(versions);
     }
 
-    @Ignore("https://github.com/hazelcast/hazelcast/issues/15021")
     @Test
     public void testMap_whenMixed_V37_Cluster() {
         String[] versions = new String[]{"3.7.4", "3.7.5"};

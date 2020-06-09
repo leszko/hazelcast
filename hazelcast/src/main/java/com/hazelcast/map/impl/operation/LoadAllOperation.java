@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 
 package com.hazelcast.map.impl.operation;
 
+import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.map.MapLoader;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
 import com.hazelcast.spi.impl.operationservice.MutatingOperation;
-import com.hazelcast.spi.partition.IPartitionService;
+import com.hazelcast.internal.partition.IPartitionService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +33,7 @@ import java.util.List;
 
 /**
  * Triggers loading values for the given keys from the defined
- * {@link com.hazelcast.core.MapLoader}.
+ * {@link MapLoader}.
  * The values are loaded asynchronously and the loaded key-value pairs are sent to
  * the partition threads to update the record stores.
  * <p>
@@ -96,7 +98,7 @@ public class LoadAllOperation extends MapOperation implements PartitionAwareOper
         final int size = keys.size();
         out.writeInt(size);
         for (Data key : keys) {
-            out.writeData(key);
+            IOUtil.writeData(out, key);
         }
         out.writeBoolean(replaceExistingValues);
     }
@@ -109,7 +111,7 @@ public class LoadAllOperation extends MapOperation implements PartitionAwareOper
             keys = new ArrayList<>(size);
         }
         for (int i = 0; i < size; i++) {
-            Data data = in.readData();
+            Data data = IOUtil.readData(in);
             keys.add(data);
         }
         replaceExistingValues = in.readBoolean();

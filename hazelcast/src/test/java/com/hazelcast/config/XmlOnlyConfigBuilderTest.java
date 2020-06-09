@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -188,6 +188,14 @@ public class XmlOnlyConfigBuilderTest {
         buildConfig(xml);
     }
 
+    @Test(expected = InvalidConfigurationException.class)
+    public void testInvalidRootElement() {
+        String xml = "<hazelcast-client>"
+                + "<cluster-name>dev</cluster-name>"
+                + "</hazelcast-client>";
+        buildConfig(xml);
+    }
+
     @Test
     public void testAddWhitespaceToNonSpaceStrings() throws Exception {
         // parse the default config file
@@ -214,9 +222,7 @@ public class XmlOnlyConfigBuilderTest {
     }
 
     private static void testConfig2Xml2Config(String fileName) {
-        String pass = "password";
         Config config = new ClasspathXmlConfig(fileName);
-        config.getGroupConfig().setPassword(pass);
 
         String xml = new ConfigXmlGenerator(true, false).generate(config);
         Config config2 = new InMemoryXmlConfig(xml);

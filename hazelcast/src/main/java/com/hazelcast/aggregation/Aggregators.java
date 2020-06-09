@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ public final class Aggregators {
      * Aggregation result type is a Set of R.
      */
     public static <I, R> Aggregator<I, Set<R>> distinct() {
-        return new DistinctValuesAggregator<I, R>();
+        return new DistinctValuesAggregator<>();
     }
 
     /**
@@ -110,7 +110,7 @@ public final class Aggregators {
      * Aggregation result type is a Set of R.
      */
     public static <I, R> Aggregator<I, Set<R>> distinct(String attributePath) {
-        return new DistinctValuesAggregator<I, R>(attributePath);
+        return new DistinctValuesAggregator<>(attributePath);
     }
 
     // ---------------------------------------------------------------------------------------------------------

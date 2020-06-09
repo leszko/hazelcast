@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,16 @@
 
 package com.hazelcast.spi.impl.operationservice;
 
-import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.internal.management.dto.SlowOperationDTO;
-import com.hazelcast.nio.Address;
-import com.hazelcast.spi.InternalCompletableFuture;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.spi.impl.PartitionSpecificRunnable;
+import com.hazelcast.spi.impl.operationservice.impl.InvocationFuture;
 
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The OperationService is responsible for executing operations.
@@ -38,6 +37,7 @@ import java.util.Map;
  * It also is possible to execute multiple operation on multiple partitions
  * using one of the invoke methods.
  */
+@SuppressWarnings("checkstyle:MethodCount")
 public interface OperationService {
     String SERVICE_NAME = "hz:impl:operationService";
 
@@ -106,7 +106,7 @@ public interface OperationService {
      * taskFactory.
      *
      * For more info see the
-     * {@link OperationExecutor#executeOnPartitions(PartitionTaskFactory, BitSet)}
+     * {@link com.hazelcast.spi.impl.operationexecutor.OperationExecutor#executeOnPartitions(PartitionTaskFactory, BitSet)}
      *
      * @param taskFactory the PartitionTaskFactory used to create
      *                    operations.
@@ -115,9 +115,9 @@ public interface OperationService {
      */
     void executeOnPartitions(PartitionTaskFactory taskFactory, BitSet partitions);
 
-    <E> InternalCompletableFuture<E> invokeOnPartition(String serviceName, Operation op, int partitionId);
+    <E> InvocationFuture<E> invokeOnPartition(String serviceName, Operation op, int partitionId);
 
-    <V> void asyncInvokeOnPartition(String serviceName, Operation op, int partitionId, ExecutionCallback<V> callback);
+    <E> InvocationFuture<E> invokeOnPartitionAsync(String serviceName, Operation op, int partitionId);
 
     /**
      * Executes an operation on a partition.
@@ -126,9 +126,9 @@ public interface OperationService {
      * @param <E> the return type of the operation response
      * @return the future.
      */
-    <E> InternalCompletableFuture<E> invokeOnPartition(Operation op);
+    <E> InvocationFuture<E> invokeOnPartition(Operation op);
 
-    <E> InternalCompletableFuture<E> invokeOnTarget(String serviceName, Operation op, Address target);
+    <E> InvocationFuture<E> invokeOnTarget(String serviceName, Operation op, Address target);
 
     InvocationBuilder createInvocationBuilder(String serviceName, Operation op, int partitionId);
 
@@ -155,8 +155,8 @@ public interface OperationService {
     /**
      * Invokes a set of operations on selected set of all partitions in an async way.
      * <p>
-     * If the operations have sync backups, the returned {@link ICompletableFuture} does <b>not</b>
-     * wait for their completion. Instead, the {@link ICompletableFuture} is completed once the
+     * If the operations have sync backups, the returned {@link CompletableFuture} does <b>not</b>
+     * wait for their completion. Instead, the {@link CompletableFuture} is completed once the
      * operations are completed on primary replicas of the given {@code partitions}.
      *
      * @param serviceName      the name of the service
@@ -165,7 +165,7 @@ public interface OperationService {
      * @return a future returning a Map with partitionId as a key and the
      * outcome of the operation as a value.
      */
-    <T> ICompletableFuture<Map<Integer, T>> invokeOnAllPartitionsAsync(String serviceName, OperationFactory operationFactory);
+    <T> CompletableFuture<Map<Integer, T>> invokeOnAllPartitionsAsync(String serviceName, OperationFactory operationFactory);
 
     /**
      * Invokes a set of operations on selected set of partitions.
@@ -190,8 +190,8 @@ public interface OperationService {
     /**
      * Invokes a set of operations on selected set of partitions in an async way.
      * <p>
-     * If the operations have sync backups, the returned {@link ICompletableFuture} does <b>not</b>
-     * wait for their completion. Instead, the {@link ICompletableFuture} is completed once the
+     * If the operations have sync backups, the returned {@link CompletableFuture} does <b>not</b>
+     * wait for their completion. Instead, the {@link CompletableFuture} is completed once the
      * operations are completed on primary replicas of the given {@code partitions}.
      *
      * @param serviceName      the name of the service
@@ -201,8 +201,28 @@ public interface OperationService {
      * @return a future returning a Map with partitionId as a key and the
      * outcome of the operation as a value.
      */
-    <T> ICompletableFuture<Map<Integer, T>> invokeOnPartitionsAsync(
+    <T> CompletableFuture<Map<Integer, T>> invokeOnPartitionsAsync(
             String serviceName, OperationFactory operationFactory, Collection<Integer> partitions);
+
+    /**
+     * Invokes a set of operations on selected set of partitions in an async way.
+     * <p>
+     * If the operations have sync backups, the returned {@link CompletableFuture} does <b>not</b>
+     * wait for their completion. Instead, the {@link CompletableFuture} is completed once the
+     * operations are completed on primary replicas of the given {@code partitions}.
+     *
+     * @param serviceName      the name of the service
+     * @param operationFactory the factory responsible for creating operations
+     * @param memberPartitions the partitions the operation should be executed on,
+     *                         grouped by owners
+     * @param <T>              type of result of operations returned by {@code operationFactory}
+     * @return a future returning a Map with partitionId as a key and the
+     *         outcome of the operation as a value.
+     */
+    <T> CompletableFuture<Map<Integer, T>> invokeOnPartitionsAsync(
+            String serviceName,
+            OperationFactory operationFactory,
+            Map<Address, List<Integer>> memberPartitions);
 
     /**
      * Invokes a set of operations on selected set of partitions.

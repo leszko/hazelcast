@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package com.hazelcast.query.impl.predicates;
 
+import com.hazelcast.config.IndexType;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.query.EntryObject;
-import com.hazelcast.query.IndexAwarePredicate;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.PredicateBuilder.EntryObject;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.QueryException;
 import com.hazelcast.query.SampleTestObjects.Employee;
@@ -46,7 +45,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.instance.TestUtil.toData;
+import static com.hazelcast.instance.impl.TestUtil.toData;
 import static com.hazelcast.query.Predicates.and;
 import static com.hazelcast.query.Predicates.between;
 import static com.hazelcast.query.Predicates.equal;
@@ -79,14 +78,14 @@ public class PredicatesTest extends HazelcastTestSupport {
 
     @Test
     @Ignore("now will execute partition number of times")
-    public void testAndPredicate_whenFirstIndexAwarePredicateIsNotIndexed() throws Exception {
+    public void testAndPredicate_whenFirstIndexAwarePredicateIsNotIndexed() {
         final HazelcastInstance instance = createHazelcastInstance();
         final IMap<Object, Object> map = instance.getMap("map");
-        map.addIndex("name", false);
+        map.addIndex(IndexType.HASH, "name");
         String name = randomString();
         map.put("key", new Value(name));
 
-        final ShouldExecuteOncePredicate<?, ?> indexAwareNotIndexedPredicate = new ShouldExecuteOncePredicate<Object, Object>();
+        final ShouldExecuteOncePredicate<?, ?> indexAwareNotIndexedPredicate = new ShouldExecuteOncePredicate<>();
         final EqualPredicate equalPredicate = new EqualPredicate("name", name);
         final AndPredicate andPredicate = new AndPredicate(indexAwareNotIndexedPredicate, equalPredicate);
         map.values(andPredicate);
@@ -266,11 +265,11 @@ public class PredicatesTest extends HazelcastTestSupport {
     @Test
     public void testCriteriaAPI() {
         Object value = new Employee(12, "abc-123-xvz", 34, true, 10D);
-        EntryObject e = new PredicateBuilder().getEntryObject();
+        EntryObject e = Predicates.newPredicateBuilder().getEntryObject();
         EntryObject e2 = e.get("age");
         Predicate predicate = e2.greaterEqual(29).and(e2.lessEqual(36));
         assertTrue(predicate.apply(createEntry("1", value)));
-        e = new PredicateBuilder().getEntryObject();
+        e = Predicates.newPredicateBuilder().getEntryObject();
         assertTrue(e.get("id").equal(12).apply(createEntry("1", value)));
     }
 

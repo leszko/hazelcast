@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import com.hazelcast.internal.management.dto.SlowOperationDTO;
 import com.hazelcast.internal.management.dto.SlowOperationInvocationDTO;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.impl.OperationServiceImpl;
-import com.hazelcast.spi.properties.GroupProperty;
+import com.hazelcast.spi.properties.ClusterProperty;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.spi.properties.HazelcastProperty;
 
 import java.util.List;
 
-import static com.hazelcast.util.StringUtil.LINE_SEPARATOR;
+import static com.hazelcast.internal.util.StringUtil.LINE_SEPARATOR;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -61,7 +61,7 @@ public class SlowOperationPlugin extends DiagnosticsPlugin {
 
     private long getPeriodMillis(NodeEngineImpl nodeEngine) {
         HazelcastProperties props = nodeEngine.getProperties();
-        if (!props.getBoolean(GroupProperty.SLOW_OPERATION_DETECTOR_ENABLED)) {
+        if (!props.getBoolean(ClusterProperty.SLOW_OPERATION_DETECTOR_ENABLED)) {
             return DISABLED;
         }
 

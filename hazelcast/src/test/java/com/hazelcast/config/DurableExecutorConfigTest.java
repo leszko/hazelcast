@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.hazelcast.config;
 
-import com.hazelcast.config.DurableExecutorConfig.DurableExecutorConfigReadOnly;
+import com.hazelcast.internal.config.DurableExecutorConfigReadOnly;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
@@ -43,7 +43,7 @@ public class DurableExecutorConfigTest {
     public void testReadOnly() throws Exception {
         Config config = new Config();
         DurableExecutorConfig durableExecutorConfig = config.getDurableExecutorConfig(randomString());
-        DurableExecutorConfig readOnly = durableExecutorConfig.getAsReadOnly();
+        DurableExecutorConfig readOnly = new DurableExecutorConfigReadOnly(durableExecutorConfig);
 
         Method[] methods = DurableExecutorConfig.class.getMethods();
         for (Method method : methods) {
@@ -63,12 +63,11 @@ public class DurableExecutorConfigTest {
     public void testEqualsAndHashCode() {
         assumeDifferentHashCodes();
         EqualsVerifier.forClass(DurableExecutorConfig.class)
-                .allFieldsShouldBeUsedExcept("readOnly")
-                .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
-                .withPrefabValues(DurableExecutorConfigReadOnly.class,
-                        new DurableExecutorConfigReadOnly(new DurableExecutorConfig("red")),
-                        new DurableExecutorConfigReadOnly(new DurableExecutorConfig("black")))
-                .verify();
+                      .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+                      .withPrefabValues(DurableExecutorConfigReadOnly.class,
+                              new DurableExecutorConfigReadOnly(new DurableExecutorConfig("red")),
+                              new DurableExecutorConfigReadOnly(new DurableExecutorConfig("black")))
+                      .verify();
     }
 
     private static Object newParameter(Method method) throws Exception {

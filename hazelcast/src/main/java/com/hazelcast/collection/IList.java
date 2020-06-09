@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,29 @@ package com.hazelcast.collection;
 
 import java.util.List;
 
+import com.hazelcast.config.SplitBrainProtectionConfig;
+
 /**
  * Concurrent, distributed implementation of {@link List}.
  *
- * <p>The Hazelcast IList is not a partitioned data-structure. Entire contents of an IList is stored on a single machine (and
- * in the backup). The IList will not scale by adding more members to the cluster.
+ * <p>The Hazelcast IList is not a partitioned data-structure. Entire contents
+ * of an IList is stored on a single machine (and in the backup). The IList
+ * will not scale by adding more members to the cluster.
  *
- * <p>Supports Quorum {@link com.hazelcast.config.QuorumConfig} since 3.10 in cluster versions 3.10 and higher.
+ * <p>Supports split brain protection {@link SplitBrainProtectionConfig} since 3.10
+ * in cluster versions 3.10 and higher.
  *
- * @param <E>
+ * @param <E> the type of elements maintained by this list
  * @see List
  */
 public interface IList<E> extends List<E>, ICollection<E> {
+
+
+    /**
+     * Returns {@link LocalListStats} for this collection.
+     *
+     * @return this collection's local statistics.
+     */
+    LocalListStats getLocalListStats();
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 
 package com.hazelcast.map.impl.mapstore.writebehind;
 
+import com.hazelcast.internal.util.MutableInteger;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.MapLoader;
 import com.hazelcast.map.impl.mapstore.writebehind.entry.DelayedEntry;
-import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.util.MutableInteger;
+import com.hazelcast.internal.serialization.Data;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -30,7 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * Write behind queue impl. backed by a {@link java.util.Deque}.
@@ -46,11 +48,11 @@ class CyclicWriteBehindQueue implements WriteBehindQueue<DelayedEntry> {
      * Maps: key --> number of keys.
      * <p>
      * Used to determine whether a key is loadable from store. Because there is a possibility that a key
-     * is in {@link WriteBehindQueue} but it is not in {@link com.hazelcast.core.IMap} due to the eviction.
-     * At that point if one tries to get that evicted key, {@link com.hazelcast.core.MapLoader} will
+     * is in {@link WriteBehindQueue} but it is not in {@link IMap} due to the eviction.
+     * At that point if one tries to get that evicted key, {@link MapLoader} will
      * try to load it from store and that may cause data inconsistencies.
      *
-     * @see WriteBehindStore#loadable(com.hazelcast.nio.serialization.Data)
+     * @see WriteBehindStore#loadable(Data)
      */
     private final Map<Data, MutableInteger> index;
 
@@ -73,7 +75,7 @@ class CyclicWriteBehindQueue implements WriteBehindQueue<DelayedEntry> {
     }
 
     @Override
-    public void addLast(DelayedEntry entry) {
+    public void addLast(DelayedEntry entry, boolean addWithoutCapacityCheck) {
         deque.addLast(entry);
         addCountIndex(entry);
     }
@@ -163,6 +165,14 @@ class CyclicWriteBehindQueue implements WriteBehindQueue<DelayedEntry> {
                 break;
             }
         }
+    }
+
+    @Override
+    public <T> T unwrap(Class<T> clazz) {
+        if (this.getClass().isAssignableFrom(clazz)) {
+            return (T) this;
+        }
+        return null;
     }
 
     private void addCountIndex(DelayedEntry entry) {
